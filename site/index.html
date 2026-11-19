@@ -111,8 +111,20 @@ section.card.ok h2 .n span{display:none}
 .opt span{display:block;text-align:center;border:1.5px solid var(--line);background:var(--surface2);font-weight:600;cursor:pointer;transition:all .15s}
 .opt input:checked + span{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .opt input:focus-visible + span{outline:2px solid var(--accent);outline-offset:2px}
-.dest{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.dest .opt span{border-radius:16px;padding:14px 8px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.dest{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.outpack{background:var(--accent-soft);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.outpack-h{display:flex;flex-direction:column;line-height:1.35}
+.outpack-h b{font-family:var(--font-display);font-size:16px}
+.outpack-h small{color:var(--muted);font-size:13px}
+.tiles{display:flex;flex-wrap:wrap;gap:8px}
+.tile{display:inline-flex;align-items:stretch;border-radius:999px;background:var(--surface);border:1.5px solid var(--line);overflow:hidden;transition:all .15s}
+.tile .add{background:none;border:none;padding:8px 14px;font-weight:600;font-size:15px;color:inherit}
+.tile .pl{color:var(--accent);font-weight:700}
+.tile .minus{display:none;border:none;background:rgba(0,0,0,.14);color:inherit;width:36px;font-size:18px}
+.tile.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.tile.on .pl{display:none}
+.tile.on .minus{display:block}
+.dest .opt span{border-radius:16px;padding:12px 4px;display:flex;flex-direction:column;align-items:center;gap:2px}
 .dest .ic{font-size:30px;line-height:1.2}
 .dest small{font-weight:500;font-size:13px;opacity:.8}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
@@ -215,7 +227,7 @@ footer{font-size:13px;color:var(--muted);text-align:center}
 <div class="wrap">
   <div class="tickets">
     <div class="ticket"><small>🏠 توصيل البيوت</small><b><span id="feeTop"></span> <span>ريال</span></b></div>
-    <div class="ticket"><small>⛺ الشاليهات والمنتزه</small><b><span id="chaletTop"></span> <span>ريال</span></b></div>
+    <div class="ticket"><small>🏡 الشاليهات والمنتزه</small><b><span id="chaletTop"></span> <span>ريال</span></b></div>
   </div>
   <div class="promo-banner hidden" id="promoBanner"></div>
   <button type="button" class="again hidden" id="again">🔁 اطلب نفس طلبك الماضي</button>
@@ -236,24 +248,21 @@ footer{font-size:13px;color:var(--muted);text-align:center}
       <h2><span class="n"><span>١</span></span>وين نوصّل؟</h2>
       <div class="dest" role="radiogroup" aria-label="نوع التوصيل">
         <label class="opt"><input type="radio" name="dest" id="dest-home" value="home" checked><span><span class="ic">🏠</span>البيت<small id="destHomeFee"></small></span></label>
-        <label class="opt"><input type="radio" name="dest" id="dest-chalet" value="chalet"><span><span class="ic">⛺</span>شاليه أو المنتزه<small id="destChaletFee"></small></span></label>
+        <label class="opt"><input type="radio" name="dest" id="dest-chalet" value="chalet"><span><span class="ic">🏡</span>شاليه<small id="destChaletFee"></small></span></label>
+        <label class="opt"><input type="radio" name="dest" id="dest-park" value="park"><span><span class="ic">🌳</span>المنتزه<small id="destParkFee"></small></span></label>
       </div>
     </section>
 
     <section class="card" id="sec-order">
       <h2><span class="n"><span>٢</span></span>وش تبي؟</h2>
       <p class="sub">اختر نوع المحل واكتب طلبك، وتقدر تطلب من أكثر من محل.</p>
+      <div id="chaletPack" class="outpack hidden">
+        <div class="outpack-h"><b id="packTitle">🔥 تجهيزات الشاليه</b><small>اختياري · نجيبها من بقالات جلاجل. كل ضغطة تزيد واحد</small></div>
+        <div class="tiles" id="packItems"></div>
+        <input type="text" id="packOther" placeholder="أغراض ثانية؟ مثال: صحون، ولاعة، مناديل" aria-label="أغراض ثانية">
+      </div>
       <div id="shops" class="pack" style="gap:12px"></div>
       <button type="button" class="ghost" id="addShop">+ طلب من محل ثاني</button>
-
-      <div id="chaletPack" class="hidden">
-        <h2 style="margin:6px 0 4px">⛺ باقة الشاليه</h2>
-        <p class="hint">نجيبها من بقالات جلاجل وتوصل قبل وصولك أو معك.</p>
-        <div class="pack" id="packItems"></div>
-        <label class="f" for="packOther">أغراض ثانية للشاليه
-          <input type="text" id="packOther" placeholder="مثال: صحون وأكواب، ولاعة، مناديل">
-        </label>
-      </div>
     </section>
 
     <section class="card" id="sec-info">
@@ -438,17 +447,17 @@ $("#addShop").addEventListener("click", ()=>{ shopBlock(); render(); shopsEl.las
 function buildPack(){
   const box = $("#packItems");
   box.innerHTML = CONFIG.chaletItems.map((it,i)=>`
-    <div class="item"><span>${it}</span>
-      <div class="qty">
-        <button type="button" aria-label="أنقص ${it}" data-q="${i}" data-d="-1">−</button>
-        <output id="q${i}">0</output>
-        <button type="button" aria-label="زِد ${it}" data-q="${i}" data-d="1">+</button>
-      </div></div>`).join("");
+    <div class="tile" id="t${i}">
+      <button type="button" class="add" data-q="${i}" data-d="1" aria-label="أضف ${it}"><span class="pl">+</span> ${it} <b id="q${i}"></b></button>
+      <button type="button" class="minus" data-q="${i}" data-d="-1" aria-label="أنقص ${it}">−</button>
+    </div>`).join("");
   CONFIG.chaletItems.forEach((_,i)=>packQty[i]=0);
   box.addEventListener("click", e=>{
-    const q = e.target.dataset.q; if(q===undefined) return;
-    packQty[q] = Math.max(0, packQty[q] + Number(e.target.dataset.d));
-    $("#q"+q).textContent = packQty[q];
+    const t = e.target.closest("[data-q]"); if(!t) return;
+    const q = t.dataset.q;
+    packQty[q] = Math.max(0, packQty[q] + Number(t.dataset.d));
+    $("#q"+q).textContent = packQty[q] ? "×" + toAr(packQty[q]) : "";
+    $("#t"+q).classList.toggle("on", packQty[q] > 0);
     render();
   });
 }
@@ -466,7 +475,11 @@ const orderNo = (()=>{
 })();
 
 function dest(){ return document.querySelector('input[name="dest"]:checked').value; }
-function baseFee(){ return dest()==="chalet" ? CONFIG.chaletFee : CONFIG.deliveryFee; }
+function isOut(){ return dest()!=="home"; }   // شاليه أو المنتزه
+const DEST = { home:{name:"البيت", place:"علامة مميزة", label:"علامة مميزة (اختياري)", ph:"مثال: باب أخضر جنب المسجد"},
+  chalet:{name:"شاليه", place:"الشاليه", label:"اسم الشاليه", ph:"مثال: شاليه موج، البوابة الثانية"},
+  park:{name:"المنتزه", place:"المكان في المنتزه", label:"وين بالضبط في المنتزه؟ (اختياري)", ph:"مثال: جنب الألعاب، خيمة بيضاء"} };
+function baseFee(){ return isOut() ? CONFIG.chaletFee : CONFIG.deliveryFee; }
 function fee(){ return promoApplied ? baseFee() * (1 - P.discount) : baseFee(); }
 function fmt(n){ return (Math.round(n*100)/100).toString().replace(/\.0+$/,""); }
 
@@ -498,15 +511,15 @@ function collect(){
   }).filter(s=>s.name || s.items);
   const pack = CONFIG.chaletItems.map((it,i)=>packQty[i] ? `${it} ×${packQty[i]}` : null).filter(Boolean);
   const other = $("#packOther").value.trim();
-  if(dest()==="chalet" && other) pack.push(other);
-  return { shops, pack: dest()==="chalet" ? pack : [] };
+  if(isOut() && other) pack.push(other);
+  return { shops, pack: isOut() ? pack : [] };
 }
 
 function message(){
   const {shops, pack} = collect();
   const L = [];
   L.push(`*${CONFIG.serviceName} | طلب ${orderNo}*`);
-  L.push(`التوصيل إلى: ${dest()==="chalet" ? "شاليه / المنتزه" : "البيت"}`);
+  L.push(`التوصيل إلى: ${DEST[dest()].name}`);
   L.push("");
   if(shops.length){
     shops.forEach((s,i)=>{
@@ -516,7 +529,7 @@ function message(){
     });
   }
   if(pack.length){
-    L.push("*باقة الشاليه*");
+    L.push(`*تجهيزات ${DEST[dest()].name === "شاليه" ? "الشاليه" : "المنتزه"}*`);
     pack.forEach(p=>L.push("- " + p));
     L.push("");
   }
@@ -524,7 +537,7 @@ function message(){
   L.push(`الاسم: ${$("#name").value.trim() || "—"}`);
   L.push(`الجوال: ${$("#phone").value.trim() || "—"}`);
   L.push(`الموقع: ${$("#map").value.trim() || "—"}`);
-  const pl = $("#place").value.trim(); if(pl) L.push(`${dest()==="chalet" ? "الشاليه" : "علامة مميزة"}: ${pl}`);
+  const pl = $("#place").value.trim(); if(pl) L.push(`${DEST[dest()].place}: ${pl}`);
   L.push(`الدفع: ${$("#pay").value}`);
   const note = $("#note").value.trim(); if(note) L.push(`ملاحظة: ${note}`);
   L.push("");
@@ -550,15 +563,16 @@ function problems(){
   else if($("#pay").value===$("#payTasjeel").value && $("#name").value.trim().split(/\s+/).filter(Boolean).length<2) p.push(["الاسم الكامل مع اسم العائلة (للتسجيل عند البقالة)", $("#name"), "sec-info"]);
   if(!phoneOk($("#phone").value)) p.push(["رقم جوال صحيح", $("#phone"), "sec-info"]);
   if(!/^https?:\/\/\S+$/i.test($("#map").value.trim())) p.push(["موقعك على الخريطة", $("#map"), "sec-info"]);
+  if(dest()==="chalet" && !$("#place").value.trim()) p.push(["اسم الشاليه", $("#place"), "sec-info"]);
   if($("#pay").value===$("#payTasjeel").value && shops.some(x=>x.cat==="بقالة" && !x.name)) p.push(["اسم البقالة (للتسجيل على الحساب)", shopsEl.querySelector("input[type=text]"), "sec-order"]);
   return p;
 }
 
 function render(){
-  const isChalet = dest()==="chalet";
-  $("#chaletPack").classList.toggle("hidden", !isChalet);
-  $("#placeLabel").textContent = isChalet ? "اسم الشاليه أو القسم (اختياري)" : "علامة مميزة (اختياري)";
-  $("#place").placeholder = isChalet ? "مثال: شاليه موج، القسم الثاني" : "مثال: باب أخضر جنب المسجد";
+  const D = DEST[dest()];
+  $("#chaletPack").classList.toggle("hidden", !isOut());
+  $("#packTitle").textContent = dest()==="park" ? "🔥 تجهيزات الكشتة" : "🔥 تجهيزات الشاليه";
+  $("#placeLabel").textContent = D.label; $("#place").placeholder = D.ph;
   const hasGrocery = [...shopsEl.querySelectorAll(".shop")].some(b=>{const r=b.querySelector('input[type=radio]:checked'); return r && r.value==="بقالة";});
   const tj = $("#payTasjeel"); tj.hidden = !hasGrocery; tj.disabled = !hasGrocery;
   if(!hasGrocery && $("#pay").value===tj.value) $("#pay").selectedIndex = 0;
@@ -568,6 +582,7 @@ function render(){
   $("#chaletTop").textContent = toAr(CONFIG.chaletFee);
   $("#destHomeFee").textContent = toAr(CONFIG.deliveryFee) + " ريال";
   $("#destChaletFee").textContent = toAr(CONFIG.chaletFee) + " ريال";
+  $("#destParkFee").textContent = toAr(CONFIG.chaletFee) + " ريال";
   const pb = $("#promoBanner");
   if(promoOn && promoToday){
     pb.classList.remove("hidden");
@@ -634,7 +649,7 @@ function loadSaved(){
   try{
     const s = JSON.parse(localStorage.getItem("jl-customer") || "{}");
     SAVE_IDS.forEach(id=>{ if(s[id]) $("#"+id).value = s[id]; });
-    if(s.dest==='chalet') $("#dest-chalet").checked = true;
+    if(s.dest==='chalet' || s.dest==='park') $("#dest-"+s.dest).checked = true;
   }catch(e){}
 }
 function saveNow(){
