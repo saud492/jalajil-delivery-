@@ -38,10 +38,10 @@ svg{overflow:visible}
 <!-- 1 HOOK -->
 <div class="scene" id="s-hook" style="background:var(--cream)"><div class="cam">
   <div class="abs c" style="top:470px">
-    <span class="word" id="h0" style="font-size:150px">للحين</span>
-    <span class="word" id="h1" style="font-size:150px;margin-top:-10px">تطلع</span>
-    <span class="word" id="h2" style="font-size:150px;margin-top:-10px">بنفسك</span>
-    <span class="word" id="h3" style="font-size:170px;color:var(--copper);margin-top:-6px">للبقالة؟</span>
+    <span class="mask" style="display:block;overflow:hidden;padding:24px 0 40px;margin:-24px 0 -77px"><span class="word" id="h0" style="font-size:150px">للحين</span></span>
+    <span class="mask" style="display:block;overflow:hidden;padding:24px 0 40px;margin:-34px 0 -77px"><span class="word" id="h1" style="font-size:150px">تطلع</span></span>
+    <span class="mask" style="display:block;overflow:hidden;padding:24px 0 40px;margin:-34px 0 -77px"><span class="word" id="h2" style="font-size:150px">بنفسك</span></span>
+    <span class="mask" style="display:block;overflow:hidden;padding:24px 0 40px;margin:-30px 0 -77px"><span class="word" id="h3" style="font-size:170px;color:var(--copper)">للبقالة؟</span></span>
   </div>
   <svg class="abs" style="left:260px;top:1235px" width="560" height="60"><path id="h-ul" d="M10 30 C 140 8, 300 52, 550 22" fill="none" stroke="var(--hl)" stroke-width="16" stroke-linecap="round"/></svg>
   <svg class="abs" id="h-cart" style="left:455px;top:1320px" width="170" height="150" viewBox="-8 -6 132 116"><g fill="none" stroke="var(--teal)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"><path d="M0 4H16L30 70H96L110 22H22"/><path d="M40 38H100M35 54H96" stroke-width="6" opacity=".55"/></g><circle cx="38" cy="92" r="9" fill="var(--copper)"/><circle cx="88" cy="92" r="9" fill="var(--copper)"/></svg>
@@ -135,10 +135,10 @@ svg{overflow:visible}
         <g stroke="#fff" stroke-width="70" stroke-linecap="round"><path d="M630 0V2900M1290 0V2900M0 620H2000M0 1310H2000M0 1920H2000"/></g>
         <path id="route" d="M630 2250 L630 1920 L1290 1920 L1290 1310 L630 1310 L630 620" fill="none" stroke="var(--teal)" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
-      <div class="abs" id="m-store" style="left:530px;top:2120px;width:200px;transform-origin:50% 100%;transform:rotateX(-55deg)"><div style="background:#fff;border-radius:40px;padding:20px 0;text-align:center;box-shadow:0 20px 30px rgba(0,0,0,.2)"><div class="emo" style="font-size:90px">🏪</div><div style="font-size:30px;font-weight:800;color:var(--teal)">المحل</div></div></div>
-      <div class="abs" id="m-house" style="left:530px;top:420px;width:200px;transform-origin:50% 100%;transform:rotateX(-55deg)"><div style="background:#fff;border-radius:40px;padding:20px 0;text-align:center;box-shadow:0 20px 30px rgba(0,0,0,.2)"><div class="emo" style="font-size:90px">🏠</div><div style="font-size:30px;font-weight:800;color:var(--teal)">بيتك</div></div>
+      <div class="abs" id="m-store" style="left:530px;top:2120px;width:200px;transform-origin:50% 100%;transform:rotateX(-55deg)"><div style="background:#fff;border-radius:40px;padding:20px 0;text-align:center;box-shadow:0 20px 30px rgba(0,0,0,.2)"><div id="m-store-i" style="line-height:0;margin-bottom:8px"></div><div style="font-size:30px;font-weight:800;color:var(--teal)">المحل</div></div></div>
+      <div class="abs" id="m-house" style="left:530px;top:420px;width:200px;transform-origin:50% 100%;transform:rotateX(-55deg)"><div style="background:#fff;border-radius:40px;padding:20px 0;text-align:center;box-shadow:0 20px 30px rgba(0,0,0,.2)"><div id="m-house-i" style="line-height:0;margin-bottom:8px"></div><div style="font-size:30px;font-weight:800;color:var(--teal)">بيتك</div></div>
         <div id="m-ok" class="pill" style="position:absolute;top:-90px;left:-10px;background:var(--wa);color:#fff;font-size:40px;white-space:nowrap">✓ وصل</div></div>
-      <div class="abs emo" id="m-scoot" style="left:0;top:0;font-size:120px;transform-origin:50% 100%">🛵</div>
+      <div class="abs" id="m-scoot" style="left:0;top:0;line-height:0;transform-origin:50% 100%"></div>
     </div>
   </div>
   <div class="abs" style="left:0;right:0;top:0;height:560px;background:linear-gradient(#dfe9e4 30%,rgba(223,233,228,0))"></div>
@@ -150,7 +150,7 @@ svg{overflow:visible}
 <!-- 8 CATEGORIES (match-cut) -->
 <div class="scene" id="s-cats"><div class="cam" id="c-cam">
   <div class="abs c" id="c-head" style="top:420px;font-size:70px;font-weight:800">من أي محل في جلاجل</div>
-  <div class="abs emo c" id="c-emo" style="top:560px;font-size:230px"></div>
+  <div class="abs c" id="c-emo" style="top:590px;line-height:0"></div>
   <div class="abs" id="c-box" style="left:190px;top:900px;width:700px;height:250px;border-radius:44px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 30px 60px rgba(0,0,0,.18)">
     <span id="c-word" style="font-size:140px;font-weight:900;color:var(--teal)"></span></div>
   <div class="abs" id="c-flash" style="inset:0;position:absolute;background:#fff;pointer-events:none"></div>
@@ -190,14 +190,28 @@ function whip(t, a, b, dx, dy = 0) { const k = pr(t, a, b), e = E.io(k), v = Mat
 const S = [['hook', 0, 2.6], ['pain', 2.6, 4.4], ['what', 4.4, 6.4], ['brand', 6.4, 8.6], ['app', 8.6, 17.2],
   ['price', 17.2, 20.6], ['map', 20.6, 24.0], ['cats', 24.0, 27.0], ['cta', 27.0, 30.0]];
 window.DUR = 30;
+const ICON = {
+  sun: `<circle r="27" fill="#FFC93C"/><g stroke="#F2A33A" stroke-width="9" stroke-linecap="round">${[0,45,90,135,180,225,270,315].map(a=>`<path d="M0 -38V-52" transform="rotate(${a})"/>`).join('')}</g>`,
+  car: `<path d="M-54 22V2Q-54-8-44-10L-32-12-20-34Q-16-40-8-40H20Q28-40 32-34L44-12Q56-10 56 2V22Z" fill="#A8622C"/><path d="M-24-14-16-30H-2V-14ZM6-14V-30H18L28-14Z" fill="#ECD5B3"/><g fill="#1D2321"><circle cx="-30" cy="22" r="13"/><circle cx="32" cy="22" r="13"/></g><g fill="#cfcfcf"><circle cx="-30" cy="22" r="5"/><circle cx="32" cy="22" r="5"/></g>`,
+  bread: `<path d="M-50 32V0C-64-8-58-42-28-42H28C58-42 64-8 50 0V32Z" fill="#E9B36A" stroke="#A8622C" stroke-width="6" stroke-linejoin="round"/><g stroke="#A8622C" stroke-width="6" stroke-linecap="round"><path d="M-26-24-32-8M-4-24-10-8M18-24 12-8"/></g>`,
+  cart: `<g transform="translate(-58,-55)"><g fill="none" stroke="#0F6A66" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"><path d="M0 4H16L30 70H96L110 22H22"/><path d="M40 38H100M35 54H96" stroke-width="6" opacity=".55"/></g><circle cx="38" cy="92" r="9" fill="#A8622C"/><circle cx="88" cy="92" r="9" fill="#A8622C"/></g>`,
+  burger: `<path d="M-50-6C-50-50 50-50 50-6Z" fill="#E9A24A"/><g fill="#fff"><ellipse cx="-18" cy="-26" rx="4" ry="2.5"/><ellipse cx="4" cy="-32" rx="4" ry="2.5"/><ellipse cx="22" cy="-22" rx="4" ry="2.5"/></g><path d="M-54 -2Q-45 6-36-2T-18-2 0-2 18-2 36-2 54-2V4H-54Z" fill="#7cc35b"/><rect x="-52" y="4" width="104" height="16" rx="8" fill="#5a3420"/><rect x="-50" y="22" width="100" height="20" rx="10" fill="#E9A24A"/>`,
+  coffee: `<g fill="none" stroke="#fff" stroke-linecap="round" stroke-width="6" opacity=".85"><path d="M-14-30C-20-40-8-46-14-56M6-30C0-40 12-46 6-56"/></g><path d="M-38-18H30V16Q30 38 8 38H-16Q-38 38-38 16Z" fill="#fff"/><path d="M30-8C50-8 50 22 28 22" fill="none" stroke="#fff" stroke-width="8"/><rect x="-50" y="42" width="96" height="7" rx="3.5" fill="#fff"/>`,
+  pill: `<g transform="rotate(-35)"><path d="M0-22H-28A22 22 0 0 0-28 22H0Z" fill="#ECD5B3"/><path d="M0-22H28A22 22 0 0 1 28 22H0Z" fill="#fff"/></g><circle cx="34" cy="34" r="14" fill="#fff"/><path d="M26 34H42" stroke="#062b29" stroke-width="3"/>`,
+  box: `<path d="M-44-10L-30-36H30L44-10Z" fill="#DDA66A"/><path d="M-44-10H44V42H-44Z" fill="#B87A3E"/><path d="M-8-36H8L10-10V12H-10V-10Z" fill="#F2F0EC" opacity=".85"/>`,
+  store: `<g fill="none" stroke="#0F6A66" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"><path d="M-50 -45H50L56 -12H-56Z"/><path d="M-28 -45L-31 -12M0 -45V-12M28 -45L31 -12"/><path d="M-44 -12V45H44V-12"/><rect x="-14" y="12" width="28" height="33"/></g>`,
+  house: `<g fill="none" stroke="#0F6A66" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"><path d="M-50 -5L0 -50L50 -5M-36 -16V45H36V-16"/><rect x="-11" y="15" width="22" height="30"/></g>`,
+  scooter: `<path d="M-40 26-26-22" stroke="#0F6A66" stroke-width="8" stroke-linecap="round"/><path d="M-36-24H-16" stroke="#1D2321" stroke-width="8" stroke-linecap="round"/><path d="M-30 14H20C24-4 38-6 50 6V20H-30Z" fill="#0F6A66"/><rect x="14" y="-34" width="38" height="32" rx="7" fill="#A8622C"/><g fill="#1D2321"><circle cx="-38" cy="30" r="14"/><circle cx="38" cy="30" r="14"/></g><g fill="#cfcfcf"><circle cx="-38" cy="30" r="5"/><circle cx="38" cy="30" r="5"/></g>`
+};
+const ic = (n, px) => `<svg width="${px}" height="${px}" viewBox="-62 -62 124 124" style="display:inline-block;overflow:visible">${ICON[n]}</svg>`;
 let pinR = null, okR = null, emoR = null;
 const PIN_SVG = `<svg width="190" height="241" viewBox="-75 -190 150 195" style="display:inline-block"><path d="M0 0C-18-34-60-70-60-110A60 60 0 0 1 60-110C60-70 18-34 0 0Z" fill="#fff"/><circle cx="0" cy="-110" r="24" fill="var(--teal)"/></svg>`;
 
 // build pain cards
-const PAIN = [['☀️', 'الحر ٤٥ درجة'], ['🚗', 'زحمة وطوابير'], ['🍞', 'نسيت الخبز… مرة ثانية']];
+const PAIN = [['sun', 'الحر ٤٥ درجة'], ['car', 'زحمة وطوابير'], ['bread', 'نسيت الخبز… مرة ثانية']];
 PAIN.forEach(([e, s], i) => { const d = document.createElement('div'); d.className = 'card'; d.id = 'pc' + i;
   Object.assign(d.style, { left: (230 - i * 760) + 'px', top: '400px', width: '620px', height: '880px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '50px' });
-  d.innerHTML = `<div class="emo" style="font-size:260px">${e}</div><div style="font-size:74px;font-weight:900;text-align:center;padding:0 40px;line-height:1.3">${s}</div>`; $('pain-cam').appendChild(d); });
+  d.innerHTML = `<div style="line-height:0">${ic(e, 300)}</div><div style="font-size:74px;font-weight:900;text-align:center;padding:0 40px;line-height:1.3">${s}</div>`; $('pain-cam').appendChild(d); });
 // notifications
 const NOTI = [['توصيل جلاجل', 'وصلنا طلبك JL-1444-124 ✓'], ['توصيل جلاجل', 'نجهّز طلبك من البقالة 🛒'], ['توصيل جلاجل', 'المندوب بالطريق لبيتك 🛵']];
 NOTI.forEach(([h, b], i) => { const d = document.createElement('div'); d.className = 'noti'; d.id = 'n' + i;
@@ -206,7 +220,10 @@ NOTI.forEach(([h, b], i) => { const d = document.createElement('div'); d.classNa
 
 const SC = {
   hook(t, a, b) {
-    ['h0', 'h1', 'h2', 'h3'].forEach((id, i) => slam(id, t, [.12, .5, .88, 1.3][i], .3, i === 3 ? 2.1 : 1.7));
+    // each line rises out of a hidden mask with a slight tilt; the last word lands with a bounce
+    ['h0', 'h1', 'h2', 'h3'].forEach((id, i) => { const at = [.12, .42, .72, 1.05][i], k = E.out5(pr(t, at, at + .5)), sk = (1 - k) * 8;
+      const pop = i === 3 ? 1 + .14 * Math.sin(Math.PI * pr(t, 1.3, 1.6)) : 1;
+      st(id, { transform: `translateY(${(1 - k) * 115}%) rotate(${sk}deg) scale(${pop})`, opacity: 1, filter: 'none' }); });
     draw('h-ul', t, 1.65, 1.95);
     const ck = E.back(pr(t, 1.85, 2.15)); st('h-cart', { opacity: clamp(ck), transform: `rotate(${lerp(-40, -12, clamp(ck))}deg) scale(${ck})` });
     const w = whip(t, 2.3, 2.6, 1500);
@@ -311,10 +328,10 @@ const SC = {
     const mv = E.in(pr(t, b - .32, b)); st('m-ok2', { transform: `translateY(${-mv * 300}px) scale(${ok * (1 + mv * .35)})`, opacity: clamp(ok) }); okR = $('m-ok2').getBoundingClientRect();
   },
   cats(t, a, b) {
-    const C = [['🛒', 'بقالة', '#F2F0EC', 'var(--ink)'], ['🍔', 'مطعم', '#0F6A66', '#fff'], ['☕', 'كافيه', '#A8622C', '#fff'], ['💊', 'صيدلية', '#062b29', '#fff'], ['📦', 'أخرى', '#ECD5B3', 'var(--ink)']];
+    const C = [['cart', 'بقالة', '#F2F0EC', 'var(--ink)'], ['burger', 'مطعم', '#0F6A66', '#fff'], ['coffee', 'كافيه', '#A8622C', '#fff'], ['pill', 'صيدلية', '#062b29', '#fff'], ['box', 'أخرى', '#ECD5B3', 'var(--ink)']];
     const step = .48, i = Math.floor((t - a) / step), last = i >= C.length;
     const [e, w, bg, fg] = last ? ['', 'كل محلات جلاجل', '#0F6A66', '#fff'] : C[i];
-    $('s-cats').style.background = bg; $('c-head').style.color = fg; const want = last ? 'pin' : e; if ($('c-emo').dataset.v !== want) { $('c-emo').dataset.v = want; $('c-emo').innerHTML = last ? PIN_SVG : e; } $('c-word').textContent = w;
+    $('s-cats').style.background = bg; $('c-head').style.color = fg; const want = last ? 'pin' : e; if ($('c-emo').dataset.v !== want) { $('c-emo').dataset.v = want; $('c-emo').innerHTML = last ? PIN_SVG : ic(e, 260); } $('c-word').textContent = w;
     $('c-word').style.fontSize = last ? '86px' : '140px';
     const local = last ? pr(t, a + C.length * step, a + C.length * step + .3) : pr(t, a + i * step, a + i * step + .2);
     const kick = 1 - E.out(local);
@@ -344,6 +361,7 @@ const SC = {
     st('t-cam', { transform: `scale(${lerp(1, 1.06, pr(t, a, b)) + enter * .4})`, filter: `blur(${enter * 20}px)` });
   }
 };
+$('m-store-i').innerHTML = ic('store', 90); $('m-house-i').innerHTML = ic('house', 90); $('m-scoot').innerHTML = ic('scooter', 130);
 let cur = null;
 window.frame = t => {
   const s = S.find(([, a, b]) => t >= a && t < b) || S[S.length - 1];
