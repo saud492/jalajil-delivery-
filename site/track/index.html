@@ -107,6 +107,7 @@ label.f{display:flex;flex-direction:column;gap:5px;font-size:14px;color:var(--mu
 <body>
 <header class="top"><div class="top-in"><small>توصيل جلاجل</small><h1 id="title">متابعة طلبك</h1></div></header>
 
+<div class="wrap" style="padding-bottom:0" id="pushWrap"><div id="pushBox"></div></div>
 <main class="wrap" id="main">
   <div class="card empty" id="loading">جاري تحميل طلبك…</div>
 </main>
@@ -128,6 +129,7 @@ label.f{display:flex;flex-direction:column;gap:5px;font-size:14px;color:var(--mu
 <div class="toast hidden" id="toast" aria-live="polite"></div>
 <input type="file" id="file" accept="image/*" class="hidden">
 
+<script src="/push.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 const AR = "٠١٢٣٤٥٦٧٨٩";
@@ -351,12 +353,15 @@ function actionCard(){
   const st = D.stage;
   if(st === "pricing"){
     c.classList.remove("act");
-    c.append(el("h2", "", "⏳ ننتظر الفاتورة"), el("p", "muted", "المحل أو المندوب بيكتب مبلغ الفاتورة، وبيطلع لك هنا عشان توافق عليه. خلّ الصفحة مفتوحة."));
+    c.append(el("h2", "", "⏳ ننتظر الفاتورة"), el("p", "muted", D.order.auto_approve
+      ? `لو الفاتورة ${money(D.order.auto_approve)} ريال أو أقل، المندوب يشتري على طول بدون ما ينتظرك (مثل ما طلبت). لو أكثر، بتطلع لك هنا توافق عليها.`
+      : "المحل أو المندوب بيكتب مبلغ الفاتورة، وبيطلع لك هنا عشان توافق عليه. خلّ الصفحة مفتوحة."));
     return c;
   }
   if(st === "approve"){
     c.append(el("h2", "", "وافق على مبلغ الفاتورة"));
     c.append(el("p", "muted", `قيمة المشتريات ${money(D.total)} ريال، والتوصيل ${money(D.order.fee)} ريال. المندوب ما يدفع للمحل إلا بعد موافقتك.`));
+    if(D.order.auto_approve) c.append(el("p", "muted", `الفاتورة فوق الحد اللي كتبته (${money(D.order.auto_approve)} ريال)، فنحتاج موافقتك.`));
     if(D.needsPrepay) c.append(el("p", "muted", `الفاتورة فوق ${money(D.prepay_cap)} ريال، فبعد الموافقة تحوّل قيمتها مسبقاً.`));
     const ok = el("button", "btn", `✅ موافق على ${money(D.total)} ريال`); ok.onclick = () => send({action:"approve", total: D.total}, "تمام، وافقت ✓");
     const no = el("button", "btn line", "ما أبي، ألغِ الطلب"); no.onclick = () => { if(confirm("أكيد تبي تلغي الطلب كامل؟")) send({action:"reject"}, "انلغى الطلب"); };
@@ -403,12 +408,18 @@ async function showImg(id){
 }
 $("#imgv").addEventListener("click", ()=>$("#imgv").classList.add("hidden"));
 
+let pushMounted = false;
 async function load(){
   if(!K){ $("#main").innerHTML = '<div class="card empty">الرابط ناقص. افتح الرابط اللي في رسالة طلبك.</div>'; return; }
   try{
     D = await api(); skew = D.now - Date.now();
     if(lastStage && lastStage !== D.stage && D.stage === "approve" && navigator.vibrate) try{ navigator.vibrate([200,100,200]); }catch(e){}
     lastStage = D.stage;
+    if(!pushMounted && window.JLPush && !["delivered","cancelled"].includes(D.stage)){
+      pushMounted = true;
+      JLPush.mount($("#pushBox"), { sw: "/sw.js", scope: "/", api: "/api/track/" + encodeURIComponent(K), extra: { action: "push" }, who: "تنبيهات طلبك (موافقة المبلغ، وخروج المندوب)", quietIfUnsupported: true });
+    }
+    if(["delivered","cancelled"].includes(D.stage)) $("#pushBox").innerHTML = "";
     const typing = document.activeElement && document.activeElement.closest && document.activeElement.closest("#main textarea, #main input");
     if(!typing) render();
   }catch(err){

@@ -20,3 +20,6 @@ self.addEventListener("fetch", e => {
     }).catch(() => caches.match(e.request))
   );
 });
+
+// إشعارات الجوال
+importScripts("/sw-push.js");

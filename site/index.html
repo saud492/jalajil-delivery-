@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>توصيل جلاجل</title>
-<meta name="description" content="اطلب من محلات جلاجل: بقالة، مطعم، كافيه، صيدلية. سعر المحل نفسه بدون أي زيادة، والتوصيل ٣ ريال للبيت.">
+<meta name="description" content="اطلب من محلات جلاجل: بقالة، مطعم، كافيه، صيدلية. سعر المحل نفسه بدون أي زيادة، والتوصيل ٨ ريال للبيت.">
 <!-- شكل الرابط لما ينرسل في الواتساب وتويتر وسناب -->
 <meta property="og:type" content="website">
 <meta property="og:locale" content="ar_SA">
 <meta property="og:site_name" content="توصيل جلاجل">
 <meta property="og:title" content="توصيل جلاجل · لمّة جلاجل على بابك">
-<meta property="og:description" content="اطلب من محلات جلاجل بسعر المحل نفسه، والتوصيل ٣ ريال للبيت. طلبك يوصلنا على الواتساب مباشرة.">
+<meta property="og:description" content="اطلب من محلات جلاجل بسعر المحل نفسه، والتوصيل ٨ ريال للبيت. طلبك يوصلنا على الواتساب مباشرة.">
 <meta property="og:url" content="https://jalajil-delivery.pages.dev/">
 <meta property="og:image" content="https://jalajil-delivery.pages.dev/og-image.png">
 <meta property="og:image:width" content="1200">
@@ -312,6 +312,10 @@ footer{font-size:13px;color:var(--muted);text-align:center}
           <option id="payTasjeel" hidden disabled>تسجيل على حسابي عند البقالة</option>
         </select>
       </label>
+      <label class="f" for="autoOk">اشترِ بدون ما تسألني لو الفاتورة لين (ريال، اختياري)
+        <input type="text" id="autoOk" inputmode="decimal" autocomplete="off" placeholder="مثال: ١٠٠">
+      </label>
+      <p class="hint">لو الفاتورة هالمبلغ أو أقل، المندوب يشتري على طول بدون ما ينتظر موافقتك، فيوصلك أسرع. لو أكثر، نسألك أول.</p>
       <p class="hint hidden" id="tasjeelHint">رسوم التوصيل تدفعها للمندوب، وقيمة الطلب تنسجّل على حسابك عند البقالة (بشرط توافق البقالة).</p>
       <label class="f" for="note">ملاحظة للمندوب (اختياري)
         <input type="text" id="note" placeholder="مثال: اتصل لا توصل">
@@ -383,15 +387,10 @@ const CONFIG = {
   whatsapp2: "",                      // الرقم الثاني (اتركه فاضي الحين). بعد ما تضيفه الطلبات توزّع تلقائياً
   split: "alternate",                 // "alternate" = بالتناوب بين الرقمين | "category" = البقالة للرقم الأول والباقي للثاني
   whatsapp: "966582312869",          // رقم الواتساب بصيغة دولية بدون + مثل 9665XXXXXXXX. لو فاضي، الزر يفتح الواتساب وتختار المحادثة بنفسك
-  deliveryFee: 3,        // رسوم التوصيل للبيوت داخل جلاجل
+  // الرسوم الحقيقية تجي من السيرفر (لوحة التحكم ← الحسابات). هذي بس لو السيرفر ما رد
+  deliveryFee: 8,        // رسوم التوصيل للبيوت داخل جلاجل
   chaletFee: 5,          // رسوم التوصيل للشاليهات والمنتزه
-  // كود الخصم: يخصم نسبة من رسوم التوصيل في يوم محدد فقط. حط code فاضي لو ما تبي أكواد
-  promo: {
-    code: "JALAJIL",         // الكود (الحروف الكبيرة والصغيرة سواء)
-    discount: 0.5,           // 0.5 = نصف رسوم التوصيل
-    validDate: "2026-11-20", // اليوم اللي يشتغل فيه الكود (سنة-شهر-يوم) بتوقيت الرياض. غيّره لليوم اللي تبيه
-    oncePerPhone: true       // مرة وحدة لكل رقم جوال، وانت تتأكد منها لما يوصلك الطلب
-  },
+  // أكواد الخصم صارت في لوحة التحكم (تبويب الحسابات)، والسيرفر يتحقق منها
   // أوقات استقبال الطلبات بتوقيت الرياض (24 ساعة). خلّها null لو ما تبي تظهر حالة مفتوح/مسكّر
   // مثال: hours: { open: "16:00", close: "23:30" }   (لو الإغلاق بعد نص الليل اكتب مثلاً "01:00")
   hours: null,
@@ -424,9 +423,8 @@ function dateLabel(iso){
   try{ return new Intl.DateTimeFormat("ar-SA",{timeZone:"Asia/Riyadh",weekday:"long",day:"numeric",month:"long"}).format(new Date(iso+"T12:00:00+03:00")); }
   catch(e){ return iso; }
 }
-const P = CONFIG.promo;
-const promoOn = !!(P && P.code);
-const promoToday = promoOn && todayRiyadh() === P.validDate;
+let P = null;          // الكود بعد ما يتحقق منه السيرفر: { code, discount }
+let promoToday = null; // فيه عرض شغال اليوم؟ { discount } (بدون الكود)
 
 function shopBlock(){
   shopCount++;
@@ -502,6 +500,9 @@ async function loadPartners(){
     if(!r.ok) return;
     const d = await r.json();
     PARTNERS = Array.isArray(d.shops) ? d.shops : [];
+    if(d.fees && Number.isFinite(d.fees.home) && Number.isFinite(d.fees.out)){ CONFIG.deliveryFee = d.fees.home; CONFIG.chaletFee = d.fees.out; }
+    if(d.promo && !promoToday && !$("#code").value) $("#codeBox").open = true;
+    promoToday = d.promo || null;
     if(d.prepay_cap > 0){ const n = $("#capNote"); n.textContent = `💳 لو الفاتورة فوق ${toAr(d.prepay_cap)} ريال، تحوّل قيمتها قبل ما المندوب يشتري.`; n.classList.remove("hidden"); }
     shopsEl.querySelectorAll(".shop").forEach(refreshPick);
     render();
@@ -585,25 +586,30 @@ function baseFee(){ return isOut() ? CONFIG.chaletFee : CONFIG.deliveryFee; }
 function fee(){ return promoApplied ? baseFee() * (1 - P.discount) : baseFee(); }
 function fmt(n){ return (Math.round(n*100)/100).toString().replace(/\.0+$/,""); }
 
-function checkCode(){
+async function checkCode(){
   const typed = $("#code").value.trim();
   const msg = $("#codeMsg");
   msg.classList.remove("hidden","ok","bad");
-  if(!typed){ promoApplied = false; msg.classList.add("hidden"); return; }
-  if(!promoOn || typed.toUpperCase() !== P.code.toUpperCase()){
-    promoApplied = false; msg.classList.add("bad"); msg.textContent = "الكود غير صحيح"; return;
-  }
-  if(!promoToday){
-    promoApplied = false; msg.classList.add("bad");
-    msg.textContent = "الكود يشتغل فقط يوم " + dateLabel(P.validDate); return;
-  }
-  promoApplied = true; msg.classList.add("ok");
-  msg.textContent = "تم تطبيق الكود: خصم " + Math.round(P.discount*100) + "٪ من رسوم التوصيل";
-  if(P.oncePerPhone) msg.textContent += " (مرة وحدة لكل رقم جوال)";
+  if(!typed){ promoApplied = false; P = null; msg.classList.add("hidden"); return; }
+  msg.textContent = "نتحقق من الكود…";
+  try{
+    const r = await fetch("/api/promo", {method:"POST", headers:{"content-type":"application/json"}, body: JSON.stringify({code: typed, phone: $("#phone").value})});
+    const d = await r.json();
+    if(!d.ok){ promoApplied = false; P = null; msg.classList.add("bad"); msg.textContent = d.date ? String(d.error).replace(d.date, dateLabel(d.date)) : (d.error || "الكود غير صحيح"); return; }
+    P = { code: d.code, discount: d.discount }; promoApplied = true; msg.classList.add("ok");
+    msg.textContent = "تم تطبيق الكود: خصم " + Math.round(d.discount*100) + "٪ من رسوم التوصيل" + (d.per_phone === 1 ? " (مرة وحدة لكل رقم جوال)" : "");
+  }catch(e){ promoApplied = false; P = null; msg.classList.add("bad"); msg.textContent = "ما قدرنا نتحقق من الكود. تأكد من النت وجرّب مرة ثانية"; }
 }
-$("#applyCode").addEventListener("click", ()=>{ checkCode(); render(); });
-$("#code").addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); checkCode(); render(); } });
-$("#code").addEventListener("input", ()=>{ if(promoApplied){ promoApplied=false; $("#codeMsg").classList.add("hidden"); render(); } });
+$("#applyCode").addEventListener("click", async ()=>{ await checkCode(); render(); });
+$("#code").addEventListener("keydown", async e=>{ if(e.key==="Enter"){ e.preventDefault(); await checkCode(); render(); } });
+$("#code").addEventListener("input", ()=>{ if(promoApplied){ promoApplied=false; P=null; $("#codeMsg").classList.add("hidden"); render(); } });
+// الكود مرة لكل رقم: لو تغيّر الجوال نتحقق من جديد
+$("#phone").addEventListener("change", async ()=>{ if(promoApplied){ await checkCode(); render(); } });
+$("#autoOk").addEventListener("input", ()=>render());
+function autoOk(){
+  const v = Number(toEn($("#autoOk").value.trim()).replace(/[٫,]/g, "."));
+  return $("#autoOk").value.trim() && Number.isFinite(v) && v > 0 ? Math.round(v*100)/100 : null;
+}
 
 function collect(){
   const shops = [...shopsEl.querySelectorAll(".shop")].map(b=>{
@@ -648,9 +654,10 @@ function message(withTrack = true){
   L.push(`الموقع: ${$("#map").value.trim() || "—"}`);
   const pl = $("#place").value.trim(); if(pl) L.push(`${DEST[dest()].place}: ${pl}`);
   L.push(`الدفع: ${$("#pay").value}`);
+  if(autoOk()) L.push(`موافق مسبقاً على الفاتورة لين: ${fmt(autoOk())} ريال`);
   const note = $("#note").value.trim(); if(note) L.push(`ملاحظة: ${note}`);
   L.push("");
-  if(promoApplied) L.push(`رسوم التوصيل: ${fmt(fee())} ريال (بدل ${baseFee()}، كود الخصم: ${P.code.toUpperCase()})`);
+  if(promoApplied) L.push(`رسوم التوصيل: ${fmt(fee())} ريال (بدل ${baseFee()}، كود الخصم: ${P.code})`);
   else L.push(`رسوم التوصيل: ${baseFee()} ريال`);
   L.push("قيمة الطلب: حسب فاتورة المحل بدون زيادة");
   if(withTrack){ L.push(""); L.push("تابع طلبك ووافق على الفاتورة من هنا:"); L.push(trackUrl()); }
@@ -695,9 +702,9 @@ function render(){
   $("#destChaletFee").textContent = toAr(CONFIG.chaletFee) + " ريال";
   $("#destParkFee").textContent = toAr(CONFIG.chaletFee) + " ريال";
   const pb = $("#promoBanner");
-  if(promoOn && promoToday){
+  if(promoToday){
     pb.classList.remove("hidden");
-    pb.innerHTML = "🎉 عرض اليوم: خصم <b>" + Math.round(P.discount*100) + "٪</b> من رسوم التوصيل بكود خاص، مرة وحدة لكل رقم. اكتب الكود تحت قبل الإرسال.";
+    pb.innerHTML = "🎉 عرض اليوم: خصم <b>" + Math.round(promoToday.discount*100) + "٪</b> من رسوم التوصيل بكود خاص. اكتب الكود تحت قبل الإرسال.";
   } else pb.classList.add("hidden");
   const feeTxt = promoApplied ? `<span class="old">${toAr(baseFee())}</span>${toAr(fmt(fee()))} ريال` : toAr(baseFee()) + " ريال";
   $("#feeSum").innerHTML = feeTxt; $("#barFee").innerHTML = feeTxt;
@@ -770,7 +777,7 @@ function saveOrder(){
       order_no: orderNo, dest: dest(),
       name: $("#name").value.trim(), phone: $("#phone").value.trim(), map: $("#map").value.trim(),
       place: $("#place").value.trim(), pay: $("#pay").value, note: $("#note").value.trim(),
-      fee: fee(), promo: promoApplied ? P.code.toUpperCase() : "",
+      fee: fee(), fee_full: baseFee(), promo: promoApplied && P ? P.code : "", auto_approve: autoOk(),
       pack, parts: shops.map(s => ({ shop_id: s.shopId, cat: s.cat, name: s.name, items: s.items }))
     });
     fetch("/api/orders", {method:"POST", keepalive:true, headers:{"content-type":"application/json"}, body}).catch(()=>{});
@@ -893,7 +900,6 @@ $("#share").addEventListener("click", async ()=>{
   window.open("https://wa.me/?text=" + encodeURIComponent(text + "\n" + url), "_blank", "noopener");
 });
 
-if(promoToday) $("#codeBox").open = true;
 datalist(); shopBlock(); buildPack(); loadSaved(); loadLast(); render();
 loadPartners(); setInterval(loadPartners, 60000);
 if("serviceWorker" in navigator){ window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{})); }

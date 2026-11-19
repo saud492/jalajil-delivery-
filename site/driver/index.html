@@ -194,6 +194,7 @@ input.ltr{direction:ltr;text-align:right}
   <main class="wrap" id="availTab">
     <button class="banner" id="soundBanner">🔔 <span>اضغط هنا عشان يشتغل صوت التنبيه للطلبات الجديدة</span></button>
     <div class="banner err hidden" id="netBanner">⚠️ <span>ما فيه اتصال بالإنترنت. نحاول مرة ثانية…</span></div>
+    <div id="pushBox"></div>
     <div id="availList" style="display:flex;flex-direction:column;gap:12px"></div>
   </main>
 
@@ -245,6 +246,7 @@ input.ltr{direction:ltr;text-align:right}
 
 <div class="toast hidden" id="toast" aria-live="polite"></div>
 
+<script src="/push.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 const AR = "٠١٢٣٤٥٦٧٨٩";
@@ -303,6 +305,7 @@ function showLogin(){
 function showApp(){
   $("#loginView").classList.add("hidden"); $("#appView").classList.remove("hidden");
   $("#drvName").textContent = me.name; firstLoad = true; startPolling();
+  if(window.JLPush) JLPush.mount($("#pushBox"), { sw: "/driver/sw.js", scope: "/driver/", api: "/api/driver/push", who: "الطلبات الجديدة وموافقة الزبون" });
 }
 $("#loginForm").addEventListener("submit", async e=>{
   e.preventDefault(); unlockSound();
@@ -450,12 +453,16 @@ function mineCard(o){
 function gate(o){
   const msg = {
     pricing: o.parts.some(p=>!p.partner && p.bill == null && !["cancelled","rejected"].includes(p.status))
-      ? "📷 صوّر فاتورة كل محل واكتب مبلغها. الزبون لازم يوافق قبل لا تدفع."
+      ? (o.auto_approve
+        ? `📷 صوّر فاتورة كل محل واكتب مبلغها. لو المجموع ${money(o.auto_approve)} ريال أو أقل تشتري على طول (الزبون موافق مسبقاً)، وإلا ننتظر موافقته.`
+        : "📷 صوّر فاتورة كل محل واكتب مبلغها. الزبون لازم يوافق قبل لا تدفع.")
       : "⏳ ننتظر المحل يكتب مبلغ الفاتورة.",
     approve: `⏳ ننتظر موافقة الزبون على ${money(o.total)} ريال. لا تدفع للمحل الحين.`,
     prepay: `⏳ الفاتورة كبيرة، والزبون لازم يحوّل ${money(o.total)} ريال قبل. لا تدفع للحين.`,
     prepay_check: "⏳ الزبون رفع إيصال التحويل، ننتظر صاحب الخدمة يأكّده. لا تدفع للحين.",
-    buying: `✅ الزبون وافق على ${money(o.total)} ريال${o.prepaid ? " وحوّلها" : ""}. ادفع للمحل واستلم.`,
+    buying: o.auto_approved
+      ? `✅ الفاتورة ${money(o.total)} ريال، تحت الحد اللي وافق عليه الزبون مسبقاً (${money(o.auto_approve)}). ادفع للمحل واستلم.`
+      : `✅ الزبون وافق على ${money(o.total)} ريال${o.prepaid ? " وحوّلها" : ""}. ادفع للمحل واستلم.`,
   }[o.stage];
   return msg ? el("div", "gate " + (o.stage === "buying" ? "ok" : "wait"), msg) : null;
 }

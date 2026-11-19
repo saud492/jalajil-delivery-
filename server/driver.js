@@ -3,6 +3,12 @@
 import { HttpError, json, readJson, str, riyadhRanges, cleanCode } from "./util.js";
 import { checkLock, recordFail, clearFails, createSession, sessionCookie, requireSession, endSession, verifyPin } from "./auth.js";
 import { getSettings, summarize, loadOrder, parseImage, saveImage, sendImage } from "./flow.js";
+import { snapshot, changed, subscribe } from "./alerts.js";
+
+export async function push(db, request) {
+  const s = await requireSession(db, request, "driver");
+  return subscribe(db, request, "driver", s.driver.id);
+}
 
 const ip = r => r.headers.get("cf-connecting-ip") || "local";
 const H = 3600_000;
@@ -79,7 +85,7 @@ export async function orders(db, request) {
         id: o.id, order_no: o.order_no, created_at: o.created_at, dest: o.dest, place: o.place, fee: o.fee,
         customer_name: o.customer_name, customer_phone: o.customer_phone, map_url: o.map_url, pay: o.pay, note: o.note,
         pack: safeParse(o.pack), driver_status: o.driver_status, assigned_at: o.assigned_at, picked_at: o.picked_at, delivered_at: o.delivered_at,
-        prepay_status: o.prepay_status, leave_at_door: !!o.leave_at_door,
+        prepay_status: o.prepay_status, leave_at_door: !!o.leave_at_door, auto_approve: o.auto_approve,
         parts: parts.map(p => ({ ...brief(p), id: p.id, items: p.items, bill: p.bill, receipt: p.bill_receipt })),
         ...summarize(o, parts, settings),
       };
@@ -93,9 +99,10 @@ async function myOrder(db, s, orderId) {
   return x;
 }
 
-export async function act(db, request, orderId) {
+export async function act(db, request, orderId, e = {}) {
   const s = await requireSession(db, request, "driver");
   const b = await readJson(request);
+  const before = await snapshot(db, orderId);
   const now = Date.now(), me = s.driver.id;
   let stmt;
   if (b.action === "take") {
@@ -133,7 +140,8 @@ export async function act(db, request, orderId) {
     }
     // نصيب المندوب ينحفظ لحظة التسليم، عشان لو تغيّرت النسبة بعدين ما تتغيّر الحسابات القديمة
     const { driver_share } = await getSettings(db);
-    const share = Math.round((Number(o.fee) || 0) * driver_share) / 100;
+    // من الرسوم الكاملة: كود الخصم يتحمّله صاحب الخدمة، مو المندوب (الفرق يطلع سالب في المحفظة = صاحب الخدمة عليه)
+    const share = Math.round((Number(o.fee_full ?? o.fee) || 0) * driver_share) / 100;
     stmt = db.prepare("UPDATE orders SET driver_status='delivered', delivered_at=?, delivery_photo=?, driver_share=? WHERE id=? AND driver_id=? AND driver_status='picked'")
       .bind(now, photo, share, orderId, me);
   } else throw new HttpError(400, "إجراء غير معروف");
@@ -142,17 +150,19 @@ export async function act(db, request, orderId) {
     if (b.action === "take") throw new HttpError(409, "مندوب ثاني أخذ الطلب قبلك");
     throw new HttpError(409, "حالة الطلب تغيّرت، حدّث الصفحة");
   }
+  await changed(e, db, before);
   return json({ ok: true });
 }
 
 // المندوب يكتب مبلغ فاتورة محل مو شريك (أو التجهيزات) ويرفع صورتها
-export async function setBill(db, request, partId) {
+export async function setBill(db, request, partId, e = {}) {
   const s = await requireSession(db, request, "driver");
   const b = await readJson(request, 1_000_000);
   const p = await db.prepare("SELECT * FROM parts WHERE id = ?").bind(partId).first();
   if (!p) throw new HttpError(404, "الجزء مو موجود");
   const { o } = await myOrder(db, s, p.order_id);
   if (o.driver_status !== "assigned") throw new HttpError(409, "ما تقدر تغيّر الفاتورة بعد ما اشتريت");
+  const before = await snapshot(db, o.id);
   if (p.shop_id) throw new HttpError(403, "فاتورة المحل الشريك يكتبها المحل نفسه");
   if (["cancelled", "rejected"].includes(p.status)) throw new HttpError(409, "هالجزء ملغي");
   const amount = Number(toEn(b.amount));
@@ -160,6 +170,7 @@ export async function setBill(db, request, partId) {
   const img = parseImage(b.image);
   const rid = await saveImage(db, o.id, "bill", img);
   await db.prepare("UPDATE parts SET bill=?, bill_receipt=?, updated_at=? WHERE id=?").bind(Math.round(amount * 100) / 100, rid, Date.now(), partId).run();
+  await changed(e, db, before);
   return json({ ok: true });
 }
 

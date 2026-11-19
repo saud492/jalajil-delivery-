@@ -1,0 +1,9 @@
+name = "jalajil-cron"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+
+[triggers]
+crons = ["* * * * *"]
+
+[vars]
+SITE = "https://jalajil-delivery.pages.dev"

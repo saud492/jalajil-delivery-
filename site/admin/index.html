@@ -7,6 +7,9 @@
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#0a4f4c">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/admin/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@500;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
@@ -126,6 +129,7 @@ tfoot td{font-weight:700;border-bottom:none}
   </div></header>
 
   <main class="wrap" id="ordersTab">
+    <div id="pushBox"></div>
     <div class="filters">
       <label class="f">الفترة<select id="fDays"><option value="1">اليوم وأمس</option><option value="7" selected>آخر ٧ أيام</option><option value="30">آخر ٣٠ يوم</option><option value="90">آخر ٩٠ يوم</option></select></label>
       <label class="f">الحالة<select id="fStatus"><option value="">الكل</option><option value="new">جديد</option><option value="accepted">قيد التجهيز</option><option value="ready">جاهز</option><option value="rejected">مرفوض</option><option value="cancelled">ملغي</option></select></label>
@@ -152,14 +156,42 @@ tfoot td{font-weight:700;border-bottom:none}
 
   <main class="wrap hidden" id="moneyTab">
     <form class="card" id="setForm" novalidate>
-      <h2 style="font-size:17px">💳 الدفع المسبق والشكاوى</h2>
-      <label class="f">حد الدفع المسبق (ريال): لو الفاتورة فوقه الزبون يحوّل قبل ما المندوب يشتري. صفر = بدون<input id="setCap" class="ltr" inputmode="decimal" placeholder="150"></label>
+      <h2 style="font-size:17px">💳 الرسوم والدفع المسبق والشكاوى</h2>
+      <div class="row" style="align-items:flex-end">
+        <label class="f" style="flex:1 1 140px">رسوم التوصيل للبيوت (ريال)<input id="setFeeHome" class="ltr" inputmode="decimal" placeholder="8"></label>
+        <label class="f" style="flex:1 1 140px">للشاليهات والمنتزه (ريال)<input id="setFeeOut" class="ltr" inputmode="decimal" placeholder="5"></label>
+      </div>
+      <label class="f">حد الدفع المسبق (ريال): لو الفاتورة فوقه الزبون يحوّل قبل ما المندوب يشتري. صفر = بدون<input id="setCap" class="ltr" inputmode="decimal" placeholder="100"></label>
       <label class="f">بيانات التحويل اللي تطلع للزبون (اسم البنك، الآيبان، أو رقم STC Pay)<textarea id="setPay" rows="3" style="font:inherit;font-size:16px;color:var(--ink);background:var(--surface2);border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;width:100%;resize:vertical" placeholder="مثال: الراجحي · SA00 0000 0000 0000 0000 0000 · باسم ..."></textarea></label>
       <label class="f">رقم واتساب الشكاوى (يطلع للزبون في صفحة المتابعة)<input id="setSupport" class="ltr" inputmode="tel" placeholder="9665XXXXXXXX"></label>
       <label class="f">نصيب المندوب من رسوم التوصيل (٪). ١٠٠ = الرسوم كلها له، والباقي لك ويطلع عليه في محفظته<input id="setShare" class="ltr" inputmode="decimal" placeholder="100"></label>
       <p class="msg" id="setMsg"></p>
       <button class="btn" id="setSave">حفظ</button>
     </form>
+    <div class="card" id="promoCard">
+      <h2 style="font-size:17px">🏷️ أكواد الخصم</h2>
+      <p class="muted" style="margin:0">الخصم على رسوم التوصيل بس. السيرفر يتحقق من الكود والتاريخ وعدد مرات كل رقم، والفرق عليك مو على المندوب.</p>
+      <div id="promoList" style="display:flex;flex-direction:column;gap:8px"></div>
+      <details id="promoAdd">
+        <summary style="cursor:pointer;font-weight:700;color:var(--accent)">+ كود جديد</summary>
+        <form id="promoForm" novalidate style="display:flex;flex-direction:column;gap:10px;margin-top:10px">
+          <div class="row" style="align-items:flex-end">
+            <label class="f" style="flex:2 1 160px">الكود<input id="pCode" class="ltr" autocapitalize="characters" autocomplete="off" placeholder="EID50"></label>
+            <label class="f" style="flex:1 1 100px">الخصم (٪)<input id="pPct" class="ltr" inputmode="numeric" placeholder="50"></label>
+          </div>
+          <div class="row" style="align-items:flex-end">
+            <label class="f" style="flex:1 1 140px">من تاريخ (اختياري)<input id="pFrom" type="date" class="ltr"></label>
+            <label class="f" style="flex:1 1 140px">إلى تاريخ (اختياري)<input id="pTo" type="date" class="ltr"></label>
+          </div>
+          <div class="row" style="align-items:flex-end">
+            <label class="f" style="flex:1 1 140px">كم مرة لكل رقم جوال (صفر = بدون حد)<input id="pPer" class="ltr" inputmode="numeric" value="1"></label>
+            <label class="f" style="flex:1 1 140px">الحد الكلي (اختياري)<input id="pMax" class="ltr" inputmode="numeric" placeholder="مثال: 100"></label>
+          </div>
+          <p class="msg" id="pMsg"></p>
+          <button class="btn" id="pSave">إضافة الكود</button>
+        </form>
+      </details>
+    </div>
     <div class="card">
       <h2 style="font-size:17px">العمولات المستحقة</h2>
       <p class="muted" style="margin:0">الطلب ينحسب لما المحل يضغط "جاهز للاستلام". الطلبات داخل فترة التجربة عمولتها صفر. الأسبوع يبدأ السبت.</p>
@@ -231,6 +263,7 @@ tfoot td{font-weight:700;border-bottom:none}
 </div>
 <div class="toast hidden" id="toast"></div>
 
+<script src="/push.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 const AR = "٠١٢٣٤٥٦٧٨٩";
@@ -256,6 +289,7 @@ function dateAr(iso){ try{ return new Intl.DateTimeFormat("ar-SA-u-ca-gregory-nu
 function showLogin(){ clearInterval(timer); $("#appView").classList.add("hidden"); $("#loginView").classList.remove("hidden"); }
 async function showApp(){
   $("#loginView").classList.add("hidden"); $("#appView").classList.remove("hidden");
+  if(window.JLPush) JLPush.mount($("#pushBox"), { sw: "/admin/sw.js", scope: "/admin/", api: "/api/admin/push", who: "الطلبات الجديدة والطلبات الواقفة والبلاغات" });
   await Promise.all([loadShops(), loadDrivers()]); loadOrders(); loadReports();
   clearInterval(timer); timer = setInterval(()=>{ if(document.visibilityState==="visible"){ if(tab==="orders") loadOrders(); else { loadShops(); loadDrivers(); } loadReports(); } }, 30000);
 }
@@ -423,15 +457,49 @@ $("#stForm").addEventListener("submit", async e=>{
 
 /* الإعدادات */
 async function loadSettings(){
-  try{ const d = await api("settings"); const s = d.settings; $("#setCap").value = s.prepay_cap; $("#setPay").value = s.pay_info || ""; $("#setSupport").value = s.support || ""; $("#setShare").value = s.driver_share; }
+  try{ const d = await api("settings"); const s = d.settings; $("#setFeeHome").value = s.delivery_fee; $("#setFeeOut").value = s.out_fee; $("#setCap").value = s.prepay_cap; $("#setPay").value = s.pay_info || ""; $("#setSupport").value = s.support || ""; $("#setShare").value = s.driver_share; }
   catch(err){ toast(err.message); }
+  loadPromos();
 }
 $("#setForm").addEventListener("submit", async e=>{
   e.preventDefault(); $("#setSave").disabled = true; $("#setMsg").textContent = "";
-  try{ await api("settings", "PUT", { prepay_cap: $("#setCap").value.trim() || "0", pay_info: $("#setPay").value, support: $("#setSupport").value.trim(), driver_share: $("#setShare").value.trim() || "100" }); toast("انحفظت الإعدادات ✓"); }
+  try{ await api("settings", "PUT", { delivery_fee: $("#setFeeHome").value.trim(), out_fee: $("#setFeeOut").value.trim(), prepay_cap: $("#setCap").value.trim() || "0", pay_info: $("#setPay").value, support: $("#setSupport").value.trim(), driver_share: $("#setShare").value.trim() || "100" }); toast("انحفظت الإعدادات ✓"); }
   catch(err){ $("#setMsg").textContent = err.message; }
   $("#setSave").disabled = false;
 });
+/* أكواد الخصم */
+async function loadPromos(){
+  const box = $("#promoList");
+  try{
+    const { promos } = await api("promos");
+    box.innerHTML = "";
+    if(!promos.length){ box.append(el("p", "muted", "ما فيه أكواد.")); return; }
+    const today = new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Riyadh"}).format(new Date());
+    promos.forEach(p=>{
+      const r = el("div", "row"); r.style.cssText = "border:1px solid var(--line);border-radius:12px;padding:8px 12px;background:var(--surface2)";
+      const name = el("b", "ltr", p.code); name.style.direction = "ltr"; r.append(name);
+      const ended = p.date_to && p.date_to < today, soon = p.date_from && p.date_from > today;
+      r.append(el("span", "pill " + (!p.active || ended ? "off" : soon ? "none" : "open"), !p.active ? "موقوف" : ended ? "انتهى" : soon ? "ما بدأ" : "شغال"));
+      const when = p.date_from && p.date_from === p.date_to ? "يوم " + dateAr(p.date_from)
+        : [p.date_from ? "من " + dateAr(p.date_from) : "", p.date_to ? "إلى " + dateAr(p.date_to) : ""].filter(Boolean).join(" ") || "بدون تاريخ";
+      const info = el("span", "muted grow", `خصم ${toAr(Math.round(p.discount*100))}٪ · ${when} · ${p.per_phone ? toAr(p.per_phone) + " لكل رقم" : "بدون حد لكل رقم"}${p.max_uses ? " · الحد " + toAr(p.max_uses) : ""} · استُخدم ${toAr(p.uses)}`);
+      r.append(info);
+      const t = el("button", "btn sm line", p.active ? "إيقاف" : "تشغيل");
+      t.onclick = async ()=>{ try{ await api("promos/" + p.id, "PUT", { active: !p.active }); loadPromos(); }catch(err){ toast(err.message); } };
+      r.append(t);
+      box.append(r);
+    });
+  }catch(err){ box.textContent = err.message; }
+}
+$("#promoForm").addEventListener("submit", async e=>{
+  e.preventDefault(); $("#pSave").disabled = true; $("#pMsg").textContent = "";
+  try{
+    await api("promos", "POST", { code: $("#pCode").value.trim(), discount: $("#pPct").value.trim(), date_from: $("#pFrom").value, date_to: $("#pTo").value, per_phone: $("#pPer").value.trim() || "0", max_uses: $("#pMax").value.trim() });
+    toast("انضاف الكود ✓"); $("#promoForm").reset(); $("#pPer").value = "1"; $("#promoAdd").open = false; loadPromos();
+  }catch(err){ $("#pMsg").textContent = err.message; }
+  $("#pSave").disabled = false;
+});
+
 function driverRow(o){
   const w = el("div", "drv");
   w.append(el("b", "", "🛵 المندوب:"));

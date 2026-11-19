@@ -164,6 +164,7 @@ input.ltr{direction:ltr;text-align:right}
     <button class="banner" id="soundBanner">🔔 <span>اضغط هنا عشان يشتغل صوت التنبيه للطلبات الجديدة</span></button>
     <div class="banner err hidden" id="netBanner">⚠️ <span>ما فيه اتصال بالإنترنت. نحاول مرة ثانية…</span></div>
     <div class="banner err hidden" id="closedBanner">🔒 <span>محلك مسكّر الحين، والزباين ما يقدرون يختارونه. افتحه من الزر فوق.</span></div>
+    <div id="pushBox"></div>
     <div id="list"></div>
   </main>
 
@@ -195,6 +196,7 @@ input.ltr{direction:ltr;text-align:right}
 
 <div class="toast hidden" id="toast" aria-live="polite"></div>
 
+<script src="/push.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 const AR = "٠١٢٣٤٥٦٧٨٩";
@@ -256,6 +258,7 @@ function showLogin(){
 function showApp(){
   $("#loginView").classList.add("hidden"); $("#appView").classList.remove("hidden");
   renderShop(); startPolling();
+  if(window.JLPush) JLPush.mount($("#pushBox"), { sw: "/partner/sw.js", scope: "/partner/", api: "/api/partner/push", who: "الطلبات الجديدة" });
 }
 function renderShop(){
   if(!shop) return;

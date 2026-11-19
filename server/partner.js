@@ -1,5 +1,6 @@
 // تطبيق الشريك: كل استعلام مربوط برقم المحل من الجلسة، فما يقدر محل يشوف طلبات غيره
 import { HttpError, json, readJson, str, commissionFor, riyadhRanges, cleanCode } from "./util.js";
+import { snapshot, changed, subscribe } from "./alerts.js";
 import { checkLock, recordFail, clearFails, createSession, sessionCookie, requireSession, endSession, verifyPin } from "./auth.js";
 
 const ip = r => r.headers.get("cf-connecting-ip") || "local";
@@ -50,8 +51,15 @@ export async function orders(db, request) {
 
 const FROM = { accept: ["new"], ready: ["new", "accepted"], reject: ["new", "accepted"] };
 
-export async function act(db, request, partId) {
+export async function push(db, request) {
   const s = await requireSession(db, request, "shop");
+  return subscribe(db, request, "shop", s.shop.id);
+}
+
+export async function act(db, request, partId, e = {}) {
+  const s = await requireSession(db, request, "shop");
+  const own = await db.prepare("SELECT order_id FROM parts WHERE id = ? AND shop_id = ?").bind(partId, s.shop.id).first();
+  const before = own && await snapshot(db, own.order_id);
   const b = await readJson(request);
   const action = b.action;
   if (!FROM[action]) throw new HttpError(400, "إجراء غير معروف");
@@ -83,6 +91,7 @@ export async function act(db, request, partId) {
     if (action === "ready" && p.bill === null && FROM.ready.includes(p.status)) throw new HttpError(400, "اكتب مبلغ الفاتورة");
     throw new HttpError(409, "حالة الطلب تغيّرت، حدّث الصفحة");
   }
+  await changed(e, db, before);
   return json({ ok: true });
 }
 

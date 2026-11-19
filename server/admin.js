@@ -3,6 +3,8 @@ import { HttpError, json, readJson, str, riyadhRanges, STATUSES, sha256, cleanCo
 import { checkLock, recordFail, clearFails, createSession, sessionCookie, requireSession, endSession, hashPin, safeEqual } from "./auth.js";
 import { getSettings, saveSettings, summarize, loadOrder, sendImage } from "./flow.js";
 import { driverRating, walletFor } from "./driver.js";
+import { snapshot, changed, subscribe } from "./alerts.js";
+import { listPromos, savePromo } from "./fees.js";
 
 const ip = r => r.headers.get("cf-connecting-ip") || "local";
 const CATS = ["بقالة", "مطعم", "كافيه", "صيدلية", "أخرى"];
@@ -156,13 +158,16 @@ export async function orders(db, request) {
 
 function safeParse(s) { try { return JSON.parse(s || "[]"); } catch { return []; } }
 
-export async function actPart(db, request, partId) {
+export async function actPart(db, request, partId, e = {}) {
   await requireSession(db, request, "admin");
   const b = await readJson(request);
   if (b.action !== "cancel") throw new HttpError(400, "إجراء غير معروف");
+  const part = await db.prepare("SELECT order_id FROM parts WHERE id = ?").bind(partId).first();
+  const before = part && await snapshot(db, part.order_id);
   const r = await db.prepare("UPDATE parts SET status='cancelled', commission=0, updated_at=? WHERE id=? AND status != 'cancelled'")
     .bind(Date.now(), partId).run();
   if (!r.meta.changes) throw new HttpError(404, "الطلب مو موجود أو ملغي");
+  await changed(e, db, before);
   return json({ ok: true });
 }
 
@@ -245,8 +250,9 @@ export async function updateDriver(db, request, id) {
 }
 
 // تعيين مندوب لطلب، أو شيله (driver_id = null)
-export async function assignDriver(db, request, orderId) {
+export async function assignDriver(db, request, orderId, e = {}) {
   await requireSession(db, request, "admin");
+  const before = await snapshot(db, orderId);
   const b = await readJson(request);
   const o = await db.prepare("SELECT id, driver_status FROM orders WHERE id = ?").bind(orderId).first();
   if (!o) throw new HttpError(404, "الطلب مو موجود");
@@ -259,6 +265,7 @@ export async function assignDriver(db, request, orderId) {
   const d = Number.isInteger(id) && await db.prepare("SELECT id FROM drivers WHERE id = ? AND active = 1").bind(id).first();
   if (!d) throw new HttpError(400, "اختر مندوب فعّال");
   await db.prepare("UPDATE orders SET driver_id=?, driver_status='assigned', assigned_at=?, picked_at=NULL WHERE id=?").bind(id, Date.now(), orderId).run();
+  await changed(e, db, before);
   return json({ ok: true });
 }
 
@@ -275,9 +282,10 @@ export async function updateSettings(db, request) {
 }
 
 // صاحب الخدمة يأكّد إن تحويل الزبون وصل (أو يرفضه عشان الزبون يرفع إيصال صحيح)
-export async function prepay(db, request, orderId) {
+export async function prepay(db, request, orderId, e = {}) {
   await requireSession(db, request, "admin");
   const b = await readJson(request);
+  const before = await snapshot(db, orderId);
   const x = await loadOrder(db, "id", orderId);
   if (!x) throw new HttpError(404, "الطلب مو موجود");
   const sum = summarize(x.o, x.parts, await getSettings(db));
@@ -287,6 +295,30 @@ export async function prepay(db, request, orderId) {
   } else if (b.action === "reject") {
     await db.prepare("UPDATE orders SET prepay_status=NULL, prepay_amount=NULL WHERE id=?").bind(orderId).run();
   } else throw new HttpError(400, "إجراء غير معروف");
+  await changed(e, db, before);
+  return json({ ok: true });
+}
+
+/* ===== الإشعارات وأكواد الخصم ===== */
+export async function push(db, request) {
+  await requireSession(db, request, "admin");
+  return subscribe(db, request, "admin", null);
+}
+
+export async function promos(db, request) {
+  await requireSession(db, request, "admin");
+  return json({ promos: await listPromos(db) });
+}
+
+export async function createPromo(db, request) {
+  await requireSession(db, request, "admin");
+  const id = await savePromo(db, await readJson(request));
+  return json({ ok: true, id });
+}
+
+export async function updatePromo(db, request, id) {
+  await requireSession(db, request, "admin");
+  await savePromo(db, await readJson(request), id);
   return json({ ok: true });
 }
 

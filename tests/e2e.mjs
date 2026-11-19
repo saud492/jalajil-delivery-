@@ -1,11 +1,19 @@
 // تجربة كاملة على السيرفر المحلي:
 //   npx wrangler@4 pages dev site --d1 DB --binding ADMIN_PASSWORD=test-pass-123 --port 8788
 //   node tests/e2e.mjs
+// أو بدون wrangler:  LOCAL=1 node tests/e2e.mjs
 import assert from "node:assert/strict";
 
 const BASE = process.env.BASE || "http://localhost:8788";
 const ADMIN_PW = process.env.ADMIN_PW || "test-pass-123";
 const run = Date.now().toString(36);
+
+// LOCAL=1 node tests/e2e.mjs  ← نفس التجربة بدون wrangler (قاعدة مقلّدة في الذاكرة)
+if (process.env.LOCAL) {
+  const { localServer } = await import("./local.mjs");
+  const f = localServer({ ADMIN_PASSWORD: ADMIN_PW }), real = globalThis.fetch;
+  globalThis.fetch = (u, i) => String(u).startsWith(BASE) ? f(u, i) : real(u, i);
+}
 
 function client() {
   let cookie = "";
@@ -34,6 +42,9 @@ for (const p of ["/", "/partner/", "/admin/", "/driver/", "/track/"]) {
 r = await admin("GET", "/api/admin/shops"); assert.equal(r.status, 401, "admin needs login");
 r = await admin("POST", "/api/admin/login", { password: "wrong" }); assert.equal(r.status, 401);
 r = await admin("POST", "/api/admin/login", { password: ADMIN_PW }); assert.equal(r.status, 200, JSON.stringify(r.data));
+// الرسوم من الإعدادات (السيرفر ما يصدّق رقم الصفحة)
+r = await admin("PUT", "/api/admin/settings", { delivery_fee: "٣", out_fee: 5 }); assert.equal(r.status, 200); assert.equal(r.data.settings.delivery_fee, 3);
+r = await admin("PUT", "/api/admin/settings", { delivery_fee: "" }); assert.equal(r.status, 400, "fee can't be blank");
 const codeA = "a" + run, codeB = "b" + run;
 r = await admin("POST", "/api/admin/shops", { name: "مطعم أ " + run, category: "مطعم", code: codeA, pin: "1111", commission: 2, trial_end: "2000-01-01" });
 assert.equal(r.status, 200, JSON.stringify(r.data)); const idA = r.data.id;
@@ -268,6 +279,7 @@ assert.equal(dd.rating.avg, 4); assert.equal(dd.reports.count, 1); assert.equal(
 assert.equal(dd.wallet.balance, 0);
 r = await admin("PUT", "/api/admin/settings", { driver_share: 50 }); assert.equal(r.status, 200);
 // طلب عند الباب
+r = await admin("PUT", "/api/admin/settings", { delivery_fee: 4 }); assert.equal(r.status, 200);
 const gtrack = "dor" + run + "dddddddddddd";
 r = await anon("POST", "/api/orders", { key: "dor" + run + "x7", track: gtrack, code: "2468", order_no: "JL-G-" + run, dest: "home", fee: 4, parts: [{ shop_id: null, cat: "بقالة", name: "بقالة", items: "ماء" }] });
 const gOrder = r.data.id;
@@ -290,6 +302,27 @@ r = await admin("POST", `/api/admin/drivers/${drv2}/settle`, { direction: "in", 
 r = await admin("POST", `/api/admin/drivers/${drv2}/settle`, { direction: "sideways", amount: 2 }); assert.equal(r.status, 400);
 r = await d2("GET", "/api/driver/wallet"); assert.equal(r.data.history.length, 1); assert.equal(r.data.history[0].amount, 2);
 r = await admin("PUT", "/api/admin/settings", { driver_share: 100 }); assert.equal(r.status, 200);
+// كود خصم: الزبون دفع ٤ بدل ٨، والمندوب ياخذ نصيبه من الـ ٨ كاملة → صاحب الخدمة عليه ٤ للمندوب
+r = await admin("PUT", "/api/admin/settings", { delivery_fee: 8 }); assert.equal(r.status, 200);
+r = await admin("POST", "/api/admin/promos", { code: "half", discount: 50, per_phone: 1 }); assert.equal(r.status, 200, JSON.stringify(r.data));
+r = await admin("POST", "/api/admin/promos", { code: "HALF", discount: 10 }); assert.equal(r.status, 409, "duplicate promo");
+r = await anon("POST", "/api/promo", { code: "half", phone: "0599999999" }); assert.equal(r.data.ok, true); assert.equal(r.data.discount, 0.5);
+r = await anon("POST", "/api/promo", { code: "nope", phone: "0599999999" }); assert.equal(r.data.ok, false);
+const qtrack = "pro" + run + "qqqqqqqqqqqq";
+r = await anon("POST", "/api/orders", { key: "pro" + run + "x6", track: qtrack, code: "1357", order_no: "JL-Q-" + run, dest: "home", fee: 0, fee_full: 0, promo: "HALF", phone: "+966 59 999 9999", parts: [{ shop_id: null, cat: "بقالة", name: "بقالة", items: "خبز" }] });
+const qOrder = r.data.id; assert.equal(r.data.fee, 4, "server applies the promo, ignores the page's fee"); assert.equal(r.data.fee_full, 8);
+// نفس الرقم بصيغة ثانية: الكود مستخدم
+r = await anon("POST", "/api/promo", { code: "half", phone: "٠٥٩٩٩٩٩٩٩٩" }); assert.equal(r.data.ok, false, "once per phone");
+r = await anon("POST", "/api/orders", { key: "pro" + run + "x5", order_no: "JL-Q2-" + run, dest: "home", promo: "HALF", phone: "0599999999", parts: [{ shop_id: null, cat: "بقالة", name: "بقالة", items: "خبز" }] });
+assert.equal(r.data.fee, 8, "second use of the promo pays full"); assert.equal(r.data.promo, "");
+r = await d2("POST", `/api/driver/orders/${qOrder}`, { action: "take" }); assert.equal(r.status, 200);
+r = await d2("GET", "/api/driver/orders"); const qPart = r.data.mine.find(o => o.id === qOrder).parts[0].id;
+r = await d2("POST", `/api/driver/parts/${qPart}/bill`, { amount: 10, image: IMG }); assert.equal(r.status, 200);
+r = await anon("POST", "/api/track/" + qtrack, { action: "approve", total: 10 }); assert.equal(r.status, 200);
+r = await d2("POST", `/api/driver/orders/${qOrder}`, { action: "picked" }); assert.equal(r.status, 200);
+r = await d2("POST", `/api/driver/orders/${qOrder}`, { action: "delivered", code: "1357" }); assert.equal(r.status, 200);
+r = await d2("GET", "/api/driver/wallet"); assert.equal(r.data.wallet.balance, -4, "promo discount is on the owner, not the driver");
+r = await admin("POST", `/api/admin/drivers/${drv2}/settle`, { direction: "out", amount: 4 }); assert.equal(r.status, 200); assert.equal(r.data.wallet.balance, 0);
 // موقع المحل
 r = await admin("PUT", `/api/admin/shops/${idA}`, { map_url: "not a link" }); assert.equal(r.status, 400);
 r = await admin("PUT", `/api/admin/shops/${idA}`, { map_url: "https://maps.google.com/?q=1,1" }); assert.equal(r.status, 200);

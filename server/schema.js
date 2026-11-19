@@ -107,6 +107,32 @@ const STATEMENTS = [
     note TEXT,
     created_at INTEGER NOT NULL
   )`,
+  // أجهزة مشتركة في الإشعارات: shop/driver = رقم المحل أو المندوب، track = رقم الطلب، admin = بدون
+  `CREATE TABLE IF NOT EXISTS push_subs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    endpoint TEXT NOT NULL UNIQUE,
+    p256dh TEXT NOT NULL,
+    auth TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    ref_id INTEGER,
+    fails INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS push_subs_kind ON push_subs(kind, ref_id)`,
+  // أكواد الخصم: تنضاف وتنوقف من اللوحة، والسيرفر يتحقق منها (مو صفحة الزبون)
+  `CREATE TABLE IF NOT EXISTS promos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT NOT NULL UNIQUE COLLATE NOCASE,
+    discount REAL NOT NULL,          -- 0.5 = نص رسوم التوصيل
+    date_from TEXT,                  -- YYYY-MM-DD بتوقيت الرياض، فاضي = من الحين
+    date_to TEXT,                    -- فاضي = بدون نهاية
+    per_phone INTEGER NOT NULL DEFAULT 1,
+    max_uses INTEGER,                -- فاضي = بدون حد
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at INTEGER NOT NULL
+  )`,
+  // الكود اللي كان مكتوب في صفحة الزبون ينتقل هنا أول مرة
+  `INSERT OR IGNORE INTO promos (code, discount, date_from, date_to, per_phone, created_at) VALUES ('JALAJIL', 0.5, '2026-11-20', '2026-11-20', 1, 0)`,
 ];
 
 // أعمدة انضافت بعد أول نسخة: تنضاف للجداول القديمة لو ناقصة
@@ -128,11 +154,17 @@ const COLUMNS = {
     ["leave_at_door", "INTEGER"],    // الزبون طلب يتركه عند الباب (يسلّم بصورة بدل الرمز)
     ["delivery_photo", "INTEGER"],
     ["driver_share", "REAL"],        // نصيب المندوب من رسوم التوصيل، ينحفظ لحظة التسليم
+    ["fee_full", "REAL"],
+    ["auto_approve", "REAL"],        // الزبون يوافق مسبقاً على أي فاتورة لين هالمبلغ
+    ["phone_key", "TEXT"],           // جوال الزبون بصيغة موحدة (لحساب استخدام أكواد الخصم)
+    ["nudge_driver_at", "INTEGER"],  // الحارس نبّه إن الطلب بدون مندوب
+    ["nudge_approve_at", "INTEGER"], // الحارس نبّه إن الزبون ما وافق            // رسوم التوصيل قبل كود الخصم: نصيب المندوب ينحسب منها، والخصم على صاحب الخدمة
   ],
   parts: [
     ["bill", "REAL"],                // مبلغ فاتورة المحل
     ["bill_receipt", "INTEGER"],     // صورة الفاتورة (للمحلات غير الشريكة)
-    ["shop_stars", "INTEGER"],       // تقييم الزبون للمحل الشريك
+    ["shop_stars", "INTEGER"],
+    ["nudged_at", "INTEGER"],        // الحارس نبّه إن المحل ما رد       // تقييم الزبون للمحل الشريك
   ],
   shops: [
     ["map_url", "TEXT"],             // موقع المحل
@@ -153,6 +185,7 @@ export async function ensureSchema(db) {
   await db.batch([
     db.prepare("CREATE INDEX IF NOT EXISTS orders_driver ON orders(driver_id, driver_status)"),
     db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS orders_track ON orders(track_token)"),
+    db.prepare("CREATE INDEX IF NOT EXISTS orders_promo ON orders(promo, phone_key)"),
   ]);
   ready = true;
 }

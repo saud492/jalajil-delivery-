@@ -9,3 +9,4 @@ site-current/
 /jalajil-promo-*.mp4
 .wrangler/
 node_modules/
+.dev.vars

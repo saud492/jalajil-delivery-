@@ -1,16 +1,20 @@
 // حماية الزبون والمندوب: مبلغ الفاتورة، موافقة الزبون، الدفع المسبق، ورمز الاستلام
 import { HttpError, json, readJson, str } from "./util.js";
+import { snapshot, changed, reportAlert, subscribe } from "./alerts.js";
 
 /* ===== الإعدادات ===== */
-const DEFAULTS = { prepay_cap: "150", pay_info: "", support: "966582312869", driver_share: "100" };
+const DEFAULTS = { prepay_cap: "100", pay_info: "", support: "966582312869", driver_share: "100", delivery_fee: "8", out_fee: "5" };
+const toEn = v => String(v).replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/[٫,]/g, ".");
 
 export async function getSettings(db) {
   const { results } = await db.prepare("SELECT key, value FROM settings").all();
   const s = { ...DEFAULTS };
   for (const r of results) if (r.key in DEFAULTS) s[r.key] = r.value ?? "";
   const share = Number(s.driver_share);
+  const feeOf = (v, d) => { const n = Number(v); return Number.isFinite(n) && n >= 0 ? n : d; };
   return { prepay_cap: Math.max(0, Number(s.prepay_cap) || 0), pay_info: s.pay_info, support: s.support,
-    driver_share: Number.isFinite(share) ? Math.min(100, Math.max(0, share)) : 100 };
+    driver_share: Number.isFinite(share) ? Math.min(100, Math.max(0, share)) : 100,
+    delivery_fee: feeOf(s.delivery_fee, 8), out_fee: feeOf(s.out_fee, 5) };
 }
 
 export async function saveSettings(db, b) {
@@ -19,6 +23,11 @@ export async function saveSettings(db, b) {
     const c = Number(String(b.driver_share).replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)));
     if (!Number.isFinite(c) || c < 0 || c > 100) throw new HttpError(400, "نصيب المندوب نسبة من ٠ إلى ١٠٠");
     rows.push(["driver_share", String(c)]);
+  }
+  for (const k of ["delivery_fee", "out_fee"]) if (b[k] !== undefined) {
+    const c = Number(toEn(b[k]));
+    if (String(b[k]).trim() === "" || !Number.isFinite(c) || c < 0 || c > 1000) throw new HttpError(400, "رسوم التوصيل رقم بالريال");
+    rows.push([k, String(Math.round(c * 100) / 100)]);
   }
   if (b.prepay_cap !== undefined) {
     const c = Number(String(b.prepay_cap).replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)));
@@ -43,7 +52,10 @@ export function summarize(o, parts, settings) {
   const live = parts.filter(p => !DEAD.includes(p.status));
   const billed = live.length > 0 && live.every(p => p.bill !== null && p.bill !== undefined);
   const total = Math.round(live.reduce((s, p) => s + (Number(p.bill) || 0), 0) * 100) / 100;
-  const approved = billed && o.approved_total !== null && o.approved_total !== undefined && close(o.approved_total, total);
+  // موافق: الزبون وافق على نفس المبلغ، أو المبلغ تحت حد الموافقة التلقائية اللي كتبه في الطلب
+  const manual = o.approved_total !== null && o.approved_total !== undefined && close(o.approved_total, total);
+  const auto = !manual && o.auto_approve !== null && o.auto_approve !== undefined && total <= Number(o.auto_approve) + 0.005;
+  const approved = billed && (manual || auto);
   const needsPrepay = settings.prepay_cap > 0 && total > settings.prepay_cap;
   const prepaid = o.prepay_status === "confirmed" && o.prepay_amount !== null && o.prepay_amount >= total - 0.005;
   const canBuy = billed && approved && (!needsPrepay || prepaid);
@@ -56,7 +68,7 @@ export function summarize(o, parts, settings) {
   else if (needsPrepay && !prepaid) stage = o.prepay_status === "sent" ? "prepay_check" : "prepay";
   else stage = "buying";
   const fee = Number(o.fee) || 0;
-  return { billed, total, approved, needsPrepay, prepaid, canBuy, stage, collect: Math.round(((prepaid ? 0 : total) + fee) * 100) / 100 };
+  return { billed, total, approved, auto_approved: billed && auto, needsPrepay, prepaid, canBuy, stage, collect: Math.round(((prepaid ? 0 : total) + fee) * 100) / 100 };
 }
 
 export async function loadOrder(db, where, val) {
@@ -108,6 +120,7 @@ export async function track(db, request, token) {
       order_no: o.order_no, created_at: o.created_at, dest: o.dest, place: o.place, pay: o.pay, fee: o.fee,
       driver_status: o.driver_status, picked_at: o.picked_at, delivered_at: o.delivered_at,
       prepay_status: o.prepay_status, leave_at_door: !!o.leave_at_door, delivery_photo: o.delivery_photo,
+      auto_approve: o.auto_approve,
     },
     parts: parts.map(p => ({ id: p.id, shop_name: p.shop_name, category: p.category, items: p.items, status: p.status, bill: p.bill, receipt: p.bill_receipt, partner: !!p.shop_id, shop_stars: p.shop_stars })),
     driver: driver && { name: driver.name, phone: driver.phone },
@@ -143,9 +156,19 @@ function eta(o, parts, stage) {
 export const REPORT_KINDS = ["ناقص غرض", "غلط في الطلب", "تأخير", "المندوب طلب مبلغ زيادة", "تعامل المندوب", "الطلب ما وصل", "شي ثاني"];
 export const RATING_TAGS = ["وصل بسرعة", "تعامل ممتاز", "حافظ على الطلب", "تأخر", "تعامل سيء", "ما التزم بالمبلغ"];
 
-export async function trackAct(db, request, token) {
-  const b = await readJson(request, 1_000_000);
+export async function trackAct(db, request, token, e = {}) {
+  const b = await readJson(request.clone(), 1_000_000);
   const { o, parts } = await byToken(db, token);
+  // الزبون يفعّل إشعارات طلبه
+  if (b.action === "push") return subscribe(db, request, "track", o.id);
+  const before = await snapshot(db, o.id);
+  const res = await trackAction(db, b, o, parts, e);
+  if (b.action === "report") reportAlert(e, db, o, str(b.kind, 40));
+  else await changed(e, db, before);
+  return res;
+}
+
+async function trackAction(db, b, o, parts, e) {
   const settings = await getSettings(db);
   const sum = summarize(o, parts, settings);
   const now = Date.now();

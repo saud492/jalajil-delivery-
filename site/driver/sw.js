@@ -11,3 +11,6 @@ self.addEventListener("fetch", e => {
   if (e.request.method !== "GET" || e.request.mode !== "navigate") return;
   e.respondWith(fetch(e.request).catch(() => caches.match("/driver/")));
 });
+
+// إشعارات الجوال
+importScripts("/sw-push.js");
