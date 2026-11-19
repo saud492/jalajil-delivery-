@@ -1,0 +1,155 @@
+// لوحة صاحب الخدمة
+import { HttpError, json, readJson, str, riyadhRanges, STATUSES, sha256 } from "./util.js";
+import { checkLock, recordFail, clearFails, createSession, sessionCookie, requireSession, endSession, hashPin, safeEqual } from "./auth.js";
+
+const ip = r => r.headers.get("cf-connecting-ip") || "local";
+const CATS = ["بقالة", "مطعم", "كافيه", "صيدلية", "أخرى"];
+
+export async function login(db, request, env) {
+  if (!env.ADMIN_PASSWORD) throw new HttpError(503, "كلمة سر اللوحة ما انضافت في إعدادات Cloudflare (ADMIN_PASSWORD)");
+  const b = await readJson(request);
+  const keys = [`admin:${ip(request)}`, "admin"];
+  await checkLock(db, keys);
+  const ok = safeEqual(await sha256(str(b.password, 200)), await sha256(env.ADMIN_PASSWORD));
+  if (!ok) { await recordFail(db, keys, [5, 30]); throw new HttpError(401, "كلمة السر غلط"); }
+  await clearFails(db, keys);
+  const token = await createSession(db, "admin");
+  return json({ ok: true }, 200, { "set-cookie": sessionCookie("admin", token) });
+}
+
+export async function logout(db, request) {
+  await endSession(db, request, "admin");
+  return json({ ok: true }, 200, { "set-cookie": sessionCookie("admin", null) });
+}
+
+export async function me(db, request) {
+  await requireSession(db, request, "admin");
+  return json({ ok: true });
+}
+
+function cleanShop(b, creating) {
+  const out = {};
+  if (creating || b.code !== undefined) {
+    out.code = str(b.code, 30).toLowerCase();
+    if (!/^[a-z0-9-]{2,30}$/.test(out.code)) throw new HttpError(400, "رمز المحل: حروف إنجليزية صغيرة أو أرقام، من ٢ إلى ٣٠ حرف");
+  }
+  if (creating || b.name !== undefined) {
+    out.name = str(b.name, 60);
+    if (!out.name) throw new HttpError(400, "اكتب اسم المحل");
+  }
+  if (creating || b.category !== undefined) {
+    out.category = str(b.category, 20);
+    if (!CATS.includes(out.category)) throw new HttpError(400, "اختر نوع المحل");
+  }
+  if (creating || (b.pin !== undefined && b.pin !== "")) {
+    out.pin = str(b.pin, 20);
+    if (!/^\d{4,8}$/.test(out.pin)) throw new HttpError(400, "الرقم السري من ٤ إلى ٨ أرقام");
+  }
+  if (creating || b.commission !== undefined) {
+    const c = Number(b.commission ?? 0);
+    if (!Number.isFinite(c) || c < 0 || c > 1000) throw new HttpError(400, "العمولة رقم بالريال");
+    out.commission = Math.round(c * 100) / 100;
+  }
+  if (creating || b.trial_end !== undefined) {
+    const t = str(b.trial_end, 10);
+    if (t && !/^\d{4}-\d{2}-\d{2}$/.test(t)) throw new HttpError(400, "تاريخ نهاية التجربة غير صحيح");
+    out.trial_end = t || null;
+  }
+  if (b.active !== undefined) out.active = b.active ? 1 : 0;
+  if (b.is_open !== undefined) out.is_open = b.is_open ? 1 : 0;
+  return out;
+}
+
+export async function createShop(db, request) {
+  await requireSession(db, request, "admin");
+  const s = cleanShop(await readJson(request), true);
+  const dup = await db.prepare("SELECT id FROM shops WHERE code = ?").bind(s.code).first();
+  if (dup) throw new HttpError(409, "رمز المحل مستخدم، اختر رمز ثاني");
+  const { hash, salt } = await hashPin(s.pin);
+  const r = await db.prepare(`INSERT INTO shops (code, name, category, pin_hash, pin_salt, commission, trial_end, created_at)
+    VALUES (?,?,?,?,?,?,?,?) RETURNING id`).bind(s.code, s.name, s.category, hash, salt, s.commission, s.trial_end, Date.now()).first();
+  return json({ ok: true, id: r.id });
+}
+
+export async function updateShop(db, request, id) {
+  await requireSession(db, request, "admin");
+  const s = cleanShop(await readJson(request), false);
+  const shop = await db.prepare("SELECT id FROM shops WHERE id = ?").bind(id).first();
+  if (!shop) throw new HttpError(404, "المحل مو موجود");
+  if (s.code) {
+    const dup = await db.prepare("SELECT id FROM shops WHERE code = ? AND id != ?").bind(s.code, id).first();
+    if (dup) throw new HttpError(409, "رمز المحل مستخدم، اختر رمز ثاني");
+  }
+  const sets = [], vals = [];
+  for (const k of ["code", "name", "category", "commission", "trial_end", "active", "is_open"]) {
+    if (k in s) { sets.push(`${k} = ?`); vals.push(s[k]); }
+  }
+  const stmts = [];
+  if (s.pin) {
+    const { hash, salt } = await hashPin(s.pin);
+    sets.push("pin_hash = ?", "pin_salt = ?"); vals.push(hash, salt);
+    // رقم سري جديد: نطلّع المحل من كل الأجهزة
+    stmts.push(db.prepare("DELETE FROM sessions WHERE kind = 'shop' AND shop_id = ?").bind(id));
+  }
+  if (s.active === 0) stmts.push(db.prepare("DELETE FROM sessions WHERE kind = 'shop' AND shop_id = ?").bind(id));
+  if (sets.length) stmts.unshift(db.prepare(`UPDATE shops SET ${sets.join(", ")} WHERE id = ?`).bind(...vals, id));
+  if (stmts.length) await db.batch(stmts);
+  return json({ ok: true });
+}
+
+// المحلات مع أرقامها: الطلبات المكتملة والعمولة (أسبوع، شهر، الكل)
+export async function shops(db, request) {
+  await requireSession(db, request, "admin");
+  const { weekStart, monthStart } = riyadhRanges(Date.now());
+  const { results } = await db.prepare(`
+    SELECT s.id, s.code, s.name, s.category, s.commission, s.trial_end, s.is_open, s.active, s.created_at,
+      SUM(CASE WHEN p.status='ready' AND p.ready_at >= ?1 THEN 1 ELSE 0 END) AS week_count,
+      SUM(CASE WHEN p.status='ready' AND p.ready_at >= ?1 THEN p.commission ELSE 0 END) AS week_commission,
+      SUM(CASE WHEN p.status='ready' AND p.ready_at >= ?2 THEN 1 ELSE 0 END) AS month_count,
+      SUM(CASE WHEN p.status='ready' AND p.ready_at >= ?2 THEN p.commission ELSE 0 END) AS month_commission,
+      SUM(CASE WHEN p.status='ready' THEN 1 ELSE 0 END) AS all_count,
+      SUM(CASE WHEN p.status='ready' THEN p.commission ELSE 0 END) AS all_commission,
+      SUM(CASE WHEN p.status IN ('new','accepted') THEN 1 ELSE 0 END) AS open_count
+    FROM shops s LEFT JOIN parts p ON p.shop_id = s.id
+    GROUP BY s.id ORDER BY s.active DESC, s.name`).bind(weekStart, monthStart).all();
+  const n = v => v || 0;
+  return json({
+    shops: results.map(r => ({ ...r, is_open: !!r.is_open, active: !!r.active,
+      week_count: n(r.week_count), week_commission: n(r.week_commission), month_count: n(r.month_count),
+      month_commission: n(r.month_commission), all_count: n(r.all_count), all_commission: n(r.all_commission), open_count: n(r.open_count) })),
+  });
+}
+
+export async function orders(db, request) {
+  await requireSession(db, request, "admin");
+  const u = new URL(request.url);
+  const days = Math.min(90, Math.max(1, Number(u.searchParams.get("days")) || 7));
+  const status = u.searchParams.get("status");
+  const shop = u.searchParams.get("shop");
+  const since = Date.now() - days * 24 * 3600_000;
+  const where = ["o.created_at >= ?"], vals = [since];
+  if (status && STATUSES.includes(status)) { where.push("p.status = ?"); vals.push(status); }
+  if (shop === "none") where.push("p.shop_id IS NULL");
+  else if (shop && /^\d+$/.test(shop)) { where.push("p.shop_id = ?"); vals.push(Number(shop)); }
+  const filtered = (status || shop) ? `AND o.id IN (SELECT p.order_id FROM parts p JOIN orders o ON o.id = p.order_id WHERE ${where.join(" AND ")})` : "";
+  const { results: os } = await db.prepare(`SELECT * FROM orders o WHERE o.created_at >= ? ${filtered} ORDER BY o.created_at DESC LIMIT 300`)
+    .bind(since, ...(filtered ? vals : [])).all();
+  if (!os.length) return json({ orders: [] });
+  const ids = os.map(o => o.id);
+  const { results: ps } = await db.prepare(`SELECT * FROM parts WHERE order_id IN (${ids.map(() => "?").join(",")}) ORDER BY id`).bind(...ids).all();
+  const by = new Map(os.map(o => [o.id, { ...o, client_key: undefined, pack: safeParse(o.pack), parts: [] }]));
+  for (const p of ps) by.get(p.order_id).parts.push(p);
+  return json({ orders: [...by.values()] });
+}
+
+function safeParse(s) { try { return JSON.parse(s || "[]"); } catch { return []; } }
+
+export async function actPart(db, request, partId) {
+  await requireSession(db, request, "admin");
+  const b = await readJson(request);
+  if (b.action !== "cancel") throw new HttpError(400, "إجراء غير معروف");
+  const r = await db.prepare("UPDATE parts SET status='cancelled', commission=0, updated_at=? WHERE id=? AND status != 'cancelled'")
+    .bind(Date.now(), partId).run();
+  if (!r.meta.changes) throw new HttpError(404, "الطلب مو موجود أو ملغي");
+  return json({ ok: true });
+}
