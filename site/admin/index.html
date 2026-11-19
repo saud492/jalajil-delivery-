@@ -306,7 +306,7 @@ function renderOrders(list){
       const r = el("div", "row");
       r.append(el("b", "grow", (p.category ? p.category + " · " : "") + (p.shop_name || "بدون اسم محل")));
       if(!p.shop_id) r.append(el("span", "pill none", "مو شريك"));
-      else r.append(el("span", "pill " + p.status, STATUS[p.status] || p.status));
+      if(p.shop_id || p.status === "cancelled") r.append(el("span", "pill " + p.status, STATUS[p.status] || p.status));
       d.append(r);
       if(p.items) d.append(el("div", "items", p.items));
       const extra = [];
@@ -315,10 +315,11 @@ function renderOrders(list){
       if(p.reject_reason) extra.push("سبب الرفض: " + p.reject_reason);
       if(p.status === "ready") extra.push("العمولة " + money(p.commission) + " ريال");
       if(extra.length) d.append(el("div", "muted", extra.join(" · ")));
-      if(p.shop_id && p.status !== "cancelled"){
+      if(p.status !== "cancelled"){
         const x = el("button", "btn sm bad", "إلغاء هذا الجزء"); x.style.alignSelf = "flex-start";
         x.onclick = async ()=>{
-          if(!confirm("تلغي طلب " + (p.shop_name||"") + "؟ ما راح ينحسب على المحل، وما تقدر ترجعه.")) return;
+          const msg = p.shop_id ? "تلغي طلب " + (p.shop_name||"") + "؟ ما راح ينحسب على المحل، وما تقدر ترجعه." : "تلغي هذا الطلب؟ ما تقدر ترجعه.";
+          if(!confirm(msg)) return;
           try{ await api("parts/" + p.id, "POST", {action:"cancel"}); toast("تم الإلغاء"); loadOrders(); }catch(err){ toast(err.message); }
         };
         d.append(x);
