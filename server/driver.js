@@ -1,13 +1,15 @@
 // تطبيق المندوب: يشوف الطلبات اللي ما لها مندوب ويأخذ منها، ويشوف تفاصيل الزبون بس للطلبات اللي معه
+// ما يقدر يشتري قبل موافقة الزبون على المبلغ (والدفع المسبق لو لازم)، وما يقدر يسكّر الطلب بدون رمز الاستلام
 import { HttpError, json, readJson, str, riyadhRanges, cleanCode } from "./util.js";
 import { checkLock, recordFail, clearFails, createSession, sessionCookie, requireSession, endSession, verifyPin } from "./auth.js";
+import { getSettings, summarize, loadOrder, parseImage, saveImage, sendImage } from "./flow.js";
 
 const ip = r => r.headers.get("cf-connecting-ip") || "local";
 const H = 3600_000;
+const toEn = s => String(s).replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d));
 
-// الطلب "حي" لو فيه جزء واحد على الأقل ما انلغى ولا انرفض، أو ما فيه أجزاء أصلاً (تجهيزات بس)
-const LIVE = `(NOT EXISTS (SELECT 1 FROM parts x WHERE x.order_id = o.id)
-  OR EXISTS (SELECT 1 FROM parts x WHERE x.order_id = o.id AND x.status NOT IN ('cancelled','rejected')))`;
+// الطلب "حي" لو فيه جزء واحد على الأقل ما انلغى ولا انرفض
+const LIVE = `(o.rejected_at IS NULL AND EXISTS (SELECT 1 FROM parts x WHERE x.order_id = o.id AND x.status NOT IN ('cancelled','rejected')))`;
 
 function driverInfo(d) {
   return { name: d.name, code: d.code, phone: d.phone };
@@ -16,7 +18,7 @@ function driverInfo(d) {
 export async function login(db, request) {
   const b = await readJson(request);
   const code = cleanCode(b.code) || str(b.code, 40).toLowerCase();
-  const pin = str(b.pin, 20).replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d));
+  const pin = toEn(str(b.pin, 20));
   if (!code || !pin) throw new HttpError(400, "اكتب رمز المندوب والرقم السري");
   const keys = [`driver:${code}:${ip(request)}`, `driver:${code}`];
   await checkLock(db, keys);
@@ -40,39 +42,55 @@ export async function me(db, request) {
   return json({ driver: driverInfo(s.driver) });
 }
 
-async function partsFor(db, ids, full) {
+async function partsFor(db, ids) {
   const by = new Map(ids.map(id => [id, []]));
   if (!ids.length) return by;
-  const cols = full ? "order_id, shop_name, category, items, status, prep_minutes, accepted_at, ready_at"
-                    : "order_id, shop_name, category, status, prep_minutes, accepted_at, ready_at";
-  const { results } = await db.prepare(`SELECT ${cols} FROM parts WHERE order_id IN (${ids.map(() => "?").join(",")}) ORDER BY id`).bind(...ids).all();
+  const { results } = await db.prepare(`SELECT id, order_id, shop_id, shop_name, category, items, status, prep_minutes, accepted_at, ready_at, bill, bill_receipt
+    FROM parts WHERE order_id IN (${ids.map(() => "?").join(",")}) ORDER BY id`).bind(...ids).all();
   for (const p of results) by.get(p.order_id).push(p);
   return by;
 }
 
 const safeParse = s => { try { return JSON.parse(s || "[]"); } catch { return []; } };
 
-// الطلبات المتاحة (بدون بيانات الزبون) + طلباتي (كاملة)
+// الطلبات المتاحة (بدون بيانات الزبون ولا تفاصيل الأغراض) + طلباتي (كاملة)
 export async function orders(db, request) {
   const s = await requireSession(db, request, "driver");
   const now = Date.now();
+  const settings = await getSettings(db);
   const { results: avail } = await db.prepare(`
     SELECT o.id, o.order_no, o.created_at, o.dest, o.place, o.fee FROM orders o
     WHERE o.driver_id IS NULL AND o.created_at > ? AND ${LIVE}
     ORDER BY o.created_at DESC LIMIT 50`).bind(now - 12 * H).all();
   const { results: mine } = await db.prepare(`
-    SELECT o.id, o.order_no, o.created_at, o.dest, o.place, o.fee, o.customer_name, o.customer_phone, o.map_url, o.pay, o.note, o.pack,
-           o.driver_status, o.assigned_at, o.picked_at, o.delivered_at
-    FROM orders o
-    WHERE o.driver_id = ? AND (o.driver_status != 'delivered' OR o.delivered_at > ?)
-    ORDER BY o.created_at DESC LIMIT 100`).bind(s.driver.id, now - 24 * H).all();
-  const pa = await partsFor(db, avail.map(o => o.id), false);
-  const pm = await partsFor(db, mine.map(o => o.id), true);
+    SELECT o.* FROM orders o
+    WHERE o.driver_id = ? AND (o.driver_status IN ('assigned','picked')
+      OR (o.driver_status = 'delivered' AND o.delivered_at > ?) OR (o.driver_status = 'cancelled' AND o.rejected_at > ?))
+    ORDER BY o.created_at DESC LIMIT 100`).bind(s.driver.id, now - 24 * H, now - 24 * H).all();
+  const pa = await partsFor(db, avail.map(o => o.id));
+  const pm = await partsFor(db, mine.map(o => o.id));
+  const brief = p => ({ shop_name: p.shop_name, category: p.category, status: p.status, prep_minutes: p.prep_minutes, accepted_at: p.accepted_at, ready_at: p.ready_at, partner: !!p.shop_id });
   return json({
     driver: driverInfo(s.driver), now,
-    available: avail.map(o => ({ ...o, parts: pa.get(o.id) })),
-    mine: mine.map(o => ({ ...o, pack: safeParse(o.pack), parts: pm.get(o.id) })),
+    available: avail.map(o => ({ ...o, parts: pa.get(o.id).map(brief) })),
+    mine: mine.map(o => {
+      const parts = pm.get(o.id);
+      return {
+        id: o.id, order_no: o.order_no, created_at: o.created_at, dest: o.dest, place: o.place, fee: o.fee,
+        customer_name: o.customer_name, customer_phone: o.customer_phone, map_url: o.map_url, pay: o.pay, note: o.note,
+        pack: safeParse(o.pack), driver_status: o.driver_status, assigned_at: o.assigned_at, picked_at: o.picked_at, delivered_at: o.delivered_at,
+        prepay_status: o.prepay_status,
+        parts: parts.map(p => ({ ...brief(p), id: p.id, items: p.items, bill: p.bill, receipt: p.bill_receipt })),
+        ...summarize(o, parts, settings),
+      };
+    }),
   });
+}
+
+async function myOrder(db, s, orderId) {
+  const x = await loadOrder(db, "id", orderId);
+  if (!x || x.o.driver_id !== s.driver.id) throw new HttpError(404, "الطلب مو معك");
+  return x;
 }
 
 export async function act(db, request, orderId) {
@@ -86,9 +104,27 @@ export async function act(db, request, orderId) {
   } else if (b.action === "release") {
     stmt = db.prepare("UPDATE orders SET driver_id=NULL, driver_status=NULL, assigned_at=NULL WHERE id=? AND driver_id=? AND driver_status='assigned'").bind(orderId, me);
   } else if (b.action === "picked") {
+    // "اشتريت واستلمت": بس بعد ما الزبون يوافق على المبلغ ويخلص الدفع المسبق لو لازم
+    const { o, parts } = await myOrder(db, s, orderId);
+    const sum = summarize(o, parts, await getSettings(db));
+    if (o.driver_status === "assigned") {
+      if (!sum.billed) throw new HttpError(409, "باقي مبلغ فاتورة لمحل، اكتبه أول");
+      if (!sum.approved) throw new HttpError(409, "انتظر موافقة الزبون على المبلغ قبل لا تدفع");
+      if (!sum.canBuy) throw new HttpError(409, "الطلب يحتاج دفع مسبق، انتظر تأكيد التحويل قبل لا تدفع");
+    }
     stmt = db.prepare("UPDATE orders SET driver_status='picked', picked_at=? WHERE id=? AND driver_id=? AND driver_status='assigned'").bind(now, orderId, me);
   } else if (b.action === "delivered") {
-    stmt = db.prepare("UPDATE orders SET driver_status='delivered', delivered_at=?, picked_at=COALESCE(picked_at, ?) WHERE id=? AND driver_id=? AND driver_status IN ('assigned','picked')").bind(now, now, orderId, me);
+    const { o } = await myOrder(db, s, orderId);
+    if (o.driver_status !== "picked") throw new HttpError(409, "اضغط \"اشتريت واستلمت\" أول");
+    const keys = [`dcode:${orderId}`];
+    await checkLock(db, keys);
+    const code = toEn(str(b.code, 8));
+    if (!o.delivery_code || code !== o.delivery_code) {
+      await recordFail(db, keys, [5]);
+      throw new HttpError(400, "رمز الاستلام غلط. اطلبه من الزبون");
+    }
+    await clearFails(db, keys);
+    stmt = db.prepare("UPDATE orders SET driver_status='delivered', delivered_at=? WHERE id=? AND driver_id=? AND driver_status='picked'").bind(now, orderId, me);
   } else throw new HttpError(400, "إجراء غير معروف");
   const r = await stmt.run();
   if (!r.meta.changes) {
@@ -96,6 +132,32 @@ export async function act(db, request, orderId) {
     throw new HttpError(409, "حالة الطلب تغيّرت، حدّث الصفحة");
   }
   return json({ ok: true });
+}
+
+// المندوب يكتب مبلغ فاتورة محل مو شريك (أو التجهيزات) ويرفع صورتها
+export async function setBill(db, request, partId) {
+  const s = await requireSession(db, request, "driver");
+  const b = await readJson(request, 1_000_000);
+  const p = await db.prepare("SELECT * FROM parts WHERE id = ?").bind(partId).first();
+  if (!p) throw new HttpError(404, "الجزء مو موجود");
+  const { o } = await myOrder(db, s, p.order_id);
+  if (o.driver_status !== "assigned") throw new HttpError(409, "ما تقدر تغيّر الفاتورة بعد ما اشتريت");
+  if (p.shop_id) throw new HttpError(403, "فاتورة المحل الشريك يكتبها المحل نفسه");
+  if (["cancelled", "rejected"].includes(p.status)) throw new HttpError(409, "هالجزء ملغي");
+  const amount = Number(toEn(b.amount));
+  if (!Number.isFinite(amount) || amount <= 0 || amount > 100000) throw new HttpError(400, "اكتب مبلغ الفاتورة");
+  const img = parseImage(b.image);
+  const rid = await saveImage(db, o.id, "bill", img);
+  await db.prepare("UPDATE parts SET bill=?, bill_receipt=?, updated_at=? WHERE id=?").bind(Math.round(amount * 100) / 100, rid, Date.now(), partId).run();
+  return json({ ok: true });
+}
+
+export async function image(db, request, id) {
+  const s = await requireSession(db, request, "driver");
+  const r = await db.prepare("SELECT order_id FROM receipts WHERE id = ?").bind(id).first();
+  if (!r) throw new HttpError(404, "الصورة مو موجودة");
+  await myOrder(db, s, r.order_id);
+  return sendImage(db, r.order_id, id);
 }
 
 export async function summary(db, request) {

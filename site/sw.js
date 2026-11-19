@@ -1,7 +1,7 @@
 // خدمة بسيطة: تجيب أحدث نسخة من الشبكة، ولو ما فيه نت تفتح آخر نسخة محفوظة
 // ما تلمس طلبات السيرفر (/api) ولا تطبيق الشركاء ولا لوحة التحكم، عشان ما تنحفظ بيانات الطلبات على الجهاز
 const CACHE = "jalajil-v3";
-const SKIP = /^\/(api|partner|admin|driver)(\/|$)/;
+const SKIP = /^\/(api|partner|admin|driver|track)(\/|$)/;
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(["./", "icon-192.png"])).then(() => self.skipWaiting()));
 });

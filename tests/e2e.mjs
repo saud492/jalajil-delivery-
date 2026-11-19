@@ -25,7 +25,7 @@ const admin = client(), shopA = client(), shopB = client(), anon = client();
 let r;
 
 // صفحات
-for (const p of ["/", "/partner/", "/admin/", "/driver/"]) {
+for (const p of ["/", "/partner/", "/admin/", "/driver/", "/track/"]) {
   const res = await fetch(BASE + p);
   assert.equal(res.status, 200, p);
 }
@@ -75,13 +75,15 @@ const partB = r.data.orders.find(o => o.order_no === order.order_no);
 assert.equal(partB.items, "قهوة ×١");
 
 // المحل أ ما يقدر يلمس طلب المحل ب
-r = await shopA("POST", `/api/partner/parts/${partB.id}`, { action: "accept", minutes: 10 }); assert.equal(r.status, 404, "cross-shop blocked");
+r = await shopA("POST", `/api/partner/parts/${partB.id}`, { action: "accept", minutes: 10, bill: 5 }); assert.equal(r.status, 404, "cross-shop blocked");
 r = await shopA("POST", `/api/partner/parts/${mineA[0].id}`, { action: "accept", minutes: 15 }); assert.equal(r.status, 400, "only 10/20/30");
-r = await shopA("POST", `/api/partner/parts/${mineA[0].id}`, { action: "accept", minutes: 20 }); assert.equal(r.status, 200);
-r = await shopA("POST", `/api/partner/parts/${mineA[0].id}`, { action: "accept", minutes: 20 }); assert.equal(r.status, 409, "can't accept twice");
+r = await shopA("POST", `/api/partner/parts/${mineA[0].id}`, { action: "accept", minutes: 20 }); assert.equal(r.status, 400, "bill required");
+r = await shopA("POST", `/api/partner/parts/${mineA[0].id}`, { action: "accept", minutes: 20, bill: "٣٠" }); assert.equal(r.status, 200);
+r = await shopA("POST", `/api/partner/parts/${mineA[0].id}`, { action: "accept", minutes: 20, bill: 30 }); assert.equal(r.status, 409, "can't accept twice");
 r = await shopA("POST", `/api/partner/parts/${mineA[0].id}`, { action: "ready" }); assert.equal(r.status, 200);
 r = await shopB("POST", `/api/partner/parts/${partB.id}`, { action: "reject" }); assert.equal(r.status, 400, "reason required");
-r = await shopB("POST", `/api/partner/parts/${partB.id}`, { action: "ready" }); assert.equal(r.status, 200);
+r = await shopB("POST", `/api/partner/parts/${partB.id}`, { action: "ready" }); assert.equal(r.status, 400, "ready needs bill");
+r = await shopB("POST", `/api/partner/parts/${partB.id}`, { action: "ready", bill: 12 }); assert.equal(r.status, 200);
 
 // الطلب ما يتغيّر بعد ما المحل تعامل معه
 r = await anon("POST", "/api/orders", { ...order, parts: [{ shop_id: idA, cat: "مطعم", items: "تعديل" }] });
@@ -141,30 +143,93 @@ r = await d1("POST", "/api/driver/login", { code: "فهد" + run, pin: "7777" })
 r = await d2("POST", "/api/driver/login", { code: "d2" + run, pin: "8888" }); assert.equal(r.status, 200);
 r = await d1("GET", "/api/admin/orders"); assert.equal(r.status, 401, "driver can't open admin");
 
-const dkey = "drv" + run + "x1";
-r = await anon("POST", "/api/orders", { key: dkey, order_no: "JL-D-" + run, dest: "chalet", place: "شاليه النخيل", name: "زبون ٢", phone: "0522222222", fee: 5, pack: [], parts: [{ shop_id: idA, cat: "مطعم", items: "شاورما" }] });
+const IMG = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AKp//2Q==";
+const dkey = "drv" + run + "x1", dtrack = "trk" + run + "aaaaaaaaaaaa";
+r = await anon("POST", "/api/orders", { key: dkey, track: dtrack, code: "4321", order_no: "JL-D-" + run, dest: "chalet", place: "شاليه النخيل", name: "زبون ٢", phone: "0522222222", fee: 5, pack: ["فحم ×١"], parts: [{ shop_id: null, cat: "مطعم", name: "مطعم برا", items: "شاورما" }] });
 assert.equal(r.status, 200); const dOrder = r.data.id;
+r = await anon("GET", "/api/track/" + dtrack); assert.equal(r.status, 200);
+assert.equal(r.data.parts.length, 2, "pack becomes its own bill part"); assert.equal(r.data.stage, "pricing");
+assert.ok(!JSON.stringify(r.data).includes("4321"), "tracking API never returns the code");
+r = await anon("GET", "/api/track/nope" + run + "zzzzzzzzzz"); assert.equal(r.status, 404);
 r = await d1("GET", "/api/driver/orders");
 const av = r.data.available.find(o => o.id === dOrder);
 assert.ok(av, "new order is available to drivers");
 assert.ok(!("customer_phone" in av) && !("customer_name" in av), "no customer data before taking");
 assert.ok(!("items" in av.parts[0]), "no items before taking");
-r = await d1("POST", `/api/driver/orders/${dOrder}`, { action: "picked" }); assert.equal(r.status, 409, "can't pick before taking");
+r = await d1("POST", `/api/driver/orders/${dOrder}`, { action: "picked" }); assert.equal(r.status, 404, "can't pick before taking");
 r = await d1("POST", `/api/driver/orders/${dOrder}`, { action: "take" }); assert.equal(r.status, 200);
 r = await d2("POST", `/api/driver/orders/${dOrder}`, { action: "take" }); assert.equal(r.status, 409, "second driver can't take");
 r = await d2("GET", "/api/driver/orders"); assert.ok(!r.data.available.some(o => o.id === dOrder), "gone from available");
 r = await d1("GET", "/api/driver/orders");
-const mineD = r.data.mine.find(o => o.id === dOrder);
+let mineD = r.data.mine.find(o => o.id === dOrder);
 assert.equal(mineD.customer_phone, "0522222222"); assert.equal(mineD.parts[0].items, "شاورما");
-r = await d2("POST", `/api/driver/orders/${dOrder}`, { action: "picked" }); assert.equal(r.status, 409, "other driver can't act");
+assert.ok(!("delivery_code" in mineD), "driver never sees the code");
+r = await d2("POST", `/api/driver/orders/${dOrder}`, { action: "picked" }); assert.equal(r.status, 404, "other driver can't act");
 r = await d1("POST", `/api/driver/orders/${dOrder}`, { action: "release" }); assert.equal(r.status, 200);
 r = await d2("GET", "/api/driver/orders"); assert.ok(r.data.available.some(o => o.id === dOrder), "released back");
 // صاحب الخدمة يعيّن المندوب ٢
 r = await admin("POST", `/api/admin/orders/${dOrder}/driver`, { driver_id: drv2 }); assert.equal(r.status, 200);
-r = await d2("GET", "/api/driver/orders"); assert.equal(r.data.mine.find(o => o.id === dOrder).driver_status, "assigned");
+r = await d2("GET", "/api/driver/orders"); mineD = r.data.mine.find(o => o.id === dOrder); assert.equal(mineD.driver_status, "assigned");
+// ما يشتري قبل الفاتورة والموافقة
+r = await d2("POST", `/api/driver/orders/${dOrder}`, { action: "picked" }); assert.equal(r.status, 409, "no buying before bill");
+r = await d2("POST", `/api/driver/parts/${mineD.parts[0].id}/bill`, { amount: 40 }); assert.equal(r.status, 400, "photo required");
+r = await d2("POST", `/api/driver/parts/${mineD.parts[0].id}/bill`, { amount: 40, image: IMG }); assert.equal(r.status, 200, JSON.stringify(r.data));
+r = await d2("POST", `/api/driver/parts/${mineD.parts[1].id}/bill`, { amount: "٢٠", image: IMG }); assert.equal(r.status, 200);
+r = await anon("GET", "/api/track/" + dtrack); assert.equal(r.data.stage, "approve"); assert.equal(r.data.total, 60); assert.equal(r.data.collect, 65);
+const rid = r.data.parts[0].receipt;
+let img = await fetch(BASE + "/api/track/" + dtrack + "/images/" + rid); assert.equal(img.status, 200); assert.match(img.headers.get("content-type"), /image/);
+img = await fetch(BASE + "/api/track/" + dtrack + "/images/999999"); assert.equal(img.status, 404);
+r = await d2("POST", `/api/driver/orders/${dOrder}`, { action: "picked" }); assert.equal(r.status, 409, "no buying before approval");
+r = await anon("POST", "/api/track/" + dtrack, { action: "approve", total: 50 }); assert.equal(r.status, 409, "approve must match current total");
+r = await anon("POST", "/api/track/" + dtrack, { action: "approve", total: 60 }); assert.equal(r.status, 200);
+// المندوب يغيّر المبلغ بعد الموافقة = موافقة جديدة
+r = await d2("POST", `/api/driver/parts/${mineD.parts[0].id}/bill`, { amount: 45, image: IMG }); assert.equal(r.status, 200);
+r = await anon("GET", "/api/track/" + dtrack); assert.equal(r.data.stage, "approve", "changed amount needs re-approval");
+r = await d2("POST", `/api/driver/orders/${dOrder}`, { action: "picked" }); assert.equal(r.status, 409);
+r = await anon("POST", "/api/track/" + dtrack, { action: "approve", total: 65 }); assert.equal(r.status, 200);
 r = await d2("POST", `/api/driver/orders/${dOrder}`, { action: "picked" }); assert.equal(r.status, 200);
-r = await d2("POST", `/api/driver/orders/${dOrder}`, { action: "delivered" }); assert.equal(r.status, 200);
+r = await d2("POST", `/api/driver/parts/${mineD.parts[0].id}/bill`, { amount: 99, image: IMG }); assert.equal(r.status, 409, "no bill change after buying");
+r = await anon("POST", "/api/track/" + dtrack, { action: "reject" }); assert.equal(r.status, 409, "can't cancel once bought");
+r = await d2("POST", `/api/driver/orders/${dOrder}`, { action: "delivered", code: "0000" }); assert.equal(r.status, 400, "wrong code");
+r = await d2("POST", `/api/driver/orders/${dOrder}`, { action: "delivered" }); assert.equal(r.status, 400, "code required");
+r = await d2("POST", `/api/driver/orders/${dOrder}`, { action: "delivered", code: "٤٣٢١" }); assert.equal(r.status, 200, "right code (arabic digits)");
+r = await anon("GET", "/api/track/" + dtrack); assert.equal(r.data.stage, "delivered");
 r = await admin("POST", `/api/admin/orders/${dOrder}/driver`, { driver_id: drv1 }); assert.equal(r.status, 409, "can't reassign delivered");
+
+// الدفع المسبق: فوق الحد لازم تحويل وتأكيد قبل الشراء
+r = await admin("PUT", "/api/admin/settings", { prepay_cap: 100, pay_info: "الراجحي SA00", support: "966500000000" }); assert.equal(r.status, 200);
+const ptrack = "pre" + run + "bbbbbbbbbbbb";
+r = await anon("POST", "/api/orders", { key: "pre" + run + "x9", track: ptrack, code: "1111", order_no: "JL-P-" + run, dest: "home", fee: 3, parts: [{ shop_id: null, cat: "بقالة", name: "بقالة كبيرة", items: "مقاضي" }] });
+const pOrder = r.data.id;
+r = await d2("POST", `/api/driver/orders/${pOrder}`, { action: "take" }); assert.equal(r.status, 200);
+r = await d2("GET", "/api/driver/orders"); const pPart = r.data.mine.find(o => o.id === pOrder).parts[0].id;
+r = await d2("POST", `/api/driver/parts/${pPart}/bill`, { amount: 250, image: IMG }); assert.equal(r.status, 200);
+r = await anon("POST", "/api/track/" + ptrack, { action: "approve", total: 250 }); assert.equal(r.status, 200);
+r = await anon("GET", "/api/track/" + ptrack); assert.equal(r.data.stage, "prepay"); assert.equal(r.data.pay_info, "الراجحي SA00");
+r = await d2("POST", `/api/driver/orders/${pOrder}`, { action: "picked" }); assert.equal(r.status, 409, "no buying before prepay");
+r = await anon("POST", "/api/track/" + ptrack, { action: "prepay", image: IMG }); assert.equal(r.status, 200);
+r = await anon("GET", "/api/track/" + ptrack); assert.equal(r.data.stage, "prepay_check");
+r = await d2("POST", `/api/driver/orders/${pOrder}`, { action: "picked" }); assert.equal(r.status, 409, "no buying before owner confirms");
+r = await admin("POST", `/api/admin/orders/${pOrder}/prepay`, { action: "confirm" }); assert.equal(r.status, 200);
+r = await anon("GET", "/api/track/" + ptrack); assert.equal(r.data.stage, "buying"); assert.equal(r.data.collect, 3, "only delivery fee left");
+r = await d2("POST", `/api/driver/orders/${pOrder}`, { action: "picked" }); assert.equal(r.status, 200);
+// رمز غلط ٥ مرات يقفل
+for (let i = 0; i < 5; i++) await d2("POST", `/api/driver/orders/${pOrder}`, { action: "delivered", code: "9999" });
+r = await d2("POST", `/api/driver/orders/${pOrder}`, { action: "delivered", code: "1111" }); assert.equal(r.status, 429, "code guessing locked");
+r = await admin("GET", "/api/admin/orders?days=1");
+const pa = r.data.orders.find(o => o.id === pOrder); assert.equal(pa.delivery_code, "1111"); assert.equal(pa.stage, "onway");
+r = await admin("PUT", "/api/admin/settings", { prepay_cap: 150 }); assert.equal(r.status, 200);
+
+// الزبون يرفض المبلغ = الطلب ينلغي ويطلع من المندوب
+const xtrack = "rej" + run + "cccccccccccc";
+r = await anon("POST", "/api/orders", { key: "rej" + run + "x8", track: xtrack, order_no: "JL-R-" + run, dest: "home", fee: 3, parts: [{ shop_id: null, cat: "مطعم", name: "مطعم", items: "عشا" }] });
+const xOrder = r.data.id;
+r = await d1("POST", `/api/driver/orders/${xOrder}`, { action: "take" }); assert.equal(r.status, 200);
+r = await d1("GET", "/api/driver/orders"); const xPart = r.data.mine.find(o => o.id === xOrder).parts[0].id;
+r = await d1("POST", `/api/driver/parts/${xPart}/bill`, { amount: 80, image: IMG }); assert.equal(r.status, 200);
+r = await anon("POST", "/api/track/" + xtrack, { action: "reject" }); assert.equal(r.status, 200);
+r = await d1("GET", "/api/driver/orders"); assert.equal(r.data.mine.find(o => o.id === xOrder).driver_status, "cancelled");
+r = await d1("POST", `/api/driver/orders/${xOrder}`, { action: "picked" }); assert.equal(r.status, 409, "can't buy a cancelled order");
 r = await d2("GET", "/api/driver/summary"); assert.equal(r.data.today.count, 1); assert.equal(r.data.week.fees, 5);
 r = await admin("GET", "/api/admin/drivers");
 assert.equal(r.data.drivers.find(d => d.id === drv2).month_count, 1);

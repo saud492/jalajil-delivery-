@@ -1,5 +1,6 @@
 // الجزء العام: موقع الزباين يحفظ الطلب ويجيب قائمة المحلات الشريكة
 import { HttpError, json, readJson, str } from "./util.js";
+import { getSettings } from "./flow.js";
 
 const DESTS = ["home", "chalet", "park"];
 
@@ -7,7 +8,8 @@ export async function listShops(db) {
   const { results } = await db.prepare(
     "SELECT id, name, category, is_open FROM shops WHERE active = 1 ORDER BY name"
   ).all();
-  return json({ shops: results.map(s => ({ id: s.id, name: s.name, category: s.category, open: !!s.is_open })) });
+  const { prepay_cap } = await getSettings(db);
+  return json({ shops: results.map(s => ({ id: s.id, name: s.name, category: s.category, open: !!s.is_open })), prepay_cap });
 }
 
 export async function saveOrder(db, request) {
@@ -33,6 +35,8 @@ export async function saveOrder(db, request) {
     const s = p.shop_id && shops.get(p.shop_id);
     if (s) { p.name = s.name; } else p.shop_id = null;
   }
+  // تجهيزات الشاليه/الكشتة يشتريها المندوب، فلها فاتورة مثل أي محل
+  if (pack.length) parts.push({ shop_id: null, category: "تجهيزات", name: "تجهيزات", items: pack.join("\n") });
 
   const now = Date.now();
   const o = {
@@ -44,12 +48,16 @@ export async function saveOrder(db, request) {
     promo: str(b.promo, 30), pack: JSON.stringify(pack),
   };
 
-  const existing = await db.prepare("SELECT id FROM orders WHERE client_key = ?").bind(key).first();
+  // رابط المتابعة ورمز الاستلام يجون من جوال الزبون (عشان يطلعون له على طول بدون انتظار)
+  const track = /^[A-Za-z0-9_-]{16,64}$/.test(str(b.track, 64)) ? str(b.track, 64) : null;
+  const code = /^\d{4}$/.test(str(b.code, 4)) ? str(b.code, 4) : String(Math.floor(1000 + Math.random() * 9000));
+
+  const existing = await db.prepare("SELECT id, driver_id FROM orders WHERE client_key = ?").bind(key).first();
   let orderId;
   if (existing) {
     // الزبون ضغط إرسال مرة ثانية: نحدّث الطلب بس لو ما أحد تعامل معه للحين
-    const touched = await db.prepare("SELECT COUNT(*) AS n FROM parts WHERE order_id = ? AND status != 'new'").bind(existing.id).first();
-    if (touched.n > 0) return json({ ok: true, id: existing.id, unchanged: true });
+    const touched = await db.prepare("SELECT COUNT(*) AS n FROM parts WHERE order_id = ? AND (status != 'new' OR bill IS NOT NULL)").bind(existing.id).first();
+    if (touched.n > 0 || existing.driver_id) return json({ ok: true, id: existing.id, unchanged: true });
     orderId = existing.id;
     await db.batch([
       db.prepare("DELETE FROM parts WHERE order_id = ?").bind(orderId),
@@ -57,9 +65,11 @@ export async function saveOrder(db, request) {
         .bind(o.order_no, o.dest, o.customer_name, o.customer_phone, o.map_url, o.place, o.pay, o.note, o.fee, o.promo, o.pack, orderId),
     ]);
   } else {
-    const r = await db.prepare(`INSERT INTO orders (client_key, order_no, created_at, dest, customer_name, customer_phone, map_url, place, pay, note, fee, promo, pack)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(client_key) DO NOTHING RETURNING id`)
-      .bind(key, o.order_no, now, o.dest, o.customer_name, o.customer_phone, o.map_url, o.place, o.pay, o.note, o.fee, o.promo, o.pack).first();
+    // لو رابط المتابعة مستخدم لطلب ثاني (نادر)، نحفظ الطلب بدونه بدل ما نضيّعه
+    const used = track && await db.prepare("SELECT id FROM orders WHERE track_token = ?").bind(track).first();
+    const r = await db.prepare(`INSERT INTO orders (client_key, order_no, created_at, dest, customer_name, customer_phone, map_url, place, pay, note, fee, promo, pack, track_token, delivery_code)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(client_key) DO NOTHING RETURNING id`)
+      .bind(key, o.order_no, now, o.dest, o.customer_name, o.customer_phone, o.map_url, o.place, o.pay, o.note, o.fee, o.promo, o.pack, used ? null : track, code).first();
     if (!r) return json({ ok: true, unchanged: true }); // وصل طلبين بنفس اللحظة
     orderId = r.id;
   }

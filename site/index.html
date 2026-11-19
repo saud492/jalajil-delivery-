@@ -213,6 +213,19 @@ footer{font-size:13px;color:var(--muted);text-align:center}
 .wa:active{transform:scale(.97)}
 .wa[aria-disabled="true"]{filter:grayscale(.9) opacity(.55);box-shadow:none}
 .wa svg{flex:none}
+/* حماية الطلب + بعد الإرسال */
+.safe{list-style:none;margin:6px 0 0;padding:10px 12px;background:var(--accent-soft);border-radius:12px;display:flex;flex-direction:column;gap:4px;font-size:14px}
+.track-last{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--ink);background:var(--surface);border:1.5px solid var(--accent);border-radius:14px;padding:12px 14px;font-weight:700}
+.track-last span{flex:1}
+.track-last b{font-family:var(--font-display);color:var(--accent);letter-spacing:2px;direction:ltr}
+.sent-bg{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center}
+.sent{background:var(--surface);width:100%;max-width:520px;border-radius:22px 22px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:12px;text-align:center}
+.sent h2{margin:0;font-family:var(--font-display);font-size:20px}
+.sent p{margin:0;color:var(--muted);font-size:15px}
+.sent .code{font-family:var(--font-display);font-size:44px;font-weight:800;letter-spacing:10px;color:var(--accent);direction:ltr;background:var(--accent-soft);border-radius:16px;padding:6px 0 6px 10px}
+.sent .warn{color:var(--bad);font-weight:700;font-size:14px}
+.sent a.go{display:block;background:var(--accent);color:var(--accent-ink);text-decoration:none;border-radius:14px;padding:14px;font-weight:700;font-family:var(--font-display);font-size:17px}
+.sent button{font:inherit;border:1.5px solid var(--line);background:none;border-radius:14px;padding:11px;font-weight:600;color:var(--muted);cursor:pointer}
 @media (prefers-reduced-motion: reduce){*{transition:none !important;animation:none !important}html{scroll-behavior:auto}}
 </style>
 </head>
@@ -238,6 +251,7 @@ footer{font-size:13px;color:var(--muted);text-align:center}
     <div class="ticket"><small>🏡 الشاليهات والمنتزه</small><b><span id="chaletTop"></span> <span>ريال</span></b></div>
   </div>
   <div class="promo-banner hidden" id="promoBanner"></div>
+  <a class="track-last hidden" id="trackLast" href="#">📦 <span>تابع طلبك الأخير</span><b id="trackLastCode"></b></a>
   <button type="button" class="again hidden" id="again">🔁 اطلب نفس طلبك الماضي</button>
 
   <nav class="progress" aria-label="خطوات الطلب">
@@ -318,6 +332,11 @@ footer{font-size:13px;color:var(--muted);text-align:center}
         <div><span>رسوم التوصيل</span><span class="v" id="feeSum"></span></div>
         <div><span>قيمة الطلب</span><span class="v">حسب فاتورة المحل</span></div>
       </div>
+      <ul class="safe">
+        <li>✅ تشوف مبلغ الفاتورة وتوافق عليه قبل ما المندوب يدفع للمحل.</li>
+        <li>🔐 يوصلك رمز استلام، لا تعطيه للمندوب إلا لما تستلم طلبك.</li>
+        <li class="hidden" id="capNote"></li>
+      </ul>
       <details class="preview"><summary>شوف رسالة الواتساب قبل ما ترسلها</summary><pre class="msg" id="msg"></pre></details>
       <p class="hint" id="waHint"></p>
     </section>
@@ -328,6 +347,18 @@ footer{font-size:13px;color:var(--muted);text-align:center}
   <button type="button" class="share" id="share">💬 شارك توصيل جلاجل مع أهلك وجيرانك</button>
   <p class="install"><a href="/install">📲 ثبّت الموقع كتطبيق على جوالك</a></p>
   <footer>نسخة تجريبية. الأسعار والرسوم مبدئية وتتعدل قبل الإطلاق.</footer>
+</div>
+
+<div class="sent-bg hidden" id="sentBox">
+  <div class="sent" role="dialog" aria-modal="true" aria-labelledby="sentT">
+    <h2 id="sentT">أرسل الرسالة في الواتساب ✓</h2>
+    <p>هذا رمز استلام طلبك:</p>
+    <div class="code" id="sentCode"></div>
+    <p class="warn">لا تعطي الرمز للمندوب إلا بعد ما تستلم طلبك كامل.</p>
+    <p>من رابط المتابعة تشوف مبلغ الفاتورة وتوافق عليه قبل ما المندوب يدفع للمحل. الرابط موجود بعد في رسالتك.</p>
+    <a class="go" id="sentLink" href="#">📦 تابع طلبك</a>
+    <button type="button" id="sentClose">رجوع</button>
+  </div>
 </div>
 
 <div class="bar">
@@ -470,6 +501,7 @@ async function loadPartners(){
     if(!r.ok) return;
     const d = await r.json();
     PARTNERS = Array.isArray(d.shops) ? d.shops : [];
+    if(d.prepay_cap > 0){ const n = $("#capNote"); n.textContent = `💳 لو الفاتورة فوق ${toAr(d.prepay_cap)} ريال، تحوّل قيمتها قبل ما المندوب يشتري.`; n.classList.remove("hidden"); }
     shopsEl.querySelectorAll(".shop").forEach(refreshPick);
     render();
   }catch(e){}
@@ -585,7 +617,13 @@ function collect(){
   return { shops, pack: isOut() ? pack : [] };
 }
 
-function message(){
+/* رابط المتابعة ورمز الاستلام: يتولّدون بالجوال، وينحفظون عنده بس */
+function rnd(n){ try{ const a = new Uint8Array(n); crypto.getRandomValues(a); return [...a].map(x=>x.toString(16).padStart(2,"0")).join(""); }catch(e){ return (Date.now().toString(16) + Math.random().toString(16).slice(2)).slice(0, n*2).padEnd(n*2, "0"); } }
+function newCode(){ try{ const a = new Uint16Array(1); crypto.getRandomValues(a); return String(1000 + a[0] % 9000); }catch(e){ return String(1000 + Math.floor(Math.random()*9000)); } }
+let TRACK = rnd(12), CODE = newCode(), sentHash = null;
+const trackUrl = () => location.origin + "/track/?k=" + TRACK;
+
+function message(withTrack = true){
   const {shops, pack} = collect();
   const L = [];
   L.push(`*${CONFIG.serviceName} | طلب ${orderNo}*`);
@@ -614,6 +652,7 @@ function message(){
   if(promoApplied) L.push(`رسوم التوصيل: ${fmt(fee())} ريال (بدل ${baseFee()}، كود الخصم: ${P.code.toUpperCase()})`);
   else L.push(`رسوم التوصيل: ${baseFee()} ريال`);
   L.push("قيمة الطلب: حسب فاتورة المحل بدون زيادة");
+  if(withTrack){ L.push(""); L.push("تابع طلبك ووافق على الفاتورة من هنا:"); L.push(trackUrl()); }
   return L.join("\n");
 }
 
@@ -704,8 +743,15 @@ $("#send").addEventListener("click", e=>{
     if(el){ el.classList.add("bad"); el.scrollIntoView({behavior:"smooth", block:"center"}); setTimeout(()=>el.focus({preventScroll:true}), 400); }
     return;
   }
+  // طلب مختلف من نفس الصفحة = رابط ورمز جديدين (نفس الطلب مرتين = نفس الرابط)
+  const h = textHash(message(false));
+  if(sentHash && h !== sentHash){ TRACK = rnd(12); CODE = newCode(); }
+  sentHash = h;
+  $("#send").href = $("#send").href.split("?text=")[0] + "?text=" + encodeURIComponent(message());
   saveLast();
   saveOrder();
+  rememberOrder();
+  setTimeout(showSent, 400);
   if(CONFIG.whatsapp2 && CONFIG.split!=="category"){
     try{ localStorage.setItem("waTurn", String((+localStorage.getItem("waTurn")||0)+1)); }catch(e){}
     setTimeout(render,300);
@@ -718,7 +764,8 @@ function saveOrder(){
   try{
     const {shops, pack} = collect();
     const body = JSON.stringify({
-      key: PAGE_KEY + "-" + textHash(message()), // نفس الطلب مرتين = طلب واحد
+      key: PAGE_KEY + "-" + textHash(message(false)), // نفس الطلب مرتين = طلب واحد
+      track: TRACK, code: CODE,
       order_no: orderNo, dest: dest(),
       name: $("#name").value.trim(), phone: $("#phone").value.trim(), map: $("#map").value.trim(),
       place: $("#place").value.trim(), pay: $("#pay").value, note: $("#note").value.trim(),
@@ -728,6 +775,34 @@ function saveOrder(){
     fetch("/api/orders", {method:"POST", keepalive:true, headers:{"content-type":"application/json"}, body}).catch(()=>{});
   }catch(e){}
 }
+
+/* الطلبات المرسلة تنحفظ على جوال الزبون: رابط المتابعة + رمز الاستلام */
+function myOrders(){ try{ const a = JSON.parse(localStorage.getItem("jl-orders") || "[]"); return Array.isArray(a) ? a : []; }catch(e){ return []; } }
+function rememberOrder(){
+  try{
+    const list = myOrders().filter(o=>o.t !== TRACK);
+    list.unshift({ t: TRACK, c: CODE, n: orderNo, at: Date.now() });
+    localStorage.setItem("jl-orders", JSON.stringify(list.slice(0, 20)));
+  }catch(e){}
+  showTrackLast();
+}
+function showSent(){
+  $("#sentCode").textContent = CODE;
+  $("#sentLink").href = "/track/?k=" + TRACK;
+  $("#sentBox").classList.remove("hidden");
+}
+$("#sentClose").addEventListener("click", ()=>$("#sentBox").classList.add("hidden"));
+$("#sentBox").addEventListener("click", e=>{ if(e.target.id === "sentBox") $("#sentBox").classList.add("hidden"); });
+function showTrackLast(){
+  const last = myOrders()[0];
+  const a = $("#trackLast");
+  if(!last || Date.now() - last.at > 2*24*3600*1000){ a.classList.add("hidden"); return; }
+  a.href = "/track/?k=" + last.t;
+  $("#trackLastCode").textContent = last.c;
+  a.setAttribute("aria-label", "تابع طلبك الأخير، رمز الاستلام " + last.c);
+  a.classList.remove("hidden");
+}
+showTrackLast();
 
 document.getElementById("f").addEventListener("input", e=>{ if(e.target.classList) e.target.classList.remove("bad"); render(); });
 document.getElementById("f").addEventListener("change", render);

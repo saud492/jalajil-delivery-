@@ -139,6 +139,14 @@ tfoot td{font-weight:700;border-bottom:none}
   </main>
 
   <main class="wrap hidden" id="moneyTab">
+    <form class="card" id="setForm" novalidate>
+      <h2 style="font-size:17px">💳 الدفع المسبق والشكاوى</h2>
+      <label class="f">حد الدفع المسبق (ريال): لو الفاتورة فوقه الزبون يحوّل قبل ما المندوب يشتري. صفر = بدون<input id="setCap" class="ltr" inputmode="decimal" placeholder="150"></label>
+      <label class="f">بيانات التحويل اللي تطلع للزبون (اسم البنك، الآيبان، أو رقم STC Pay)<textarea id="setPay" rows="3" style="font:inherit;font-size:16px;color:var(--ink);background:var(--surface2);border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;width:100%;resize:vertical" placeholder="مثال: الراجحي · SA00 0000 0000 0000 0000 0000 · باسم ..."></textarea></label>
+      <label class="f">رقم واتساب الشكاوى (يطلع للزبون في صفحة المتابعة)<input id="setSupport" class="ltr" inputmode="tel" placeholder="9665XXXXXXXX"></label>
+      <p class="msg" id="setMsg"></p>
+      <button class="btn" id="setSave">حفظ</button>
+    </form>
     <div class="card">
       <h2 style="font-size:17px">العمولات المستحقة</h2>
       <p class="muted" style="margin:0">الطلب ينحسب لما المحل يضغط "جاهز للاستلام". الطلبات داخل فترة التجربة عمولتها صفر. الأسبوع يبدأ السبت.</p>
@@ -194,6 +202,7 @@ tfoot td{font-weight:700;border-bottom:none}
   </form>
 </div>
 
+<div class="imgv hidden" id="imgv" role="dialog" aria-label="صورة" style="position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:60;display:flex;align-items:center;justify-content:center;padding:16px"><img id="imgvImg" alt="صورة" style="max-width:100%;max-height:100%;border-radius:12px"></div>
 <div class="toast hidden" id="toast"></div>
 
 <script>
@@ -237,6 +246,7 @@ document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",
   document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on", x===b));
   ["orders","shops","drivers","money"].forEach(t=>$("#"+t+"Tab").classList.toggle("hidden", t!==tab));
   if(tab==="orders") loadOrders(); else { loadShops(); loadDrivers(); }
+  if(tab==="money") loadSettings();
 }));
 
 /* ===== المناديب ===== */
@@ -295,7 +305,50 @@ $("#driverForm").addEventListener("submit", async e=>{
   $("#saveDriver").disabled = false;
 });
 
-const DSTATUS = { assigned:"معه، ما استلم", picked:"استلم، في الطريق", delivered:"وصل ✓" };
+const DSTATUS = { assigned:"معه، ما اشترى", picked:"اشترى، في الطريق", delivered:"وصل ✓", cancelled:"الزبون ألغى" };
+const STAGE = { pricing:"ننتظر الفاتورة", approve:"ننتظر موافقة الزبون", prepay:"ننتظر تحويل الزبون", prepay_check:"الزبون رفع إيصال، أكّده",
+  buying:"الزبون وافق، المندوب يشتري", onway:"في الطريق", delivered:"وصل ✓", cancelled:"ملغي" };
+
+// مبلغ الفاتورة، موافقة الزبون، الدفع المسبق، رمز الاستلام، ورابط المتابعة
+function moneyRow(o){
+  const w = el("div", "drv");
+  w.append(el("b", "", "🧾 الحالة:"), el("span", "pill " + (["delivered","buying","onway"].includes(o.stage) ? "open" : o.stage === "cancelled" ? "off" : "new"), STAGE[o.stage] || o.stage));
+  if(o.billed) w.append(el("span", "muted", `المشتريات ${money(o.total)} ر · يحصّل ${money(o.collect)} ر`));
+  const info = el("div", "row muted"); info.style.width = "100%";
+  if(o.delivery_code) info.append("رمز الاستلام: ", el("b", "", o.delivery_code), " (عطه للزبون بس لو ضاع منه)");
+  w.append(info);
+  const links = el("div", "row"); links.style.width = "100%";
+  if(o.track_token){
+    const t = el("a", "btn sm line", "🔗 رابط متابعة الزبون"); t.href = "/track/?k=" + o.track_token; t.target = "_blank"; t.rel = "noopener"; t.style.textDecoration = "none"; links.append(t);
+  }
+  if(o.prepay_receipt){ const x = el("button", "btn sm line", "📷 إيصال التحويل"); x.onclick = () => showImg(o.prepay_receipt); links.append(x); }
+  if(o.stage === "prepay_check" || (o.stage === "prepay" && o.approved)){
+    const ok = el("button", "btn sm", `✓ وصل التحويل ${money(o.total)} ر`);
+    ok.onclick = async ()=>{ if(!confirm(`تأكدت إن ${money(o.total)} ريال وصلت حسابك؟ بعدها المندوب يقدر يشتري.`)) return; try{ await api("orders/" + o.id + "/prepay", "POST", {action:"confirm"}); toast("تم ✓ المندوب يقدر يشتري الحين"); loadOrders(); }catch(err){ toast(err.message); } };
+    links.append(ok);
+    if(o.stage === "prepay_check"){
+      const no = el("button", "btn sm bad", "الإيصال غلط");
+      no.onclick = async ()=>{ try{ await api("orders/" + o.id + "/prepay", "POST", {action:"reject"}); toast("رجّعناه للزبون يرفع إيصال ثاني"); loadOrders(); }catch(err){ toast(err.message); } };
+      links.append(no);
+    }
+  }
+  if(links.children.length) w.append(links);
+  return w;
+}
+function showImg(id){ $("#imgvImg").src = "/api/admin/images/" + id; $("#imgv").classList.remove("hidden"); }
+$("#imgv").addEventListener("click", ()=>$("#imgv").classList.add("hidden"));
+
+/* الإعدادات */
+async function loadSettings(){
+  try{ const d = await api("settings"); const s = d.settings; $("#setCap").value = s.prepay_cap; $("#setPay").value = s.pay_info || ""; $("#setSupport").value = s.support || ""; }
+  catch(err){ toast(err.message); }
+}
+$("#setForm").addEventListener("submit", async e=>{
+  e.preventDefault(); $("#setSave").disabled = true; $("#setMsg").textContent = "";
+  try{ await api("settings", "PUT", { prepay_cap: $("#setCap").value.trim() || "0", pay_info: $("#setPay").value, support: $("#setSupport").value.trim() }); toast("انحفظت الإعدادات ✓"); }
+  catch(err){ $("#setMsg").textContent = err.message; }
+  $("#setSave").disabled = false;
+});
 function driverRow(o){
   const w = el("div", "drv");
   w.append(el("b", "", "🛵 المندوب:"));
@@ -458,6 +511,8 @@ function renderOrders(list){
       if(p.ready_at) extra.push("جاهز " + when(p.ready_at));
       if(p.reject_reason) extra.push("سبب الرفض: " + p.reject_reason);
       if(p.status === "ready") extra.push("العمولة " + money(p.commission) + " ريال");
+      if(p.bill != null) extra.push("الفاتورة " + money(p.bill) + " ريال" + (p.shop_id ? " (من المحل)" : " (من المندوب)"));
+      if(p.bill_receipt){ const x = el("button", "btn sm line", "📷 صورة الفاتورة"); x.style.alignSelf = "flex-start"; x.onclick = () => showImg(p.bill_receipt); d.append(x); }
       if(extra.length) d.append(el("div", "muted", extra.join(" · ")));
       if(p.status !== "cancelled"){
         const x = el("button", "btn sm bad", "إلغاء هذا الجزء"); x.style.alignSelf = "flex-start";
@@ -470,6 +525,7 @@ function renderOrders(list){
       }
       c.append(d);
     });
+    c.append(moneyRow(o));
     c.append(driverRow(o));
     box.append(c);
   });

@@ -204,6 +204,7 @@ const POLL = 15000, REMIND = 60000;
 
 let shop = null, orders = [], serverSkew = 0, timer = null, tickTimer = null;
 let seen = new Set(), lastChime = 0, rejectId = null, busy = false;
+const drafts = {}; // مبالغ الفواتير اللي المحل يكتبها، عشان ما تنمسح مع التحديث
 
 /* ===== السيرفر ===== */
 async function api(path, body){
@@ -309,7 +310,10 @@ async function refresh(){
     const d = await api("orders");
     $("#netBanner").classList.add("hidden");
     shop = d.shop; serverSkew = d.now - Date.now(); orders = d.orders || [];
-    renderShop(); render();
+    renderShop();
+    // لا نعيد رسم القائمة والمحل يكتب مبلغ (عشان ما يطير المؤشر)
+    const typing = document.activeElement && document.activeElement.closest && document.activeElement.closest("#list input");
+    if(!typing) render();
     const fresh = orders.filter(o=>o.status==="new");
     const brandNew = fresh.some(o=>!seen.has(o.id));
     fresh.forEach(o=>seen.add(o.id));
@@ -346,14 +350,26 @@ function card(o){
   line("التوصيل إلى", (DEST[o.dest] || o.dest) + (o.place ? " · " + o.place : ""));
   line("الدفع", o.pay);
   line("ملاحظة", o.note);
+  if(o.bill != null) line("مبلغ الفاتورة", money(o.bill) + " ريال");
   if(o.status === "rejected") line("سبب الرفض", o.reject_reason);
   c.append(meta);
 
   const acts = el("div", "acts");
   if(o.status === "new"){
+    const lb = el("label", "f"); lb.style.gridColumn = "1/-1";
+    lb.append("مبلغ الفاتورة (ريال). الزبون يشوفه ويوافق عليه قبل ما المندوب يدفع");
+    const inp = el("input", "ltr"); inp.inputMode = "decimal"; inp.placeholder = "مثال: 45"; inp.setAttribute("aria-label", "مبلغ الفاتورة بالريال");
+    inp.value = drafts[o.id] || ""; inp.dataset.id = o.id; inp.oninput = () => { drafts[o.id] = inp.value; };
+    lb.append(inp); acts.append(lb);
+    const toEn = s => String(s).replace(/[٠-٩]/g, d => AR.indexOf(d)).replace(/[٫,]/g, ".");
     [10,20,30].forEach(m=>{
       const b = el("button", "btn"); b.innerHTML = "قبول<small></small>"; b.querySelector("small").textContent = toAr(m) + " دقيقة";
-      b.onclick = () => act(o.id, {action:"accept", minutes:m}, "تم القبول ✓"); acts.append(b);
+      b.onclick = () => {
+        const bill = Number(toEn(inp.value.trim()));
+        if(!inp.value.trim() || !(bill > 0)){ inp.focus(); toast("اكتب مبلغ الفاتورة أول"); return; }
+        act(o.id, {action:"accept", minutes:m, bill}, "تم القبول ✓");
+      };
+      acts.append(b);
     });
     const r = el("button", "btn line", "رفض الطلب"); r.onclick = () => openReject(o.id); acts.append(r);
   } else if(o.status === "accepted"){

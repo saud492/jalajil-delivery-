@@ -40,7 +40,7 @@ export async function orders(db, request) {
   const s = await requireSession(db, request, "shop");
   const since = Date.now() - 24 * 3600_000;
   const { results } = await db.prepare(`
-    SELECT p.id, p.items, p.status, p.prep_minutes, p.reject_reason, p.accepted_at, p.ready_at, p.updated_at,
+    SELECT p.id, p.items, p.status, p.prep_minutes, p.reject_reason, p.accepted_at, p.ready_at, p.updated_at, p.bill,
            o.order_no, o.created_at, o.dest, o.customer_name, o.customer_phone, o.place, o.pay, o.note
     FROM parts p JOIN orders o ON o.id = p.order_id
     WHERE p.shop_id = ? AND (p.status IN ('new','accepted') OR p.updated_at > ?)
@@ -57,15 +57,19 @@ export async function act(db, request, partId) {
   if (!FROM[action]) throw new HttpError(400, "إجراء غير معروف");
   const now = Date.now();
   const allowed = FROM[action].map(x => `'${x}'`).join(",");
+  // مبلغ الفاتورة يكتبه المحل نفسه، عشان المندوب ما يقدر يزوّده على الزبون
+  const bill = b.bill === undefined || b.bill === "" ? null : Number(String(b.bill).replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)));
+  if (bill !== null && (!Number.isFinite(bill) || bill <= 0 || bill > 100000)) throw new HttpError(400, "مبلغ الفاتورة غير صحيح");
   let stmt;
   if (action === "accept") {
     const m = Number(b.minutes);
     if (![10, 20, 30].includes(m)) throw new HttpError(400, "اختر وقت التجهيز");
-    stmt = db.prepare(`UPDATE parts SET status='accepted', prep_minutes=?, accepted_at=?, updated_at=? WHERE id=? AND shop_id=? AND status IN (${allowed})`)
-      .bind(m, now, now, partId, s.shop.id);
+    if (bill === null) throw new HttpError(400, "اكتب مبلغ الفاتورة");
+    stmt = db.prepare(`UPDATE parts SET status='accepted', prep_minutes=?, accepted_at=?, bill=?, updated_at=? WHERE id=? AND shop_id=? AND status IN (${allowed})`)
+      .bind(m, now, Math.round(bill * 100) / 100, now, partId, s.shop.id);
   } else if (action === "ready") {
-    stmt = db.prepare(`UPDATE parts SET status='ready', ready_at=?, commission=?, updated_at=? WHERE id=? AND shop_id=? AND status IN (${allowed})`)
-      .bind(now, commissionFor(s.shop, now), now, partId, s.shop.id);
+    stmt = db.prepare(`UPDATE parts SET status='ready', ready_at=?, commission=?, bill=COALESCE(?, bill), updated_at=? WHERE id=? AND shop_id=? AND status IN (${allowed}) AND COALESCE(?, bill) IS NOT NULL`)
+      .bind(now, commissionFor(s.shop, now), bill, now, partId, s.shop.id, bill);
   } else {
     const reason = str(b.reason, 120);
     if (!reason) throw new HttpError(400, "اختر سبب الرفض");
@@ -74,8 +78,9 @@ export async function act(db, request, partId) {
   }
   const r = await stmt.run();
   if (!r.meta.changes) {
-    const p = await db.prepare("SELECT status FROM parts WHERE id = ? AND shop_id = ?").bind(partId, s.shop.id).first();
+    const p = await db.prepare("SELECT status, bill FROM parts WHERE id = ? AND shop_id = ?").bind(partId, s.shop.id).first();
     if (!p) throw new HttpError(404, "الطلب مو موجود");
+    if (action === "ready" && p.bill === null && FROM.ready.includes(p.status)) throw new HttpError(400, "اكتب مبلغ الفاتورة");
     throw new HttpError(409, "حالة الطلب تغيّرت، حدّث الصفحة");
   }
   return json({ ok: true });

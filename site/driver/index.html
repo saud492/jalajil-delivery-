@@ -136,6 +136,19 @@ input.ltr{direction:ltr;text-align:right}
 .pill.delivered{background:var(--accent);color:var(--accent-ink)}
 .fee{font-family:var(--font-display);font-weight:700;color:var(--accent);font-size:17px}
 .acts2{display:grid;grid-template-columns:1fr;gap:8px}
+.gate{border-radius:12px;padding:10px 12px;font-weight:700;font-size:15px}
+.gate.wait{background:var(--new-soft);color:var(--ink);border:1.5px solid var(--new)}
+.gate.ok{background:var(--accent-soft);color:var(--accent)}
+.gate.bad{background:var(--bad-soft);color:var(--bad)}
+.billrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px}
+.billrow .fee{font-size:15px;flex:1}
+.muted2{color:var(--muted);font-size:14px;flex:1}
+.mini{border:1.5px solid var(--line);background:var(--surface);border-radius:10px;padding:4px 10px;font-size:13px;font-weight:700}
+.mini.strong{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.tot2{flex-direction:row;justify-content:space-between;font-weight:700}
+.btn[disabled]{opacity:.4}
+.imgv{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:60;display:flex;align-items:center;justify-content:center;padding:16px}
+.imgv img{max-width:100%;max-height:100%;border-radius:12px}
 .stats3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 @media (max-width:380px){.stats3{grid-template-columns:1fr}}
 </style>
@@ -192,6 +205,33 @@ input.ltr{direction:ltr;text-align:right}
     <button class="out" id="logoutBtn">تسجيل خروج</button>
   </main>
 </div>
+
+<div id="billSheet" class="sheet-bg hidden">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="billT">
+    <h2 id="billT">الفاتورة</h2>
+    <p style="margin:0;color:var(--muted);font-size:14px">صوّر فاتورة المحل واكتب مبلغها بالضبط. الزبون يشوف الصورة والمبلغ ويوافق قبل لا تدفع.</p>
+    <button class="btn" id="billPhoto" type="button">📷 صوّر الفاتورة</button>
+    <img id="billPrev" class="hidden" alt="صورة الفاتورة" style="max-height:200px;object-fit:contain;border-radius:12px;background:var(--surface2)">
+    <label class="f">المبلغ (ريال)<input id="billAmt" class="ltr" inputmode="decimal" placeholder="مثال: 37.5"></label>
+    <p class="msg" id="billMsg" aria-live="polite"></p>
+    <button class="btn big" id="billSave" type="button">حفظ الفاتورة</button>
+    <button class="out" id="billCancel" type="button">رجوع</button>
+  </div>
+</div>
+<input type="file" id="billFile" accept="image/*" capture="environment" class="hidden">
+
+<div id="codeSheet" class="sheet-bg hidden">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="codeT">
+    <h2 id="codeT">رمز الاستلام</h2>
+    <p style="margin:0;color:var(--muted);font-size:14px">سلّم الطلب للزبون، واطلب منه رمز الاستلام (٤ أرقام) اللي عنده.</p>
+    <input id="codeIn" class="ltr" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="••••" style="font-size:30px;letter-spacing:10px;text-align:center">
+    <p class="msg" id="codeMsg" aria-live="polite"></p>
+    <button class="btn big" id="codeSave" type="button">تأكيد التسليم</button>
+    <button class="out" id="codeCancel" type="button">رجوع</button>
+  </div>
+</div>
+
+<div class="imgv hidden" id="imgv" role="dialog" aria-label="صورة الفاتورة"><img id="imgvImg" alt="صورة الفاتورة"></div>
 
 <div class="toast hidden" id="toast" aria-live="polite"></div>
 
@@ -308,6 +348,8 @@ function ago(ms){
   return "قبل " + toAr(Math.floor(m/60)) + " س";
 }
 function partStatus(p){
+  if(p.status === "cancelled") return ["cancelled", "ملغي"];
+  if(!p.partner) return ["picked", "تطلبه وتشتريه أنت"];
   if(p.status === "ready") return ["ready", "جاهز للاستلام ✓"];
   if(p.status === "accepted"){
     const left = Math.round((p.accepted_at + p.prep_minutes*60000 - now())/60000);
@@ -352,7 +394,7 @@ function availCard(o){
   a.append(b); c.append(a);
   return c;
 }
-const MS = { assigned:"معك، روح استلم", picked:"في الطريق للزبون", delivered:"وصل ✓" };
+const MS = { assigned:"معك، ما اشتريت", picked:"في الطريق للزبون", delivered:"وصل ✓", cancelled:"ملغي" };
 function mineCard(o){
   const c = el("article", "card" + (o.driver_status === "assigned" ? " new" : ""));
   c.append(head(o, el("span", "pill " + o.driver_status, MS[o.driver_status] || o.driver_status)));
@@ -372,16 +414,115 @@ function mineCard(o){
   line("الدفع", o.pay); line("ملاحظة", o.note);
   if(o.pack && o.pack.length) line("تجهيزات", o.pack.join("، "));
   if(extra.children.length) c.append(extra);
-  c.append(partsBox(o.parts, true));
+  c.append(billBox(o));
+  if(o.driver_status === "cancelled"){ c.append(el("div", "gate bad", "❌ الزبون ألغى الطلب. لا تشتري شي.")); return c; }
   const a = el("div", "acts2");
   if(o.driver_status === "assigned"){
-    const b = el("button", "btn big", "📦 استلمت الطلب"); b.onclick = () => act(o.id, "picked", "تمام، بالتوفيق في الطريق 🛵"); a.append(b);
+    const g = gate(o); if(g) c.append(g);
+    const b = el("button", "btn big", "🛍️ اشتريت واستلمت الطلب"); b.disabled = !o.canBuy;
+    b.onclick = () => act(o.id, "picked", "تمام، بالتوفيق في الطريق 🛵"); a.append(b);
     const r = el("button", "btn line", "ما أقدر، رجّعه للمناديب"); r.onclick = () => { if(confirm("ترجّع الطلب؟ بيطلع لباقي المناديب.")) act(o.id, "release", "رجّعت الطلب"); }; a.append(r);
   } else if(o.driver_status === "picked"){
-    const b = el("button", "btn big", "✅ وصلت للزبون"); b.onclick = () => { if(confirm("أكيد سلّمت الطلب للزبون؟")) act(o.id, "delivered", "يعطيك العافية ✓"); }; a.append(b);
+    c.append(el("div", "gate ok", `💵 حصّل من الزبون: ${money(o.collect)} ريال` + (o.prepaid ? " (المشتريات محوّلة مسبقاً، التوصيل بس)" : "")));
+    const b = el("button", "btn big", "✅ سلّمت الطلب (اكتب رمز الزبون)"); b.onclick = () => openCode(o); a.append(b);
   }
   if(a.children.length) c.append(a);
   return c;
+}
+
+// وش المطلوب قبل ما يقدر يشتري
+function gate(o){
+  const msg = {
+    pricing: o.parts.some(p=>!p.partner && p.bill == null && !["cancelled","rejected"].includes(p.status))
+      ? "📷 صوّر فاتورة كل محل واكتب مبلغها. الزبون لازم يوافق قبل لا تدفع."
+      : "⏳ ننتظر المحل يكتب مبلغ الفاتورة.",
+    approve: `⏳ ننتظر موافقة الزبون على ${money(o.total)} ريال. لا تدفع للمحل الحين.`,
+    prepay: `⏳ الفاتورة كبيرة، والزبون لازم يحوّل ${money(o.total)} ريال قبل. لا تدفع للحين.`,
+    prepay_check: "⏳ الزبون رفع إيصال التحويل، ننتظر صاحب الخدمة يأكّده. لا تدفع للحين.",
+    buying: `✅ الزبون وافق على ${money(o.total)} ريال${o.prepaid ? " وحوّلها" : ""}. ادفع للمحل واستلم.`,
+  }[o.stage];
+  return msg ? el("div", "gate " + (o.stage === "buying" ? "ok" : "wait"), msg) : null;
+}
+
+function billBox(o){
+  const box = el("div", "parts");
+  o.parts.forEach(p=>{
+    const b = el("div", "pt"); const h = el("div", "pt-h");
+    h.append(el("b", "", (p.category && p.category !== p.shop_name ? p.category + " · " : "") + (p.shop_name || "محل")));
+    const [cls, txt] = partStatus(p); h.append(el("span", "pill " + cls, txt));
+    b.append(h);
+    if(p.items) b.append(el("div", "it", p.items));
+    const dead = ["cancelled","rejected"].includes(p.status);
+    if(!dead){
+      const row = el("div", "billrow");
+      if(p.bill != null) row.append(el("span", "fee", "الفاتورة: " + money(p.bill) + " ريال"));
+      else row.append(el("span", "muted2", p.partner ? "المحل للحين ما كتب المبلغ" : "ما كتبت الفاتورة للحين"));
+      if(p.receipt){ const x = el("button", "mini", "📷 الصورة"); x.onclick = () => showImg(p.receipt); row.append(x); }
+      if(!p.partner && o.driver_status === "assigned"){ const x = el("button", "mini strong", p.bill != null ? "تعديل" : "📷 صوّر واكتب المبلغ"); x.onclick = () => openBill(o, p); row.append(x); }
+      b.append(row);
+    }
+    box.append(b);
+  });
+  if(o.billed){ const t = el("div", "pt tot2"); t.append(el("span", "", "المجموع"), el("span", "fee", money(o.total) + " ريال")); box.append(t); }
+  return box;
+}
+
+/* الفاتورة: صورة + مبلغ */
+let billFor = null, billImg = null;
+function openBill(o, p){
+  billFor = p; billImg = null;
+  $("#billT").textContent = "فاتورة " + (p.shop_name || "المحل");
+  $("#billAmt").value = p.bill != null ? p.bill : ""; $("#billPrev").classList.add("hidden"); $("#billMsg").textContent = "";
+  $("#billSheet").classList.remove("hidden");
+}
+$("#billPhoto").addEventListener("click", ()=>{ $("#billFile").value = ""; $("#billFile").click(); });
+$("#billFile").addEventListener("change", async ()=>{
+  const f = $("#billFile").files[0]; if(!f) return;
+  try{ billImg = await compress(f); $("#billPrev").src = billImg; $("#billPrev").classList.remove("hidden"); $("#billMsg").textContent = ""; }
+  catch(err){ $("#billMsg").textContent = err.message; }
+});
+$("#billCancel").addEventListener("click", ()=>$("#billSheet").classList.add("hidden"));
+$("#billSave").addEventListener("click", async ()=>{
+  const amount = Number(String($("#billAmt").value).replace(/[٠-٩]/g, d => AR.indexOf(d)).replace(/[٫,]/g, "."));
+  if(!billImg){ $("#billMsg").textContent = "صوّر الفاتورة أول"; return; }
+  if(!(amount > 0)){ $("#billMsg").textContent = "اكتب مبلغ الفاتورة"; $("#billAmt").focus(); return; }
+  $("#billSave").disabled = true;
+  try{ await api("parts/" + billFor.id + "/bill", {amount, image: billImg}); $("#billSheet").classList.add("hidden"); toast("انحفظت الفاتورة ✓ ننتظر موافقة الزبون"); refresh(); }
+  catch(err){ $("#billMsg").textContent = err.message; }
+  $("#billSave").disabled = false;
+});
+
+/* رمز الاستلام */
+let codeFor = null;
+function openCode(o){ codeFor = o; $("#codeIn").value = ""; $("#codeMsg").textContent = ""; $("#codeSheet").classList.remove("hidden"); setTimeout(()=>$("#codeIn").focus(), 100); }
+$("#codeCancel").addEventListener("click", ()=>$("#codeSheet").classList.add("hidden"));
+$("#codeSave").addEventListener("click", async ()=>{
+  const code = $("#codeIn").value.trim();
+  if(!code){ $("#codeMsg").textContent = "اطلب الرمز من الزبون واكتبه"; return; }
+  $("#codeSave").disabled = true;
+  try{ await api("orders/" + codeFor.id, {action:"delivered", code}); $("#codeSheet").classList.add("hidden"); toast("يعطيك العافية ✓"); refresh(); }
+  catch(err){ $("#codeMsg").textContent = err.message; }
+  $("#codeSave").disabled = false;
+});
+
+function showImg(id){ $("#imgvImg").src = "/api/driver/images/" + id; $("#imgv").classList.remove("hidden"); }
+$("#imgv").addEventListener("click", ()=>$("#imgv").classList.add("hidden"));
+
+// تصغير الصورة بالجوال قبل الرفع
+function compress(file){
+  return new Promise((res, rej)=>{
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = ()=>{
+      const max = 1280, s = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement("canvas"); c.width = Math.round(img.width*s); c.height = Math.round(img.height*s);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+      let q = .72, out = c.toDataURL("image/jpeg", q);
+      while(out.length > 850000 && q > .3){ q -= .12; out = c.toDataURL("image/jpeg", q); }
+      res(out);
+    };
+    img.onerror = ()=>{ URL.revokeObjectURL(url); rej(new Error("ما قدرنا نقرأ الصورة")); };
+    img.src = url;
+  });
 }
 
 function sec(list, title, arr, cls){
@@ -401,9 +542,9 @@ function render(){
 
   const ml = $("#mineList"); ml.innerHTML = "";
   if(!mine.length){ const e = el("div", "empty"); e.append(el("b", "", "ما معك طلبات")); e.append("خذ طلب من \"متاحة\"، أو انتظر صاحب الخدمة يعيّن لك."); ml.append(e); return; }
-  sec(ml, "📦 روح استلمها", mine.filter(o=>o.driver_status==="assigned"));
+  sec(ml, "📦 روح اشترِ واستلم", mine.filter(o=>o.driver_status==="assigned"));
   sec(ml, "🛵 في الطريق", mine.filter(o=>o.driver_status==="picked"));
-  sec(ml, "آخر ٢٤ ساعة", mine.filter(o=>o.driver_status==="delivered"), "done-list");
+  sec(ml, "آخر ٢٤ ساعة", mine.filter(o=>["delivered","cancelled"].includes(o.driver_status)), "done-list");
 }
 
 async function act(id, action, done, after){

@@ -1,6 +1,7 @@
 // لوحة صاحب الخدمة
 import { HttpError, json, readJson, str, riyadhRanges, STATUSES, sha256, cleanCode } from "./util.js";
 import { checkLock, recordFail, clearFails, createSession, sessionCookie, requireSession, endSession, hashPin, safeEqual } from "./auth.js";
+import { getSettings, saveSettings, summarize, loadOrder, sendImage } from "./flow.js";
 
 const ip = r => r.headers.get("cf-connecting-ip") || "local";
 const CATS = ["بقالة", "مطعم", "كافيه", "صيدلية", "أخرى"];
@@ -139,7 +140,8 @@ export async function orders(db, request) {
   const { results: ps } = await db.prepare(`SELECT * FROM parts WHERE order_id IN (${ids.map(() => "?").join(",")}) ORDER BY id`).bind(...ids).all();
   const by = new Map(os.map(o => [o.id, { ...o, client_key: undefined, pack: safeParse(o.pack), parts: [] }]));
   for (const p of ps) by.get(p.order_id).parts.push(p);
-  return json({ orders: [...by.values()] });
+  const st = await getSettings(db);
+  return json({ orders: [...by.values()].map(o => ({ ...o, ...summarize(o, o.parts, st) })) });
 }
 
 function safeParse(s) { try { return JSON.parse(s || "[]"); } catch { return []; } }
@@ -242,4 +244,39 @@ export async function assignDriver(db, request, orderId) {
   if (!d) throw new HttpError(400, "اختر مندوب فعّال");
   await db.prepare("UPDATE orders SET driver_id=?, driver_status='assigned', assigned_at=?, picked_at=NULL WHERE id=?").bind(id, Date.now(), orderId).run();
   return json({ ok: true });
+}
+
+/* ===== الإعدادات، الدفع المسبق، والصور ===== */
+export async function settings(db, request) {
+  await requireSession(db, request, "admin");
+  return json({ settings: await getSettings(db) });
+}
+
+export async function updateSettings(db, request) {
+  await requireSession(db, request, "admin");
+  await saveSettings(db, await readJson(request));
+  return json({ ok: true, settings: await getSettings(db) });
+}
+
+// صاحب الخدمة يأكّد إن تحويل الزبون وصل (أو يرفضه عشان الزبون يرفع إيصال صحيح)
+export async function prepay(db, request, orderId) {
+  await requireSession(db, request, "admin");
+  const b = await readJson(request);
+  const x = await loadOrder(db, "id", orderId);
+  if (!x) throw new HttpError(404, "الطلب مو موجود");
+  const sum = summarize(x.o, x.parts, await getSettings(db));
+  if (b.action === "confirm") {
+    if (!sum.approved) throw new HttpError(409, "الزبون للحين ما وافق على المبلغ");
+    await db.prepare("UPDATE orders SET prepay_status='confirmed', prepay_amount=? WHERE id=?").bind(sum.total, orderId).run();
+  } else if (b.action === "reject") {
+    await db.prepare("UPDATE orders SET prepay_status=NULL, prepay_amount=NULL WHERE id=?").bind(orderId).run();
+  } else throw new HttpError(400, "إجراء غير معروف");
+  return json({ ok: true });
+}
+
+export async function image(db, request, id) {
+  await requireSession(db, request, "admin");
+  const r = await db.prepare("SELECT order_id FROM receipts WHERE id = ?").bind(id).first();
+  if (!r) throw new HttpError(404, "الصورة مو موجودة");
+  return sendImage(db, r.order_id, id);
 }

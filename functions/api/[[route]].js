@@ -5,6 +5,7 @@ import * as pub from "../../server/orders.js";
 import * as partner from "../../server/partner.js";
 import * as admin from "../../server/admin.js";
 import * as driver from "../../server/driver.js";
+import * as flow from "../../server/flow.js";
 
 const routes = [
   ["GET", /^\/api\/shops$/, (db, r) => pub.listShops(db, r)],
@@ -31,6 +32,17 @@ const routes = [
   ["PUT", /^\/api\/admin\/drivers\/(\d+)$/, (db, r, e, m) => admin.updateDriver(db, r, Number(m[1]))],
   ["POST", /^\/api\/admin\/orders\/(\d+)\/driver$/, (db, r, e, m) => admin.assignDriver(db, r, Number(m[1]))],
 
+  ["GET", /^\/api\/admin\/settings$/, (db, r) => admin.settings(db, r)],
+  ["PUT", /^\/api\/admin\/settings$/, (db, r) => admin.updateSettings(db, r)],
+  ["POST", /^\/api\/admin\/orders\/(\d+)\/prepay$/, (db, r, e, m) => admin.prepay(db, r, Number(m[1]))],
+  ["GET", /^\/api\/admin\/images\/(\d+)$/, (db, r, e, m) => admin.image(db, r, Number(m[1]))],
+
+  ["GET", /^\/api\/track\/([A-Za-z0-9_-]+)$/, (db, r, e, m) => flow.track(db, r, m[1])],
+  ["POST", /^\/api\/track\/([A-Za-z0-9_-]+)$/, (db, r, e, m) => flow.trackAct(db, r, m[1])],
+  ["GET", /^\/api\/track\/([A-Za-z0-9_-]+)\/images\/(\d+)$/, (db, r, e, m) => flow.trackImage(db, r, m[1], Number(m[2]))],
+
+  ["POST", /^\/api\/driver\/parts\/(\d+)\/bill$/, (db, r, e, m) => driver.setBill(db, r, Number(m[1]))],
+  ["GET", /^\/api\/driver\/images\/(\d+)$/, (db, r, e, m) => driver.image(db, r, Number(m[1]))],
   ["POST", /^\/api\/driver\/login$/, (db, r) => driver.login(db, r)],
   ["POST", /^\/api\/driver\/logout$/, (db, r) => driver.logout(db, r)],
   ["GET", /^\/api\/driver\/me$/, (db, r) => driver.me(db, r)],

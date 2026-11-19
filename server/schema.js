@@ -61,6 +61,21 @@ const STATEMENTS = [
     active INTEGER NOT NULL DEFAULT 1,
     created_at INTEGER NOT NULL
   )`,
+  // إعدادات صاحب الخدمة (حد الدفع المسبق، بيانات التحويل…)
+  `CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT
+  )`,
+  // صور الفواتير وإيصالات التحويل، مضغوطة من الجوال
+  `CREATE TABLE IF NOT EXISTS receipts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id INTEGER NOT NULL REFERENCES orders(id),
+    kind TEXT NOT NULL,              -- bill = فاتورة محل، transfer = إيصال تحويل الزبون
+    mime TEXT NOT NULL,
+    data TEXT NOT NULL,              -- base64
+    created_at INTEGER NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS receipts_order ON receipts(order_id)`,
 ];
 
 // أعمدة انضافت بعد أول نسخة: تنضاف للجداول القديمة لو ناقصة
@@ -71,6 +86,18 @@ const COLUMNS = {
     ["assigned_at", "INTEGER"],
     ["picked_at", "INTEGER"],
     ["delivered_at", "INTEGER"],
+    ["track_token", "TEXT"],         // رابط متابعة الزبون
+    ["delivery_code", "TEXT"],       // رمز الاستلام: عند الزبون بس، والمندوب يكتبه لما يسلّم
+    ["approved_total", "REAL"],      // المبلغ اللي وافق عليه الزبون (لو تغيّر المبلغ يحتاج موافقة جديدة)
+    ["approved_at", "INTEGER"],
+    ["rejected_at", "INTEGER"],      // الزبون رفض المبلغ
+    ["prepay_status", "TEXT"],       // null، sent = الزبون رفع إيصال، confirmed = صاحب الخدمة أكّد
+    ["prepay_amount", "REAL"],       // المبلغ اللي تأكد وصوله
+    ["prepay_receipt", "INTEGER"],
+  ],
+  parts: [
+    ["bill", "REAL"],                // مبلغ فاتورة المحل
+    ["bill_receipt", "INTEGER"],     // صورة الفاتورة (للمحلات غير الشريكة)
   ],
 };
 
@@ -85,6 +112,9 @@ export async function ensureSchema(db) {
     const add = cols.filter(([n]) => !have.has(n));
     if (add.length) await db.batch(add.map(([n, t]) => db.prepare(`ALTER TABLE ${table} ADD COLUMN ${n} ${t}`)));
   }
-  await db.prepare("CREATE INDEX IF NOT EXISTS orders_driver ON orders(driver_id, driver_status)").run();
+  await db.batch([
+    db.prepare("CREATE INDEX IF NOT EXISTS orders_driver ON orders(driver_id, driver_status)"),
+    db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS orders_track ON orders(track_token)"),
+  ]);
   ready = true;
 }
