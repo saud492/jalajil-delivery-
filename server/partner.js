@@ -41,7 +41,7 @@ export async function orders(db, request) {
   const since = Date.now() - 24 * 3600_000;
   const { results } = await db.prepare(`
     SELECT p.id, p.items, p.status, p.prep_minutes, p.reject_reason, p.accepted_at, p.ready_at, p.updated_at,
-           o.order_no, o.created_at, o.dest, o.customer_name, o.customer_phone, o.map_url, o.place, o.pay, o.note
+           o.order_no, o.created_at, o.dest, o.customer_name, o.customer_phone, o.place, o.pay, o.note
     FROM parts p JOIN orders o ON o.id = p.order_id
     WHERE p.shop_id = ? AND (p.status IN ('new','accepted') OR p.updated_at > ?)
     ORDER BY o.created_at DESC LIMIT 200`).bind(s.shop.id, since).all();

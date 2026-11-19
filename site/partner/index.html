@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>شركاء توصيل جلاجل</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0a4f4c">
+<link rel="manifest" href="/partner/manifest.webmanifest">
+<link rel="icon" href="/partner/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/partner/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="شركاء توصيل جلاجل">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@500;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f3f1ec;--surface:#fffdf9;--surface2:#f7f5f0;--ink:#1f2a2b;--muted:#5f6b6b;--line:#e2ded5;
+  --accent:#0f6a66;--accent-2:#0a4f4c;--accent-ink:#ffffff;--accent-soft:#e1efed;--stone:#a4652f;--sand:#ecd5b3;
+  --ok:#0f6a66;--bad:#b3261e;--bad-soft:#fbe9e7;--new:#a4652f;--new-soft:#f8ecdc;
+  --shadow:0 1px 2px rgba(31,42,43,.05),0 6px 20px rgba(31,42,43,.06);
+  --font-display:"Readex Pro","IBM Plex Sans Arabic",system-ui,sans-serif;
+  --font-body:"IBM Plex Sans Arabic",system-ui,"Segoe UI",Tahoma,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121818;--surface:#1a2222;--surface2:#151c1c;--ink:#e9eeec;--muted:#a3b0ae;--line:#2b3636;
+    --accent:#4fb8b0;--accent-2:#0f6a66;--accent-ink:#0b1414;--accent-soft:#1d3332;--stone:#d39a63;--sand:#e4c99f;
+    --ok:#4fb8b0;--bad:#ff8a80;--bad-soft:#3a2220;--new:#d39a63;--new-soft:#33291f;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25);
+    color-scheme:dark;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.6;-webkit-tap-highlight-color:transparent;min-height:100vh}
+.hidden{display:none !important}
+button{font:inherit;cursor:pointer;color:inherit}
+a{color:inherit}
+h1,h2,h3{font-family:var(--font-display);margin:0}
+
+/* header */
+.top{position:sticky;top:0;z-index:20;color:#fff;background:radial-gradient(120% 140% at 85% 0%,#17847e 0%,#0f6a66 45%,#0a4f4c 100%);
+  padding:calc(12px + env(safe-area-inset-top)) 16px 0}
+.top-in{max-width:560px;margin:0 auto}
+.top-row{display:flex;align-items:center;gap:12px}
+.top h1{font-size:20px;font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.top small{display:block;font-size:12px;color:var(--sand);font-family:var(--font-body);font-weight:500}
+.switch{display:flex;align-items:center;gap:8px;border:none;border-radius:999px;padding:6px 8px 6px 14px;font-weight:700;font-size:14px;background:rgba(255,255,255,.16);color:#fff}
+.switch i{width:44px;height:26px;border-radius:999px;background:#ff8a80;position:relative;transition:background .2s;flex:none}
+.switch i::after{content:"";position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s}
+.switch.on i{background:#5be39a}
+.switch.on i::after{transform:translateX(-18px)}
+.tabs{display:flex;gap:4px;margin-top:10px}
+.tabs button{flex:1;border:none;background:none;color:rgba(255,255,255,.75);font-weight:700;padding:10px 0 12px;border-bottom:3px solid transparent;font-family:var(--font-display);font-size:15px}
+.tabs button.on{color:#fff;border-color:var(--sand)}
+.tabs b{display:inline-grid;place-items:center;min-width:22px;height:22px;border-radius:999px;background:var(--stone);color:#fff;font-size:12px;padding:0 6px;margin-inline-start:6px}
+
+.wrap{max-width:560px;margin:0 auto;padding:14px 14px calc(40px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:12px}
+.banner{border:none;width:100%;text-align:start;display:flex;align-items:center;gap:10px;border-radius:14px;padding:12px 14px;font-weight:600;background:var(--new-soft);color:var(--ink);border:1.5px solid var(--new)}
+.banner.err{background:var(--bad-soft);border-color:var(--bad)}
+.sec-t{font-family:var(--font-display);font-weight:700;font-size:15px;color:var(--muted);margin:6px 2px -2px;display:flex;align-items:center;gap:8px}
+.empty{text-align:center;color:var(--muted);padding:40px 10px;background:var(--surface);border-radius:20px;box-shadow:var(--shadow)}
+.empty b{display:block;font-family:var(--font-display);font-size:18px;color:var(--ink);margin-bottom:4px}
+
+/* order card */
+.card{background:var(--surface);border-radius:20px;padding:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px;border:2px solid transparent}
+.card.new{border-color:var(--new);animation:pop .5s ease}
+@keyframes pop{0%{transform:scale(.97);opacity:.4}100%{transform:none;opacity:1}}
+.c-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.c-head h3{font-size:17px;font-weight:700}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 10px;font-size:13px;font-weight:700}
+.pill.new{background:var(--new);color:#fff}
+.pill.accepted{background:var(--accent-soft);color:var(--accent)}
+.pill.ready{background:var(--accent);color:var(--accent-ink)}
+.pill.rejected,.pill.cancelled{background:var(--bad-soft);color:var(--bad)}
+.ago{margin-inline-start:auto;color:var(--muted);font-size:13px}
+.items{white-space:pre-wrap;word-break:break-word;background:var(--surface2);border-radius:12px;padding:10px 12px;font-size:17px;font-weight:600;line-height:1.7}
+.meta{display:flex;flex-direction:column;gap:2px;font-size:14px;color:var(--muted)}
+.meta b{color:var(--ink);font-weight:600}
+.cust{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cust a{display:inline-flex;align-items:center;gap:4px;text-decoration:none;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:3px 12px;font-size:14px}
+.acts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.btn{border:none;border-radius:14px;padding:13px 6px;font-weight:700;font-size:16px;background:var(--accent);color:var(--accent-ink);font-family:var(--font-display)}
+.btn small{display:block;font-size:12px;font-weight:500;opacity:.85;font-family:var(--font-body)}
+.btn.big{grid-column:1/-1;padding:16px;font-size:18px}
+.btn.line{background:none;color:var(--bad);border:1.5px solid var(--line);grid-column:1/-1;padding:10px;font-size:15px}
+.btn[disabled]{opacity:.5}
+.timer{font-weight:700;font-variant-numeric:tabular-nums;color:var(--accent)}
+.timer.late{color:var(--bad)}
+.done-list .card{opacity:.85}
+
+/* summary */
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{background:var(--surface);border-radius:18px;padding:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:2px}
+.stat small{color:var(--muted);font-size:13px}
+.stat b{font-family:var(--font-display);font-size:30px;color:var(--accent);line-height:1.2}
+.stat span{font-size:14px;color:var(--muted)}
+.stat em{font-style:normal;font-weight:700;color:var(--ink)}
+.note{background:var(--surface);border-radius:18px;padding:14px;box-shadow:var(--shadow);font-size:15px}
+.note.trial{background:var(--accent-soft);box-shadow:none}
+
+/* login */
+.login{max-width:420px;margin:0 auto;padding:calc(40px + env(safe-area-inset-top)) 18px 40px;display:flex;flex-direction:column;gap:14px}
+.login .logo{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;margin-bottom:8px}
+.login .logo img{width:84px;height:84px;border-radius:22px;box-shadow:var(--shadow)}
+.login h1{font-size:24px;font-weight:800}
+.login p{margin:0;color:var(--muted)}
+label.f{display:flex;flex-direction:column;gap:5px;font-size:14px;color:var(--muted);font-weight:500}
+input,textarea{font:inherit;font-size:18px;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;width:100%}
+input:focus,textarea:focus{outline:none;border-color:var(--accent)}
+input.ltr{direction:ltr;text-align:right}
+.msg{margin:0;font-size:14px;color:var(--bad);min-height:1.4em}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.out{background:none;border:1.5px solid var(--line);border-radius:14px;padding:12px;font-weight:600;color:var(--muted)}
+
+/* sheet */
+.sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:40;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--surface);width:100%;max-width:560px;border-radius:22px 22px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px;animation:up .2s ease}
+@keyframes up{from{transform:translateY(40px);opacity:0}}
+.sheet h2{font-size:18px}
+.reasons{display:flex;flex-direction:column;gap:8px}
+.reasons button{border:1.5px solid var(--line);background:var(--surface2);border-radius:14px;padding:13px;font-weight:600;text-align:start}
+.toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:var(--ink);color:var(--surface);padding:10px 18px;border-radius:999px;font-weight:600;z-index:50;font-size:14px;max-width:90vw;text-align:center}
+@media (prefers-reduced-motion: reduce){*{transition:none !important;animation:none !important}}
+</style>
+</head>
+<body>
+
+<!-- تسجيل الدخول -->
+<div id="loginView" class="login hidden">
+  <div class="logo">
+    <img src="/partner/icon-192.png" alt="">
+    <h1>شركاء توصيل جلاجل</h1>
+    <p>ادخل برمز المحل والرقم السري اللي وصلك منّا</p>
+  </div>
+  <form id="loginForm" novalidate style="display:flex;flex-direction:column;gap:14px">
+    <label class="f">رمز المحل<input id="code" class="ltr" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="مثال: alrif"></label>
+    <label class="f">الرقم السري<input id="pin" class="ltr" type="password" inputmode="numeric" autocomplete="current-password" placeholder="••••"></label>
+    <p class="msg" id="loginMsg" aria-live="polite"></p>
+    <button class="btn big" id="loginBtn">دخول</button>
+  </form>
+</div>
+
+<!-- التطبيق -->
+<div id="appView" class="hidden">
+  <header class="top">
+    <div class="top-in">
+      <div class="top-row">
+        <h1><small>شركاء توصيل جلاجل</small><span id="shopName"></span></h1>
+        <button class="switch" id="openBtn" aria-pressed="false"><span id="openTxt"></span><i></i></button>
+      </div>
+      <nav class="tabs">
+        <button class="on" data-tab="orders">الطلبات<b id="newCount" class="hidden"></b></button>
+        <button data-tab="summary">الملخص</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap" id="ordersTab">
+    <button class="banner" id="soundBanner">🔔 <span>اضغط هنا عشان يشتغل صوت التنبيه للطلبات الجديدة</span></button>
+    <div class="banner err hidden" id="netBanner">⚠️ <span>ما فيه اتصال بالإنترنت. نحاول مرة ثانية…</span></div>
+    <div class="banner err hidden" id="closedBanner">🔒 <span>محلك مسكّر الحين، والزباين ما يقدرون يختارونه. افتحه من الزر فوق.</span></div>
+    <div id="list"></div>
+  </main>
+
+  <main class="wrap hidden" id="summaryTab">
+    <div class="stats">
+      <div class="stat"><small>هالأسبوع</small><b id="wCount">٠</b><span>طلب مكتمل</span><span>العمولة: <em id="wCom">٠</em> ريال</span></div>
+      <div class="stat"><small>هالشهر</small><b id="mCount">٠</b><span>طلب مكتمل</span><span>العمولة: <em id="mCom">٠</em> ريال</span></div>
+    </div>
+    <div class="note" id="termsNote"></div>
+    <p class="hint" style="color:var(--muted);font-size:13px;margin:0 4px">الطلب ينحسب مكتمل لما تضغط "جاهز للاستلام". الأسبوع يبدأ السبت.</p>
+    <button class="out" id="logoutBtn">تسجيل خروج</button>
+  </main>
+</div>
+
+<div id="sheet" class="sheet-bg hidden">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetT">
+    <h2 id="sheetT">سبب الرفض</h2>
+    <div class="reasons" id="reasons">
+      <button data-r="صنف خلص">🚫 صنف خلص</button>
+      <button data-r="مسكّرين">🔒 مسكّرين</button>
+      <button data-r="زحمة، ما نقدر الحين">⏳ زحمة، ما نقدر الحين</button>
+    </div>
+    <input id="otherReason" placeholder="سبب ثاني (اكتبه هنا)">
+    <button class="btn big" id="rejectSend">رفض الطلب</button>
+    <button class="out" id="rejectCancel">رجوع</button>
+  </div>
+</div>
+
+<div class="toast hidden" id="toast" aria-live="polite"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const AR = "٠١٢٣٤٥٦٧٨٩";
+const toAr = n => String(n).replace(/\d/g, d => AR[d]);
+const money = n => toAr((Math.round((+n||0)*100)/100).toString());
+const DEST = { home:"البيت", chalet:"شاليه", park:"المنتزه" };
+const POLL = 15000, REMIND = 60000;
+
+let shop = null, orders = [], serverSkew = 0, timer = null, tickTimer = null;
+let seen = new Set(), lastChime = 0, rejectId = null, busy = false;
+
+/* ===== السيرفر ===== */
+async function api(path, body){
+  const opt = body === undefined ? {cache:"no-store"} : {method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify(body)};
+  const r = await fetch("/api/partner/" + path, opt);
+  let d = {}; try{ d = await r.json(); }catch(e){}
+  if(r.status === 401 && path !== "login"){ showLogin(); throw new Error(d.error || "سجّل دخولك"); }
+  if(!r.ok) throw new Error(d.error || "صار خطأ، جرّب مرة ثانية");
+  return d;
+}
+function toast(t){ const el = $("#toast"); el.textContent = t; el.classList.remove("hidden"); clearTimeout(toast.t); toast.t = setTimeout(()=>el.classList.add("hidden"), 2600); }
+
+/* ===== صوت التنبيه: يتولّد بالجوال نفسه، ما يحتاج ملف ===== */
+let ctx = null;
+function unlockSound(){
+  try{
+    if(!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if(ctx.state === "suspended") ctx.resume();
+    if(ctx.state === "running") $("#soundBanner").classList.add("hidden");
+  }catch(e){}
+  keepAwake();
+}
+function chime(){
+  if(navigator.vibrate) try{ navigator.vibrate([200,100,200]); }catch(e){}
+  if(!ctx || ctx.state !== "running") return;
+  const t = ctx.currentTime;
+  [[880,0],[1175,.18],[1568,.36],[1175,.7],[1568,.88]].forEach(([f,d])=>{
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = "sine"; o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, t+d); g.gain.exponentialRampToValueAtTime(0.5, t+d+.02); g.gain.exponentialRampToValueAtTime(0.0001, t+d+.45);
+    o.connect(g); g.connect(ctx.destination); o.start(t+d); o.stop(t+d+.5);
+  });
+}
+$("#soundBanner").addEventListener("click", ()=>{ unlockSound(); setTimeout(()=>{ if(ctx && ctx.state==="running"){ $("#soundBanner").classList.add("hidden"); chime(); toast("تمام، الصوت شغّال ✓"); } }, 150); });
+
+// الشاشة تظل شغالة والتطبيق مفتوح
+let wake = null;
+async function keepAwake(){
+  try{ if("wakeLock" in navigator && !wake && document.visibilityState === "visible"){ wake = await navigator.wakeLock.request("screen"); wake.addEventListener("release", ()=>{ wake = null; }); } }catch(e){}
+}
+
+/* ===== الشاشات ===== */
+function showLogin(){
+  stopPolling(); shop = null;
+  $("#appView").classList.add("hidden"); $("#loginView").classList.remove("hidden");
+  document.title = "شركاء توصيل جلاجل";
+}
+function showApp(){
+  $("#loginView").classList.add("hidden"); $("#appView").classList.remove("hidden");
+  renderShop(); startPolling();
+}
+function renderShop(){
+  if(!shop) return;
+  $("#shopName").textContent = shop.name;
+  const b = $("#openBtn");
+  b.classList.toggle("on", shop.open); b.setAttribute("aria-pressed", shop.open ? "true" : "false");
+  $("#openTxt").textContent = shop.open ? "مفتوح" : "مسكّر";
+  $("#closedBanner").classList.toggle("hidden", shop.open);
+}
+
+$("#loginForm").addEventListener("submit", async e=>{
+  e.preventDefault(); unlockSound();
+  const code = $("#code").value.trim(), pin = $("#pin").value.trim();
+  if(!code || !pin){ $("#loginMsg").textContent = "اكتب رمز المحل والرقم السري"; return; }
+  $("#loginBtn").disabled = true; $("#loginMsg").textContent = "";
+  try{
+    const d = await api("login", {code, pin});
+    shop = d.shop; $("#pin").value = "";
+    if(ctx && ctx.state === "running") $("#soundBanner").classList.add("hidden");
+    showApp();
+  }catch(err){ $("#loginMsg").textContent = err.message; }
+  $("#loginBtn").disabled = false;
+});
+$("#logoutBtn").addEventListener("click", async ()=>{
+  if(!confirm("تبي تسجّل خروج؟ ما راح توصلك تنبيهات الطلبات على هالجوال.")) return;
+  try{ await api("logout", {}); }catch(e){}
+  showLogin();
+});
+
+$("#openBtn").addEventListener("click", async ()=>{
+  const want = !shop.open;
+  if(!want && !confirm("تبي تسكّر المحل؟ الزباين بيشوفونه مسكّر وما يقدرون يطلبون منه.")) return;
+  try{ const d = await api("status", {open: want}); shop.open = d.open; renderShop(); toast(shop.open ? "المحل مفتوح للطلبات ✓" : "المحل مسكّر"); }
+  catch(err){ toast(err.message); }
+});
+
+document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click", ()=>{
+  document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on", x===b));
+  const t = b.dataset.tab;
+  $("#ordersTab").classList.toggle("hidden", t!=="orders");
+  $("#summaryTab").classList.toggle("hidden", t!=="summary");
+  if(t==="summary") loadSummary();
+}));
+
+/* ===== الطلبات ===== */
+function startPolling(){ stopPolling(); refresh(); timer = setInterval(refresh, POLL); tickTimer = setInterval(tick, 20000); }
+function stopPolling(){ clearInterval(timer); clearInterval(tickTimer); timer = tickTimer = null; }
+document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState === "visible" && shop){ refresh(); keepAwake(); } });
+
+async function refresh(){
+  if(busy) return;
+  try{
+    const d = await api("orders");
+    $("#netBanner").classList.add("hidden");
+    shop = d.shop; serverSkew = d.now - Date.now(); orders = d.orders || [];
+    renderShop(); render();
+    const fresh = orders.filter(o=>o.status==="new");
+    const brandNew = fresh.some(o=>!seen.has(o.id));
+    fresh.forEach(o=>seen.add(o.id));
+    if(brandNew || (fresh.length && Date.now() - lastChime > REMIND)){ chime(); lastChime = Date.now(); }
+  }catch(err){
+    if(shop && !navigator.onLine || /Failed to fetch|NetworkError|Load failed/i.test(err.message)) $("#netBanner").classList.remove("hidden");
+  }
+}
+
+const now = () => Date.now() + serverSkew;
+function ago(ms){
+  const m = Math.max(0, Math.round((now() - ms)/60000));
+  if(m < 1) return "الحين";
+  if(m < 60) return "قبل " + toAr(m) + " د";
+  const h = Math.floor(m/60); return "قبل " + toAr(h) + " س";
+}
+function el(tag, cls, text){ const e = document.createElement(tag); if(cls) e.className = cls; if(text !== undefined) e.textContent = text; return e; }
+const STATUS = { new:"جديد", accepted:"قيد التجهيز", ready:"جاهز ✓", rejected:"مرفوض", cancelled:"ملغي" };
+
+function card(o){
+  const c = el("article", "card" + (o.status==="new" ? " new" : ""));
+  const h = el("div", "c-head");
+  h.append(el("span", "pill " + o.status, STATUS[o.status] || o.status), el("h3", "", "طلب " + o.order_no), el("span", "ago", ago(o.created_at)));
+  c.append(h);
+  c.append(el("div", "items", o.items || "(بدون تفاصيل، تواصل مع الزبون)"));
+
+  const meta = el("div", "meta");
+  const cust = el("div", "cust");
+  const nm = el("b", "", o.customer_name || "زبون"); cust.append(nm);
+  const phone = (o.customer_phone || "").replace(/[^\d+]/g, "");
+  if(phone){ const a = el("a", "", "📞 " + o.customer_phone); a.href = "tel:" + phone; cust.append(a); }
+  meta.append(cust);
+  const line = (k, v) => { if(!v) return; const p = el("div"); p.append(k + ": "); p.append(el("b", "", v)); meta.append(p); };
+  line("التوصيل إلى", (DEST[o.dest] || o.dest) + (o.place ? " · " + o.place : ""));
+  line("الدفع", o.pay);
+  line("ملاحظة", o.note);
+  if(o.status === "rejected") line("سبب الرفض", o.reject_reason);
+  c.append(meta);
+
+  const acts = el("div", "acts");
+  if(o.status === "new"){
+    [10,20,30].forEach(m=>{
+      const b = el("button", "btn"); b.innerHTML = "قبول<small></small>"; b.querySelector("small").textContent = toAr(m) + " دقيقة";
+      b.onclick = () => act(o.id, {action:"accept", minutes:m}, "تم القبول ✓"); acts.append(b);
+    });
+    const r = el("button", "btn line", "رفض الطلب"); r.onclick = () => openReject(o.id); acts.append(r);
+  } else if(o.status === "accepted"){
+    const t = el("div", "timer"); t.dataset.due = o.accepted_at + o.prep_minutes*60000; t.style.gridColumn = "1/-1"; acts.append(t);
+    const b = el("button", "btn big", "✅ جاهز للاستلام"); b.onclick = () => act(o.id, {action:"ready"}, "تمام، المندوب جاي يستلم ✓"); acts.append(b);
+    const r = el("button", "btn line", "رفض الطلب"); r.onclick = () => openReject(o.id); acts.append(r);
+  }
+  if(acts.children.length) c.append(acts);
+  return c;
+}
+
+function render(){
+  const list = $("#list"); list.innerHTML = "";
+  const nw = orders.filter(o=>o.status==="new").sort((a,b)=>b.created_at-a.created_at);
+  const ac = orders.filter(o=>o.status==="accepted").sort((a,b)=>a.accepted_at-b.accepted_at);
+  const dn = orders.filter(o=>!["new","accepted"].includes(o.status)).sort((a,b)=>b.updated_at-a.updated_at);
+  const nc = $("#newCount"); nc.textContent = toAr(nw.length); nc.classList.toggle("hidden", !nw.length);
+  document.title = nw.length ? `(${toAr(nw.length)}) طلب جديد · شركاء جلاجل` : "شركاء توصيل جلاجل";
+  if(!orders.length){
+    const e = el("div", "empty"); e.append(el("b", "", "ما فيه طلبات للحين")); e.append("خلّ التطبيق مفتوح، وأول ما يجي طلب بيرن الجوال."); list.append(e); return;
+  }
+  const sec = (title, arr, cls) => { if(!arr.length) return; list.append(el("div", "sec-t", title)); const box = el("div", cls||""); box.style.cssText = "display:flex;flex-direction:column;gap:12px"; arr.forEach(o=>box.append(card(o))); list.append(box); };
+  sec("🔔 طلبات جديدة", nw);
+  sec("👨‍🍳 قيد التجهيز", ac);
+  sec("آخر ٢٤ ساعة", dn, "done-list");
+  tick();
+}
+function tick(){
+  document.querySelectorAll(".timer").forEach(t=>{
+    const left = Math.round((+t.dataset.due - now())/60000);
+    t.classList.toggle("late", left < 0);
+    t.textContent = left >= 0 ? `⏱️ باقي ${toAr(left)} دقيقة على الوقت اللي قلته` : `⏱️ متأخر ${toAr(-left)} دقيقة`;
+  });
+}
+
+async function act(id, body, done){
+  if(busy) return; busy = true;
+  document.querySelectorAll(".acts button").forEach(b=>b.disabled = true);
+  try{ await api("parts/" + id, body); toast(done); }
+  catch(err){ toast(err.message); }
+  busy = false; refresh();
+}
+
+/* الرفض */
+function openReject(id){ rejectId = id; $("#otherReason").value = ""; $("#sheet").classList.remove("hidden"); }
+function closeReject(){ rejectId = null; $("#sheet").classList.add("hidden"); }
+$("#reasons").addEventListener("click", e=>{ const b = e.target.closest("[data-r]"); if(b){ const id = rejectId; closeReject(); act(id, {action:"reject", reason:b.dataset.r}, "تم رفض الطلب"); } });
+$("#rejectSend").addEventListener("click", ()=>{
+  const r = $("#otherReason").value.trim();
+  if(!r){ $("#otherReason").focus(); toast("اختر سبب أو اكتبه"); return; }
+  const id = rejectId; closeReject(); act(id, {action:"reject", reason:r}, "تم رفض الطلب");
+});
+$("#rejectCancel").addEventListener("click", closeReject);
+$("#sheet").addEventListener("click", e=>{ if(e.target.id === "sheet") closeReject(); });
+
+/* الملخص */
+function dateAr(iso){ try{ return new Intl.DateTimeFormat("ar-SA-u-ca-gregory-nu-arab",{day:"numeric",month:"long",year:"numeric",timeZone:"UTC"}).format(new Date(iso+"T00:00:00Z")); }catch(e){ return iso; } }
+async function loadSummary(){
+  try{
+    const d = await api("summary");
+    shop = d.shop; renderShop();
+    $("#wCount").textContent = toAr(d.week.count); $("#wCom").textContent = money(d.week.commission);
+    $("#mCount").textContent = toAr(d.month.count); $("#mCom").textContent = money(d.month.commission);
+    const n = $("#termsNote"); n.className = "note";
+    const today = new Date(now() + 3*3600000).toISOString().slice(0,10);
+    const per = `العمولة ${money(shop.commission)} ريال لكل طلب مكتمل.`;
+    if(shop.trial_end && today <= shop.trial_end){ n.classList.add("trial"); n.textContent = `🎁 أنت في فترة التجربة لين ${dateAr(shop.trial_end)}، والطلبات فيها بدون عمولة. بعدها ${per}`; }
+    else n.textContent = per;
+  }catch(err){ toast(err.message); }
+}
+
+/* البداية */
+(async ()=>{
+  if("serviceWorker" in navigator) navigator.serviceWorker.register("/partner/sw.js", {scope:"/partner/"}).catch(()=>{});
+  try{ const d = await api("me"); shop = d.shop; showApp(); }
+  catch(e){ if(!shop) showLogin(); }
+})();
+</script>
+</body>
+</html>

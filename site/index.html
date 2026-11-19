@@ -11,8 +11,8 @@
 <meta property="og:site_name" content="توصيل جلاجل">
 <meta property="og:title" content="توصيل جلاجل · لمّة جلاجل على بابك">
 <meta property="og:description" content="اطلب من محلات جلاجل بسعر المحل نفسه، والتوصيل ٣ ريال للبيت. طلبك يوصلنا على الواتساب مباشرة.">
-<meta property="og:url" content="https://jalajil-delivery.netlify.app/">
-<meta property="og:image" content="https://jalajil-delivery.netlify.app/og-image.png">
+<meta property="og:url" content="https://jalajil-delivery.pages.dev/">
+<meta property="og:image" content="https://jalajil-delivery.pages.dev/og-image.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
@@ -131,6 +131,14 @@ section.card.ok h2 .n span{display:none}
 .chips::-webkit-scrollbar{display:none}
 .chips .opt{flex:none}
 .chips .opt span{border-radius:999px;padding:8px 14px;font-size:15px;white-space:nowrap}
+/* المحلات الشريكة */
+.pick{display:flex;flex-direction:column;gap:6px}
+.pick > small{font-size:14px;color:var(--muted);font-weight:500}
+.pick .opt span{background:var(--surface)}
+.pick .opt.closed span{opacity:.55;text-decoration:none;cursor:not-allowed}
+.pick .opt.closed input{cursor:not-allowed}
+.pick .opt em{font-style:normal;font-size:12px;font-weight:600;color:var(--bad);margin-inline-start:4px}
+.pick .opt.other span{border-style:dashed}
 
 label.f{display:flex;flex-direction:column;gap:5px;font-size:14px;color:var(--muted);font-weight:500}
 input[type=text],input[type=tel],input[type=url],textarea,select{
@@ -399,16 +407,72 @@ function shopBlock(){
     <div class="shop-top"><span>محل رقم ${shopsEl.children.length+1}</span>
       <button type="button" class="link" data-remove="${id}">حذف</button></div>
     <div class="chips" role="radiogroup" aria-label="نوع المحل">${chips}</div>
-    <label class="f" for="${id}-name">اسم المحل
+    <div class="pick hidden" id="${id}-pick"></div>
+    <label class="f" for="${id}-name" id="${id}-namewrap">اسم المحل
       <input type="text" id="${id}-name" list="shopList" placeholder="اكتب اسم المحل">
     </label>
     <label class="f" for="${id}-items">الطلب
       <textarea id="${id}-items" placeholder="مثال:&#10;برجر لحم ×٢&#10;بطاطس كبير ×١&#10;بدون بصل"></textarea>
     </label>
     <div class="quick" id="${id}-quick" aria-label="أغراض سريعة"></div>`;
+  d.dataset.shop = "";
   shopsEl.appendChild(d);
   refreshQuick(d);
+  refreshPick(d);
   refreshRemove();
+}
+
+/* ===== المحلات الشريكة: تجي من السيرفر، ولو ما جات يظل الموقع زي ما هو ===== */
+let PARTNERS = [];
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function partnerById(id){ return PARTNERS.find(p => String(p.id) === String(id)); }
+function refreshPick(b){
+  const id = b.dataset.id, cat = b.querySelector(`input[name="${id}-cat"]:checked`).value;
+  const pick = $("#"+id+"-pick"), wrap = $("#"+id+"-namewrap"), nameEl = $("#"+id+"-name");
+  const list = PARTNERS.filter(p => p.category === cat);
+  if(!list.length){
+    // ما فيه شركاء بهالنوع: نفس الخانة القديمة
+    if(b.dataset.shop && partnerById(b.dataset.shop)) nameEl.value = "";
+    b.dataset.shop = ""; b.dataset.other = "";
+    pick.classList.add("hidden"); pick.innerHTML = ""; wrap.classList.remove("hidden");
+    return;
+  }
+  let sel = b.dataset.shop;
+  if(sel && !list.some(p => String(p.id) === sel)){ sel = ""; b.dataset.shop = ""; b.dataset.other = nameEl.value.trim() ? "1" : ""; }
+  if(!sel && !b.dataset.other){
+    // لو الاسم المكتوب يطابق محل شريك نختاره، ولو اسم ثاني نخليه "محل ثاني"
+    const typed = nameEl.value.trim();
+    const m = typed && list.find(p => p.name === typed);
+    if(m){ sel = String(m.id); b.dataset.shop = sel; }
+    else if(typed) b.dataset.other = "1";
+  }
+  pick.innerHTML = `<small>اختر المحل</small><div class="chips" role="radiogroup" aria-label="المحل">` +
+    list.map(p => `<label class="opt${p.open ? "" : " closed"}"><input type="radio" name="${id}-shop" value="${p.id}" ${String(p.id)===sel ? "checked" : ""} ${p.open || String(p.id)===sel ? "" : "disabled"}><span>${esc(p.name)}${p.open ? "" : "<em>مسكّر</em>"}</span></label>`).join("") +
+    `<label class="opt other"><input type="radio" name="${id}-shop" value="other" ${!sel && b.dataset.other ? "checked" : ""}><span>محل ثاني</span></label></div>`;
+  pick.classList.remove("hidden");
+  wrap.classList.toggle("hidden", !(!sel && b.dataset.other));
+}
+function pickShop(b, value){
+  const id = b.dataset.id, nameEl = $("#"+id+"-name");
+  if(value === "other"){
+    if(b.dataset.shop && partnerById(b.dataset.shop)) nameEl.value = "";
+    b.dataset.shop = ""; b.dataset.other = "1";
+  } else {
+    const p = partnerById(value); if(!p) return;
+    b.dataset.shop = String(p.id); b.dataset.other = ""; nameEl.value = p.name; nameEl.classList.remove("bad");
+  }
+  refreshPick(b);
+  if(value === "other") nameEl.focus();
+}
+async function loadPartners(){
+  try{
+    const r = await fetch("/api/shops", {cache:"no-store"});
+    if(!r.ok) return;
+    const d = await r.json();
+    PARTNERS = Array.isArray(d.shops) ? d.shops : [];
+    shopsEl.querySelectorAll(".shop").forEach(refreshPick);
+    render();
+  }catch(e){}
 }
 function refreshQuick(b){
   const id = b.dataset.id, cat = b.querySelector(`input[name="${id}-cat"]:checked`).value;
@@ -441,7 +505,12 @@ shopsEl.addEventListener("click", e=>{
   const b = shopsEl.querySelector(`[data-id="${id}"]`);
   if(b){ b.remove(); refreshRemove(); render(); }
 });
-shopsEl.addEventListener("change", e=>{ if(e.target.type==="radio") refreshQuick(e.target.closest(".shop")); });
+shopsEl.addEventListener("change", e=>{
+  if(e.target.type!=="radio") return;
+  const b = e.target.closest(".shop");
+  if(/-shop$/.test(e.target.name)) pickShop(b, e.target.value);
+  else { refreshQuick(b); refreshPick(b); }
+});
 $("#addShop").addEventListener("click", ()=>{ shopBlock(); render(); shopsEl.lastElementChild.querySelector("input[type=text]").focus(); });
 
 function buildPack(){
@@ -507,7 +576,8 @@ function collect(){
   const shops = [...shopsEl.querySelectorAll(".shop")].map(b=>{
     const id = b.dataset.id;
     const cat = b.querySelector(`input[name="${id}-cat"]:checked`).value;
-    return { cat, name: $("#"+id+"-name").value.trim(), items: $("#"+id+"-items").value.trim() };
+    const shopId = b.dataset.shop && partnerById(b.dataset.shop) ? Number(b.dataset.shop) : null;
+    return { cat, name: $("#"+id+"-name").value.trim(), items: $("#"+id+"-items").value.trim(), shopId };
   }).filter(s=>s.name || s.items);
   const pack = CONFIG.chaletItems.map((it,i)=>packQty[i] ? `${it} ×${packQty[i]}` : null).filter(Boolean);
   const other = $("#packOther").value.trim();
@@ -565,6 +635,7 @@ function problems(){
   if(!/^https?:\/\/\S+$/i.test($("#map").value.trim())) p.push(["موقعك على الخريطة", $("#map"), "sec-info"]);
   if(dest()==="chalet" && !$("#place").value.trim()) p.push(["اسم الشاليه", $("#place"), "sec-info"]);
   if($("#pay").value===$("#payTasjeel").value && shops.some(x=>x.cat==="بقالة" && !x.name)) p.push(["اسم البقالة (للتسجيل على الحساب)", shopsEl.querySelector("input[type=text]"), "sec-order"]);
+  shops.forEach(x=>{ const s = x.shopId && partnerById(x.shopId); if(s && !s.open) p.push([`${s.name} مسكّر الحين، اختر محل ثاني`, null, "sec-order"]); });
   return p;
 }
 
@@ -634,11 +705,30 @@ $("#send").addEventListener("click", e=>{
     return;
   }
   saveLast();
+  saveOrder();
   if(CONFIG.whatsapp2 && CONFIG.split!=="category"){
     try{ localStorage.setItem("waTurn", String((+localStorage.getItem("waTurn")||0)+1)); }catch(e){}
     setTimeout(render,300);
   }
 });
+/* ===== حفظ نسخة من الطلب للمحلات. يصير بالخلفية وما يأخّر الواتساب أبد ===== */
+const PAGE_KEY = (()=>{ try{ const a = new Uint8Array(12); crypto.getRandomValues(a); return [...a].map(x=>x.toString(16).padStart(2,"0")).join(""); }catch(e){ return String(Date.now()) + Math.random().toString(16).slice(2); } })();
+function textHash(s){ let h = 2166136261; for(let i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h>>>0).toString(36); }
+function saveOrder(){
+  try{
+    const {shops, pack} = collect();
+    const body = JSON.stringify({
+      key: PAGE_KEY + "-" + textHash(message()), // نفس الطلب مرتين = طلب واحد
+      order_no: orderNo, dest: dest(),
+      name: $("#name").value.trim(), phone: $("#phone").value.trim(), map: $("#map").value.trim(),
+      place: $("#place").value.trim(), pay: $("#pay").value, note: $("#note").value.trim(),
+      fee: fee(), promo: promoApplied ? P.code.toUpperCase() : "",
+      pack, parts: shops.map(s => ({ shop_id: s.shopId, cat: s.cat, name: s.name, items: s.items }))
+    });
+    fetch("/api/orders", {method:"POST", keepalive:true, headers:{"content-type":"application/json"}, body}).catch(()=>{});
+  }catch(e){}
+}
+
 document.getElementById("f").addEventListener("input", e=>{ if(e.target.classList) e.target.classList.remove("bad"); render(); });
 document.getElementById("f").addEventListener("change", render);
 document.getElementById("f").addEventListener("submit", e=>e.preventDefault());
@@ -711,6 +801,8 @@ function loadLast(){
       const b = shopsEl.lastElementChild, id = b.dataset.id;
       const r = b.querySelector(`input[name="${id}-cat"][value="${s.cat}"]`); if(r){ r.checked = true; refreshQuick(b); }
       $("#"+id+"-name").value = s.name || ""; $("#"+id+"-items").value = s.items || "";
+      b.dataset.shop = s.shopId ? String(s.shopId) : ""; b.dataset.other = "";
+      refreshPick(b);
     });
     btn.classList.add("hidden"); render();
     $("#sec-order").scrollIntoView({behavior:"smooth", block:"start"});
@@ -727,6 +819,7 @@ $("#share").addEventListener("click", async ()=>{
 
 if(promoToday) $("#codeBox").open = true;
 datalist(); shopBlock(); buildPack(); loadSaved(); loadLast(); render();
+loadPartners(); setInterval(loadPartners, 60000);
 if("serviceWorker" in navigator){ window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{})); }
 </script>
 </body>

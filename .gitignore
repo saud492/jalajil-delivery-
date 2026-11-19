@@ -7,3 +7,5 @@ promo/orig.wav
 jalajil-site-update.zip
 site-current/
 /jalajil-promo-*.mp4
+.wrangler/
+node_modules/
