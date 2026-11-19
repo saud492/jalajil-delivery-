@@ -3,6 +3,7 @@
 // CRON_SECRET لازم يكون نفس السر المحطوط في مشروع Pages
 export default {
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(fetch(env.SITE + "/api/cron", { method: "POST", headers: { "x-cron-secret": env.CRON_SECRET } }));
+    ctx.waitUntil(fetch(env.SITE + "/api/cron", { method: "POST", headers: { "x-cron-secret": env.CRON_SECRET } })
+      .then(async r => console.log("cron", r.status, await r.text())));
   },
 };
