@@ -74,6 +74,12 @@ div.f{display:flex;flex-direction:column;gap:4px;font-size:14px;color:var(--mute
 .pill.assigned{background:var(--new-soft);color:var(--new)}
 .pill.picked{background:var(--accent-soft);color:var(--accent)}
 .pill.delivered{background:var(--accent);color:var(--accent-ink)}
+.tabs .cnt{display:inline-grid;place-items:center;min-width:20px;height:20px;border-radius:999px;background:var(--stone);color:#fff;font-size:12px;padding:0 5px;margin-inline-start:4px}
+.tabs button{font-size:14px;padding-inline:2px}
+.stars{color:#e0a020;letter-spacing:1px}
+.bal{font-weight:700}
+.bal.owe{color:var(--new)}
+.bal.due{color:var(--accent)}
 @media (max-width:480px){.grid2{grid-template-columns:1fr}}
 .msg{margin:0;font-size:14px;color:var(--bad);min-height:1.2em}
 .filters{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
@@ -112,6 +118,7 @@ tfoot td{font-weight:700;border-bottom:none}
     <div class="top-row"><h1>لوحة توصيل جلاجل</h1><button class="lo" id="logout">خروج</button></div>
     <nav class="tabs">
       <button class="on" data-tab="orders">الطلبات</button>
+      <button data-tab="reports">البلاغات<b id="repCount" class="cnt hidden"></b></button>
       <button data-tab="shops">المحلات</button>
       <button data-tab="drivers">المناديب</button>
       <button data-tab="money">الحسابات</button>
@@ -125,6 +132,11 @@ tfoot td{font-weight:700;border-bottom:none}
       <label class="f">المحل<select id="fShop"><option value="">كل المحلات</option></select></label>
     </div>
     <div id="orders"></div>
+  </main>
+
+  <main class="wrap hidden" id="reportsTab">
+    <label class="f" style="max-width:220px">عرض<select id="repFilter"><option value="open">المفتوحة بس</option><option value="">الكل</option></select></label>
+    <div id="reports"></div>
   </main>
 
   <main class="wrap hidden" id="shopsTab">
@@ -144,6 +156,7 @@ tfoot td{font-weight:700;border-bottom:none}
       <label class="f">حد الدفع المسبق (ريال): لو الفاتورة فوقه الزبون يحوّل قبل ما المندوب يشتري. صفر = بدون<input id="setCap" class="ltr" inputmode="decimal" placeholder="150"></label>
       <label class="f">بيانات التحويل اللي تطلع للزبون (اسم البنك، الآيبان، أو رقم STC Pay)<textarea id="setPay" rows="3" style="font:inherit;font-size:16px;color:var(--ink);background:var(--surface2);border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;width:100%;resize:vertical" placeholder="مثال: الراجحي · SA00 0000 0000 0000 0000 0000 · باسم ..."></textarea></label>
       <label class="f">رقم واتساب الشكاوى (يطلع للزبون في صفحة المتابعة)<input id="setSupport" class="ltr" inputmode="tel" placeholder="9665XXXXXXXX"></label>
+      <label class="f">نصيب المندوب من رسوم التوصيل (٪). ١٠٠ = الرسوم كلها له، والباقي لك ويطلع عليه في محفظته<input id="setShare" class="ltr" inputmode="decimal" placeholder="100"></label>
       <p class="msg" id="setMsg"></p>
       <button class="btn" id="setSave">حفظ</button>
     </form>
@@ -175,6 +188,7 @@ tfoot td{font-weight:700;border-bottom:none}
       <label class="f">رمز المحل (للدخول، عربي أو إنجليزي)<input id="sCode" autocapitalize="none" spellcheck="false" placeholder="مثال: الريف"></label>
       <label class="f"><span id="pinLbl">الرقم السري (٤ إلى ٨ أرقام)</span><input id="sPin" class="ltr" inputmode="numeric" autocomplete="off" placeholder="مثال: 4821"></label>
       <label class="f">العمولة لكل طلب (ريال)<input id="sCom" class="ltr" inputmode="decimal" placeholder="2"></label>
+      <label class="f">موقع المحل (رابط قوقل ماب، اختياري)<input id="sMap" class="ltr" inputmode="url" placeholder="https://maps.app.goo.gl/..."></label>
       <div class="f" role="group" aria-labelledby="trialLbl"><span id="trialLbl">نهاية فترة التجربة</span>
         <div class="date3"><select id="tD" aria-label="اليوم"></select><select id="tM" aria-label="الشهر"></select><select id="tY" aria-label="السنة"></select></div>
       </div>
@@ -203,6 +217,18 @@ tfoot td{font-weight:700;border-bottom:none}
 </div>
 
 <div class="imgv hidden" id="imgv" role="dialog" aria-label="صورة" style="position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:60;display:flex;align-items:center;justify-content:center;padding:16px"><img id="imgvImg" alt="صورة" style="max-width:100%;max-height:100%;border-radius:12px"></div>
+<div id="stSheet" class="sheet-bg hidden">
+  <form class="sheet" id="stForm" novalidate>
+    <h2 id="stT" style="font-size:18px">تسوية</h2>
+    <p class="muted" id="stBal" style="margin:0"></p>
+    <label class="f">مين سلّم مين؟<select id="stDir"><option value="in">المندوب سلّمني</option><option value="out">أنا سلّمت المندوب</option></select></label>
+    <label class="f">المبلغ (ريال)<input id="stAmt" class="ltr" inputmode="decimal"></label>
+    <label class="f">ملاحظة (اختياري)<input id="stNote" placeholder="مثال: تحويل الراجحي"></label>
+    <p class="msg" id="stMsg"></p>
+    <button class="btn" id="stSave">حفظ التسوية</button>
+    <button type="button" class="btn line" id="stCancel">إلغاء</button>
+  </form>
+</div>
 <div class="toast hidden" id="toast"></div>
 
 <script>
@@ -230,8 +256,8 @@ function dateAr(iso){ try{ return new Intl.DateTimeFormat("ar-SA-u-ca-gregory-nu
 function showLogin(){ clearInterval(timer); $("#appView").classList.add("hidden"); $("#loginView").classList.remove("hidden"); }
 async function showApp(){
   $("#loginView").classList.add("hidden"); $("#appView").classList.remove("hidden");
-  await Promise.all([loadShops(), loadDrivers()]); loadOrders();
-  clearInterval(timer); timer = setInterval(()=>{ if(document.visibilityState==="visible"){ if(tab==="orders") loadOrders(); else { loadShops(); loadDrivers(); } } }, 30000);
+  await Promise.all([loadShops(), loadDrivers()]); loadOrders(); loadReports();
+  clearInterval(timer); timer = setInterval(()=>{ if(document.visibilityState==="visible"){ if(tab==="orders") loadOrders(); else { loadShops(); loadDrivers(); } loadReports(); } }, 30000);
 }
 $("#loginForm").addEventListener("submit", async e=>{
   e.preventDefault(); $("#loginBtn").disabled = true; $("#loginMsg").textContent = "";
@@ -244,7 +270,8 @@ $("#logout").addEventListener("click", async ()=>{ try{ await api("logout", "POS
 document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click", ()=>{
   tab = b.dataset.tab;
   document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on", x===b));
-  ["orders","shops","drivers","money"].forEach(t=>$("#"+t+"Tab").classList.toggle("hidden", t!==tab));
+  ["orders","reports","shops","drivers","money"].forEach(t=>$("#"+t+"Tab").classList.toggle("hidden", t!==tab));
+  if(tab==="reports") loadReports();
   if(tab==="orders") loadOrders(); else { loadShops(); loadDrivers(); }
   if(tab==="money") loadSettings();
 }));
@@ -267,7 +294,14 @@ function renderDrivers(){
     if(ph){ const a = el("a", "", "📞 " + d.phone); a.href = "tel:" + ph; m.append(a); }
     c.append(m);
     c.append(el("div", "muted", `معه الحين: ${toAr(d.open_count)} · وصّل هالشهر: ${toAr(d.month_count)}`));
-    const b = el("div", "row"); const e = el("button", "btn sm line", "تعديل"); e.onclick = () => openDForm(d); b.append(e); c.append(b);
+    const q = el("div", "row muted");
+    q.append(d.rating && d.rating.avg ? el("span", "stars", `★ ${toAr(d.rating.avg)} (${toAr(d.rating.count)})`) : el("span", "", "ما فيه تقييمات"));
+    q.append(el("span", d.reports && d.reports.open ? "pill off" : "", `بلاغات: ${toAr(d.reports ? d.reports.count : 0)}` + (d.reports && d.reports.open ? ` (${toAr(d.reports.open)} مفتوح)` : "")));
+    c.append(q);
+    const bal = d.wallet ? d.wallet.balance : 0;
+    c.append(el("div", "bal " + (bal > 0 ? "owe" : bal < 0 ? "due" : ""), bal > 0 ? `💵 عليه لك ${money(bal)} ريال` : bal < 0 ? `💵 له عندك ${money(-bal)} ريال` : "💵 الحساب صافي"));
+    const b = el("div", "row"); const e = el("button", "btn sm line", "تعديل"); e.onclick = () => openDForm(d); b.append(e);
+    const st = el("button", "btn sm", "تسوية"); st.onclick = () => openSettle(d); b.append(st); c.append(b);
     box.append(c);
   });
 }
@@ -338,14 +372,63 @@ function moneyRow(o){
 function showImg(id){ $("#imgvImg").src = "/api/admin/images/" + id; $("#imgv").classList.remove("hidden"); }
 $("#imgv").addEventListener("click", ()=>$("#imgv").classList.add("hidden"));
 
+/* البلاغات */
+$("#repFilter").addEventListener("change", loadReports);
+async function loadReports(){
+  try{
+    const d = await api("reports?status=" + $("#repFilter").value);
+    const cnt = $("#repCount"); cnt.textContent = toAr(d.open); cnt.classList.toggle("hidden", !d.open);
+    if(tab !== "reports") return;
+    const box = $("#reports"); box.innerHTML = "";
+    if(!d.reports.length){ box.append(el("div", "card empty", $("#repFilter").value ? "ما فيه بلاغات مفتوحة ✓" : "ما فيه بلاغات")); return; }
+    d.reports.forEach(r=>{
+      const c = el("div", "card");
+      const h = el("div", "row"); h.append(el("h3", "grow", r.kind), el("span", "pill " + (r.status === "open" ? "off" : "open"), r.status === "open" ? "مفتوح" : "محلول")); c.append(h);
+      c.append(el("div", "muted", `طلب ${r.order_no} · ${when(r.created_at)}` + (r.driver_name ? ` · المندوب: ${r.driver_name}` : "")));
+      const cu = el("div", "row cust"); cu.append(el("b", "", r.customer_name || "زبون"));
+      const ph = (r.customer_phone || "").replace(/[^\d+]/g, "");
+      if(ph){ const a = el("a", "", "📞 " + r.customer_phone); a.href = "tel:" + ph; cu.append(a); }
+      if(r.track_token){ const a = el("a", "", "🔗 صفحة الطلب"); a.href = "/track/?k=" + r.track_token; a.target = "_blank"; a.rel = "noopener"; cu.append(a); }
+      c.append(cu);
+      if(r.note) c.append(el("div", "items", r.note));
+      if(r.image_id){ const x = el("button", "btn sm line", "📷 الصورة"); x.style.alignSelf = "flex-start"; x.onclick = () => showImg(r.image_id); c.append(x); }
+      if(r.resolution) c.append(el("div", "muted", "الرد: " + r.resolution));
+      if(r.status === "open"){
+        const b = el("button", "btn sm", "✓ انحلت"); b.style.alignSelf = "flex-start";
+        b.onclick = async ()=>{ const res = prompt("وش سويت؟ (يطلع للزبون)", "تواصلنا معك وانحلت المشكلة"); if(res === null) return; try{ await api("reports/" + r.id, "POST", {resolution: res}); toast("تم ✓"); loadReports(); }catch(err){ toast(err.message); } };
+        c.append(b);
+      }
+      box.append(c);
+    });
+  }catch(err){ toast(err.message); }
+}
+
+/* التسوية */
+let settleFor = null;
+function openSettle(d){
+  settleFor = d; const b = d.wallet ? d.wallet.balance : 0;
+  $("#stT").textContent = "تسوية مع " + d.name;
+  $("#stBal").textContent = b > 0 ? `عليه لك ${money(b)} ريال` : b < 0 ? `له عندك ${money(-b)} ريال` : "الحساب صافي";
+  $("#stDir").value = b < 0 ? "out" : "in"; $("#stAmt").value = b ? Math.abs(b) : ""; $("#stNote").value = ""; $("#stMsg").textContent = "";
+  $("#stSheet").classList.remove("hidden");
+}
+$("#stCancel").addEventListener("click", ()=>$("#stSheet").classList.add("hidden"));
+$("#stSheet").addEventListener("click", e=>{ if(e.target.id==="stSheet") $("#stSheet").classList.add("hidden"); });
+$("#stForm").addEventListener("submit", async e=>{
+  e.preventDefault(); $("#stSave").disabled = true; $("#stMsg").textContent = "";
+  try{ await api("drivers/" + settleFor.id + "/settle", "POST", {direction: $("#stDir").value, amount: $("#stAmt").value.trim(), note: $("#stNote").value}); $("#stSheet").classList.add("hidden"); toast("انحفظت التسوية ✓"); loadDrivers(); }
+  catch(err){ $("#stMsg").textContent = err.message; }
+  $("#stSave").disabled = false;
+});
+
 /* الإعدادات */
 async function loadSettings(){
-  try{ const d = await api("settings"); const s = d.settings; $("#setCap").value = s.prepay_cap; $("#setPay").value = s.pay_info || ""; $("#setSupport").value = s.support || ""; }
+  try{ const d = await api("settings"); const s = d.settings; $("#setCap").value = s.prepay_cap; $("#setPay").value = s.pay_info || ""; $("#setSupport").value = s.support || ""; $("#setShare").value = s.driver_share; }
   catch(err){ toast(err.message); }
 }
 $("#setForm").addEventListener("submit", async e=>{
   e.preventDefault(); $("#setSave").disabled = true; $("#setMsg").textContent = "";
-  try{ await api("settings", "PUT", { prepay_cap: $("#setCap").value.trim() || "0", pay_info: $("#setPay").value, support: $("#setSupport").value.trim() }); toast("انحفظت الإعدادات ✓"); }
+  try{ await api("settings", "PUT", { prepay_cap: $("#setCap").value.trim() || "0", pay_info: $("#setPay").value, support: $("#setSupport").value.trim(), driver_share: $("#setShare").value.trim() || "100" }); toast("انحفظت الإعدادات ✓"); }
   catch(err){ $("#setMsg").textContent = err.message; }
   $("#setSave").disabled = false;
 });
@@ -398,6 +481,10 @@ function renderShops(){
       (s.trial_end ? (today <= s.trial_end ? `تجربة لين ${dateAr(s.trial_end)}` : `انتهت التجربة ${dateAr(s.trial_end)}`) : "بدون فترة تجربة");
     c.append(m);
     c.append(el("div", "muted", `طلبات مفتوحة: ${toAr(s.open_count)} · مكتملة هالشهر: ${toAr(s.month_count)}`));
+    const sr = el("div", "row muted");
+    sr.append(s.rating ? el("span", "stars", `★ ${toAr(Math.round(s.rating*10)/10)} (${toAr(s.rating_count)} تقييم)`) : el("span", "", "ما فيه تقييمات"));
+    if(s.map_url){ const a = el("a", "", "📍 الموقع"); a.href = s.map_url; a.target = "_blank"; a.rel = "noopener"; a.style.color = "var(--accent)"; a.style.fontWeight = "700"; sr.append(a); }
+    c.append(sr);
     const b = el("div", "row");
     const e = el("button", "btn sm line", "تعديل"); e.onclick = () => openForm(s); b.append(e);
     c.append(b);
@@ -423,7 +510,7 @@ function openForm(s){
   $("#sName").value = s ? s.name : ""; $("#sCat").value = s ? s.category : "مطعم";
   $("#sCode").value = s ? s.code : ""; $("#sPin").value = "";
   $("#pinLbl").textContent = s ? "رقم سري جديد (اتركه فاضي لو ما تبي تغيّره)" : "الرقم السري (٤ إلى ٨ أرقام)";
-  $("#sCom").value = s ? s.commission : "";
+  $("#sCom").value = s ? s.commission : ""; $("#sMap").value = s ? (s.map_url || "") : "";
   setTrial(s ? s.trial_end : "");
   $("#activeRow").classList.toggle("hidden", !s); $("#sActive").checked = s ? s.active : true;
   $("#formMsg").textContent = "";
@@ -458,7 +545,7 @@ $("#shopForm").addEventListener("submit", async e=>{
   e.preventDefault();
   const toEn = s => String(s).replace(/[٠-٩]/g, d => AR.indexOf(d));
   const body = { name: $("#sName").value, category: $("#sCat").value, code: $("#sCode").value,
-    pin: toEn($("#sPin").value.trim()), commission: toEn($("#sCom").value.trim() || "0"), trial_end: getTrial() };
+    pin: toEn($("#sPin").value.trim()), commission: toEn($("#sCom").value.trim() || "0"), trial_end: getTrial(), map_url: $("#sMap").value.trim() };
   if(body.trial_end === null){ $("#formMsg").textContent = "كمّل تاريخ نهاية التجربة (اليوم والشهر والسنة)، أو خلّه كله فاضي"; return; }
   if(body.trial_end === false){ $("#formMsg").textContent = "تاريخ نهاية التجربة غلط، هالشهر ما فيه هاليوم"; return; }
   if(editing) body.active = $("#sActive").checked;
@@ -525,6 +612,12 @@ function renderOrders(list){
       }
       c.append(d);
     });
+    if(o.rating || o.reports){
+      const r = el("div", "row muted");
+      if(o.rating) r.append(el("span", "stars", "★".repeat(o.rating.stars) + "☆".repeat(5 - o.rating.stars)), (o.rating.tags || []).join(" · ") + (o.rating.comment ? " · " + o.rating.comment : ""));
+      if(o.reports) r.append(el("span", "pill " + (o.reports.open ? "off" : "none"), `⚠️ ${toAr(o.reports.count)} بلاغ` + (o.reports.open ? " مفتوح" : "")));
+      c.append(r);
+    }
     c.append(moneyRow(o));
     c.append(driverRow(o));
     box.append(c);

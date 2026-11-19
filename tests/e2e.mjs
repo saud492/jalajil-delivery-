@@ -243,6 +243,58 @@ r = await admin("GET", "/api/admin/orders?days=1");
 const cPart = r.data.orders.find(o => o.id === cOrder).parts[0].id;
 r = await admin("POST", `/api/admin/parts/${cPart}`, { action: "cancel" }); assert.equal(r.status, 200, "cancel non-partner part");
 r = await d1("GET", "/api/driver/orders"); assert.ok(!r.data.available.some(o => o.id === cOrder), "cancelled order hidden");
+
+// ===== التقييم، البلاغات، التسليم عند الباب، المحفظة =====
+r = await anon("GET", "/api/track/" + dtrack);
+assert.equal(r.data.rating, null);
+r = await anon("POST", "/api/track/" + dtrack, { action: "rate", driver_stars: 7 }); assert.equal(r.status, 400, "stars 1-5");
+r = await anon("POST", "/api/track/" + dtrack, { action: "rate", driver_stars: 4, tags: ["وصل بسرعة", "مزيف"], comment: "شكراً" }); assert.equal(r.status, 200);
+r = await anon("POST", "/api/track/" + dtrack, { action: "rate", driver_stars: 1 }); assert.equal(r.status, 409, "rate once");
+r = await anon("GET", "/api/track/" + dtrack); assert.equal(r.data.rating.driver_stars, 4); assert.deepEqual(r.data.rating.tags, ["وصل بسرعة"]);
+r = await anon("POST", "/api/track/" + ptrack, { action: "rate", driver_stars: 5 }); assert.equal(r.status, 409, "can't rate before delivery");
+r = await anon("POST", "/api/track/" + dtrack, { action: "report", kind: "مزيف" }); assert.equal(r.status, 400);
+r = await anon("POST", "/api/track/" + dtrack, { action: "report", kind: "ناقص غرض", note: "ناقص فحم", image: IMG }); assert.equal(r.status, 200);
+r = await anon("GET", "/api/track/" + dtrack); assert.equal(r.data.reports.length, 1); assert.equal(r.data.reports[0].status, "open");
+r = await admin("GET", "/api/admin/reports?status=open");
+const rep1 = r.data.reports.find(x => x.order_no === "JL-D-" + run); assert.ok(rep1 && r.data.open >= 1);
+assert.equal(rep1.driver_name, "مندوب ٢");
+r = await admin("POST", `/api/admin/reports/${rep1.id}`, { resolution: "رجّعنا لك قيمة الفحم" }); assert.equal(r.status, 200);
+r = await admin("POST", `/api/admin/reports/${rep1.id}`, { resolution: "x" }); assert.equal(r.status, 404, "already resolved");
+r = await anon("GET", "/api/track/" + dtrack); assert.equal(r.data.reports[0].resolution, "رجّعنا لك قيمة الفحم");
+r = await admin("GET", "/api/admin/drivers");
+let dd = r.data.drivers.find(d => d.id === drv2);
+assert.equal(dd.rating.avg, 4); assert.equal(dd.reports.count, 1); assert.equal(dd.reports.open, 0);
+// محفظة المندوب ٢: dOrder (توصيل ٥، نصيبه ١٠٠٪) = صافي. نصيبه ٥٠٪ للطلبات الجاية
+assert.equal(dd.wallet.balance, 0);
+r = await admin("PUT", "/api/admin/settings", { driver_share: 50 }); assert.equal(r.status, 200);
+// طلب عند الباب
+const gtrack = "dor" + run + "dddddddddddd";
+r = await anon("POST", "/api/orders", { key: "dor" + run + "x7", track: gtrack, code: "2468", order_no: "JL-G-" + run, dest: "home", fee: 4, parts: [{ shop_id: null, cat: "بقالة", name: "بقالة", items: "ماء" }] });
+const gOrder = r.data.id;
+r = await d2("POST", `/api/driver/orders/${gOrder}`, { action: "take" }); assert.equal(r.status, 200);
+r = await d2("GET", "/api/driver/orders"); const gPart = r.data.mine.find(o => o.id === gOrder).parts[0].id;
+r = await d2("POST", `/api/driver/parts/${gPart}/bill`, { amount: 10, image: IMG }); assert.equal(r.status, 200);
+r = await anon("POST", "/api/track/" + gtrack, { action: "approve", total: 10 }); assert.equal(r.status, 200);
+r = await anon("GET", "/api/track/" + gtrack); assert.ok(r.data.eta > Date.now(), "eta while buying");
+r = await d2("POST", `/api/driver/orders/${gOrder}`, { action: "picked" }); assert.equal(r.status, 200);
+r = await anon("GET", "/api/track/" + gtrack); assert.ok(r.data.eta > Date.now(), "eta while on the way");
+r = await d2("POST", `/api/driver/orders/${gOrder}`, { action: "delivered", image: IMG }); assert.equal(r.status, 403, "no door photo unless customer asked");
+r = await anon("POST", "/api/track/" + gtrack, { action: "door", on: true }); assert.equal(r.status, 200);
+r = await d2("GET", "/api/driver/orders"); assert.equal(r.data.mine.find(o => o.id === gOrder).leave_at_door, true);
+r = await d2("POST", `/api/driver/orders/${gOrder}`, { action: "delivered", image: IMG }); assert.equal(r.status, 200);
+r = await anon("GET", "/api/track/" + gtrack); assert.equal(r.data.stage, "delivered"); assert.ok(r.data.order.delivery_photo, "customer sees the door photo");
+// المندوب حصّل ٤ توصيل، نصيبه ٢ → عليه ٢ لصاحب الخدمة
+r = await d2("GET", "/api/driver/wallet"); assert.equal(r.data.wallet.balance, 2);
+r = await d2("GET", "/api/driver/summary"); assert.equal(r.data.today.earned, 7); assert.equal(r.data.rating.avg, 4);
+r = await admin("POST", `/api/admin/drivers/${drv2}/settle`, { direction: "in", amount: "٢" }); assert.equal(r.status, 200); assert.equal(r.data.wallet.balance, 0);
+r = await admin("POST", `/api/admin/drivers/${drv2}/settle`, { direction: "sideways", amount: 2 }); assert.equal(r.status, 400);
+r = await d2("GET", "/api/driver/wallet"); assert.equal(r.data.history.length, 1); assert.equal(r.data.history[0].amount, 2);
+r = await admin("PUT", "/api/admin/settings", { driver_share: 100 }); assert.equal(r.status, 200);
+// موقع المحل
+r = await admin("PUT", `/api/admin/shops/${idA}`, { map_url: "not a link" }); assert.equal(r.status, 400);
+r = await admin("PUT", `/api/admin/shops/${idA}`, { map_url: "https://maps.google.com/?q=1,1" }); assert.equal(r.status, 200);
+r = await admin("GET", "/api/admin/shops"); assert.equal(r.data.shops.find(s => s.id === idA).map_url, "https://maps.google.com/?q=1,1");
+
 // إيقاف المندوب يطلّعه
 r = await admin("PUT", `/api/admin/drivers/${drv1}`, { active: false }); assert.equal(r.status, 200);
 r = await d1("GET", "/api/driver/orders"); assert.equal(r.status, 401);

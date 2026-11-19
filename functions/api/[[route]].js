@@ -33,6 +33,10 @@ const routes = [
   ["POST", /^\/api\/admin\/orders\/(\d+)\/driver$/, (db, r, e, m) => admin.assignDriver(db, r, Number(m[1]))],
 
   ["GET", /^\/api\/admin\/settings$/, (db, r) => admin.settings(db, r)],
+  ["GET", /^\/api\/admin\/reports$/, (db, r) => admin.reports(db, r)],
+  ["POST", /^\/api\/admin\/reports\/(\d+)$/, (db, r, e, m) => admin.resolveReport(db, r, Number(m[1]))],
+  ["POST", /^\/api\/admin\/drivers\/(\d+)\/settle$/, (db, r, e, m) => admin.settle(db, r, Number(m[1]))],
+  ["GET", /^\/api\/driver\/wallet$/, (db, r) => driver.wallet(db, r)],
   ["PUT", /^\/api\/admin\/settings$/, (db, r) => admin.updateSettings(db, r)],
   ["POST", /^\/api\/admin\/orders\/(\d+)\/prepay$/, (db, r, e, m) => admin.prepay(db, r, Number(m[1]))],
   ["GET", /^\/api\/admin\/images\/(\d+)$/, (db, r, e, m) => admin.image(db, r, Number(m[1]))],

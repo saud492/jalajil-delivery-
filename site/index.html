@@ -215,6 +215,7 @@ footer{font-size:13px;color:var(--muted);text-align:center}
 .wa svg{flex:none}
 /* حماية الطلب + بعد الإرسال */
 .safe{list-style:none;margin:6px 0 0;padding:10px 12px;background:var(--accent-soft);border-radius:12px;display:flex;flex-direction:column;gap:4px;font-size:14px}
+.rt{color:#c98a10;font-weight:700;margin-inline-start:6px;font-size:13px}
 .track-last{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--ink);background:var(--surface);border:1.5px solid var(--accent);border-radius:14px;padding:12px 14px;font-weight:700}
 .track-last span{flex:1}
 .track-last b{font-family:var(--font-display);color:var(--accent);letter-spacing:2px;direction:ltr}
@@ -478,7 +479,7 @@ function refreshPick(b){
     else if(typed) b.dataset.other = "1";
   }
   pick.innerHTML = `<small>اختر المحل</small><div class="chips" role="radiogroup" aria-label="المحل">` +
-    list.map(p => `<label class="opt${p.open ? "" : " closed"}"><input type="radio" name="${id}-shop" value="${p.id}" ${String(p.id)===sel ? "checked" : ""} ${p.open || String(p.id)===sel ? "" : "disabled"}><span>${esc(p.name)}${p.open ? "" : "<em>مسكّر</em>"}</span></label>`).join("") +
+    list.map(p => `<label class="opt${p.open ? "" : " closed"}"><input type="radio" name="${id}-shop" value="${p.id}" ${String(p.id)===sel ? "checked" : ""} ${p.open || String(p.id)===sel ? "" : "disabled"}><span>${esc(p.name)}${p.rating ? `<small class="rt">★ ${toAr(p.rating)}</small>` : ""}${p.open ? "" : "<em>مسكّر</em>"}</span></label>`).join("") +
     `<label class="opt other"><input type="radio" name="${id}-shop" value="other" ${!sel && b.dataset.other ? "checked" : ""}><span>محل ثاني</span></label></div>`;
   pick.classList.remove("hidden");
   wrap.classList.toggle("hidden", !(!sel && b.dataset.other));

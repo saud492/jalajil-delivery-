@@ -101,7 +101,13 @@ export async function summary(db, request) {
   const [w, m] = await db.batch([q(weekStart), q(monthStart)]);
   return json({
     shop: shopInfo(s.shop),
+    rating: await shopRating(db, s.shop.id),
     week: { count: w.results[0].n, commission: w.results[0].c },
     month: { count: m.results[0].n, commission: m.results[0].c },
   });
+}
+
+export async function shopRating(db, id) {
+  const r = await db.prepare("SELECT COUNT(shop_stars) AS n, AVG(shop_stars) AS avg FROM parts WHERE shop_id = ? AND shop_stars IS NOT NULL").bind(id).first();
+  return { count: r.n, avg: r.avg ? Math.round(r.avg * 10) / 10 : null };
 }

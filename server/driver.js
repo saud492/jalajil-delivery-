@@ -79,7 +79,7 @@ export async function orders(db, request) {
         id: o.id, order_no: o.order_no, created_at: o.created_at, dest: o.dest, place: o.place, fee: o.fee,
         customer_name: o.customer_name, customer_phone: o.customer_phone, map_url: o.map_url, pay: o.pay, note: o.note,
         pack: safeParse(o.pack), driver_status: o.driver_status, assigned_at: o.assigned_at, picked_at: o.picked_at, delivered_at: o.delivered_at,
-        prepay_status: o.prepay_status,
+        prepay_status: o.prepay_status, leave_at_door: !!o.leave_at_door,
         parts: parts.map(p => ({ ...brief(p), id: p.id, items: p.items, bill: p.bill, receipt: p.bill_receipt })),
         ...summarize(o, parts, settings),
       };
@@ -116,15 +116,26 @@ export async function act(db, request, orderId) {
   } else if (b.action === "delivered") {
     const { o } = await myOrder(db, s, orderId);
     if (o.driver_status !== "picked") throw new HttpError(409, "اضغط \"اشتريت واستلمت\" أول");
-    const keys = [`dcode:${orderId}`];
-    await checkLock(db, keys);
-    const code = toEn(str(b.code, 8));
-    if (!o.delivery_code || code !== o.delivery_code) {
-      await recordFail(db, keys, [5]);
-      throw new HttpError(400, "رمز الاستلام غلط. اطلبه من الزبون");
+    let photo = null;
+    if (b.image) {
+      // التسليم بصورة عند الباب: بس لو الزبون نفسه طلب كذا من صفحة المتابعة
+      if (!o.leave_at_door) throw new HttpError(403, "الزبون ما طلب يتركه عند الباب، اطلب منه رمز الاستلام");
+      photo = await saveImage(db, o.id, "door", parseImage(b.image));
+    } else {
+      const keys = [`dcode:${orderId}`];
+      await checkLock(db, keys);
+      const code = toEn(str(b.code, 8));
+      if (!o.delivery_code || code !== o.delivery_code) {
+        await recordFail(db, keys, [5]);
+        throw new HttpError(400, "رمز الاستلام غلط. اطلبه من الزبون");
+      }
+      await clearFails(db, keys);
     }
-    await clearFails(db, keys);
-    stmt = db.prepare("UPDATE orders SET driver_status='delivered', delivered_at=? WHERE id=? AND driver_id=? AND driver_status='picked'").bind(now, orderId, me);
+    // نصيب المندوب ينحفظ لحظة التسليم، عشان لو تغيّرت النسبة بعدين ما تتغيّر الحسابات القديمة
+    const { driver_share } = await getSettings(db);
+    const share = Math.round((Number(o.fee) || 0) * driver_share) / 100;
+    stmt = db.prepare("UPDATE orders SET driver_status='delivered', delivered_at=?, delivery_photo=?, driver_share=? WHERE id=? AND driver_id=? AND driver_status='picked'")
+      .bind(now, photo, share, orderId, me);
   } else throw new HttpError(400, "إجراء غير معروف");
   const r = await stmt.run();
   if (!r.meta.changes) {
@@ -163,8 +174,37 @@ export async function image(db, request, id) {
 export async function summary(db, request) {
   const s = await requireSession(db, request, "driver");
   const { weekStart, monthStart, dayStart } = riyadhRanges(Date.now());
-  const q = start => db.prepare("SELECT COUNT(*) AS n, COALESCE(SUM(fee),0) AS f FROM orders WHERE driver_id = ? AND driver_status = 'delivered' AND delivered_at >= ?").bind(s.driver.id, start);
+  const q = start => db.prepare("SELECT COUNT(*) AS n, COALESCE(SUM(fee),0) AS f, COALESCE(SUM(COALESCE(driver_share, fee)),0) AS e FROM orders WHERE driver_id = ? AND driver_status = 'delivered' AND delivered_at >= ?").bind(s.driver.id, start);
   const [d, w, m] = await db.batch([q(dayStart), q(weekStart), q(monthStart)]);
-  const pick = x => ({ count: x.results[0].n, fees: x.results[0].f });
-  return json({ driver: driverInfo(s.driver), today: pick(d), week: pick(w), month: pick(m) });
+  const pick = x => ({ count: x.results[0].n, fees: x.results[0].f, earned: x.results[0].e });
+  const rating = await driverRating(db, s.driver.id);
+  const wallet = await walletFor(db, s.driver.id);
+  return json({ driver: driverInfo(s.driver), today: pick(d), week: pick(w), month: pick(m), rating, wallet });
+}
+
+export async function driverRating(db, id) {
+  const r = await db.prepare("SELECT COUNT(*) AS n, AVG(driver_stars) AS avg FROM ratings WHERE driver_id = ?").bind(id).first();
+  return { count: r.n, avg: r.avg ? Math.round(r.avg * 10) / 10 : null };
+}
+
+// المحفظة: لكل طلب وصّله، صاحب الخدمة له (رسوم التوصيل − نصيب المندوب)، وعليه المبلغ المحوّل مسبقاً
+// (لأن الزبون حوّله لصاحب الخدمة والمندوب دفعه للمحل من جيبه). التسويات تنقص من الرصيد.
+// الرصيد الموجب = المندوب عليه يسلّم صاحب الخدمة، السالب = صاحب الخدمة عليه يسلّم المندوب
+export async function walletFor(db, id) {
+  const o = await db.prepare(`SELECT COUNT(*) AS n,
+      COALESCE(SUM(COALESCE(fee,0)),0) AS fees,
+      COALESCE(SUM(COALESCE(driver_share, fee, 0)),0) AS earned,
+      COALESCE(SUM(CASE WHEN prepay_status='confirmed' THEN COALESCE(prepay_amount,0) ELSE 0 END),0) AS prepaid
+    FROM orders WHERE driver_id = ? AND driver_status = 'delivered'`).bind(id).first();
+  const st = await db.prepare("SELECT COALESCE(SUM(amount),0) AS s FROM settlements WHERE driver_id = ?").bind(id).first();
+  const owed = (o.fees - o.earned) - o.prepaid;
+  const r2 = v => Math.round(v * 100) / 100;
+  return { deliveries: o.n, fees: r2(o.fees), earned: r2(o.earned), prepaid: r2(o.prepaid), settled: r2(st.s), balance: r2(owed - st.s) };
+}
+
+export async function wallet(db, request) {
+  const s = await requireSession(db, request, "driver");
+  const w = await walletFor(db, s.driver.id);
+  const { results: history } = await db.prepare("SELECT amount, note, created_at FROM settlements WHERE driver_id = ? ORDER BY id DESC LIMIT 30").bind(s.driver.id).all();
+  return json({ wallet: w, history });
 }

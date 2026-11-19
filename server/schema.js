@@ -76,6 +76,37 @@ const STATEMENTS = [
     created_at INTEGER NOT NULL
   )`,
   `CREATE INDEX IF NOT EXISTS receipts_order ON receipts(order_id)`,
+  // تقييم الزبون بعد التوصيل: تقييم واحد لكل طلب
+  `CREATE TABLE IF NOT EXISTS ratings (
+    order_id INTEGER PRIMARY KEY REFERENCES orders(id),
+    driver_id INTEGER,
+    driver_stars INTEGER,
+    tags TEXT,                       -- JSON
+    comment TEXT,
+    created_at INTEGER NOT NULL
+  )`,
+  // بلاغات الزبائن
+  `CREATE TABLE IF NOT EXISTS reports (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id INTEGER NOT NULL REFERENCES orders(id),
+    driver_id INTEGER,
+    kind TEXT NOT NULL,
+    note TEXT,
+    image_id INTEGER,
+    status TEXT NOT NULL DEFAULT 'open',   -- open، resolved
+    resolution TEXT,
+    created_at INTEGER NOT NULL,
+    resolved_at INTEGER
+  )`,
+  `CREATE INDEX IF NOT EXISTS reports_status ON reports(status, created_at)`,
+  // تسويات المحفظة: موجب = المندوب سلّم صاحب الخدمة، سالب = صاحب الخدمة سلّم المندوب
+  `CREATE TABLE IF NOT EXISTS settlements (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    driver_id INTEGER NOT NULL REFERENCES drivers(id),
+    amount REAL NOT NULL,
+    note TEXT,
+    created_at INTEGER NOT NULL
+  )`,
 ];
 
 // أعمدة انضافت بعد أول نسخة: تنضاف للجداول القديمة لو ناقصة
@@ -94,10 +125,17 @@ const COLUMNS = {
     ["prepay_status", "TEXT"],       // null، sent = الزبون رفع إيصال، confirmed = صاحب الخدمة أكّد
     ["prepay_amount", "REAL"],       // المبلغ اللي تأكد وصوله
     ["prepay_receipt", "INTEGER"],
+    ["leave_at_door", "INTEGER"],    // الزبون طلب يتركه عند الباب (يسلّم بصورة بدل الرمز)
+    ["delivery_photo", "INTEGER"],
+    ["driver_share", "REAL"],        // نصيب المندوب من رسوم التوصيل، ينحفظ لحظة التسليم
   ],
   parts: [
     ["bill", "REAL"],                // مبلغ فاتورة المحل
     ["bill_receipt", "INTEGER"],     // صورة الفاتورة (للمحلات غير الشريكة)
+    ["shop_stars", "INTEGER"],       // تقييم الزبون للمحل الشريك
+  ],
+  shops: [
+    ["map_url", "TEXT"],             // موقع المحل
   ],
 };
 

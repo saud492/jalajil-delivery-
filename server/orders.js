@@ -6,10 +6,13 @@ const DESTS = ["home", "chalet", "park"];
 
 export async function listShops(db) {
   const { results } = await db.prepare(
-    "SELECT id, name, category, is_open FROM shops WHERE active = 1 ORDER BY name"
+    `SELECT s.id, s.name, s.category, s.is_open, AVG(p.shop_stars) AS rating, COUNT(p.shop_stars) AS rating_count
+     FROM shops s LEFT JOIN parts p ON p.shop_id = s.id WHERE s.active = 1 GROUP BY s.id ORDER BY s.name`
   ).all();
   const { prepay_cap } = await getSettings(db);
-  return json({ shops: results.map(s => ({ id: s.id, name: s.name, category: s.category, open: !!s.is_open })), prepay_cap });
+  // التقييم يطلع للزبون بعد ٣ تقييمات على الأقل
+  return json({ shops: results.map(s => ({ id: s.id, name: s.name, category: s.category, open: !!s.is_open,
+    rating: s.rating_count >= 3 ? Math.round(s.rating * 10) / 10 : null })), prepay_cap });
 }
 
 export async function saveOrder(db, request) {

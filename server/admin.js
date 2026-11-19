@@ -2,6 +2,7 @@
 import { HttpError, json, readJson, str, riyadhRanges, STATUSES, sha256, cleanCode } from "./util.js";
 import { checkLock, recordFail, clearFails, createSession, sessionCookie, requireSession, endSession, hashPin, safeEqual } from "./auth.js";
 import { getSettings, saveSettings, summarize, loadOrder, sendImage } from "./flow.js";
+import { driverRating, walletFor } from "./driver.js";
 
 const ip = r => r.headers.get("cf-connecting-ip") || "local";
 const CATS = ["بقالة", "مطعم", "كافيه", "صيدلية", "أخرى"];
@@ -56,6 +57,10 @@ function cleanShop(b, creating) {
     if (t && !/^\d{4}-\d{2}-\d{2}$/.test(t)) throw new HttpError(400, "تاريخ نهاية التجربة غير صحيح");
     out.trial_end = t || null;
   }
+  if (b.map_url !== undefined) {
+    out.map_url = str(b.map_url, 500);
+    if (out.map_url && !/^https?:\/\/\S+$/i.test(out.map_url)) throw new HttpError(400, "رابط موقع المحل لازم يبدأ بـ https://");
+  }
   if (b.active !== undefined) out.active = b.active ? 1 : 0;
   if (b.is_open !== undefined) out.is_open = b.is_open ? 1 : 0;
   return out;
@@ -67,8 +72,8 @@ export async function createShop(db, request) {
   const dup = await db.prepare("SELECT id FROM shops WHERE code = ?").bind(s.code).first();
   if (dup) throw new HttpError(409, "رمز المحل مستخدم، اختر رمز ثاني");
   const { hash, salt } = await hashPin(s.pin);
-  const r = await db.prepare(`INSERT INTO shops (code, name, category, pin_hash, pin_salt, commission, trial_end, created_at)
-    VALUES (?,?,?,?,?,?,?,?) RETURNING id`).bind(s.code, s.name, s.category, hash, salt, s.commission, s.trial_end, Date.now()).first();
+  const r = await db.prepare(`INSERT INTO shops (code, name, category, pin_hash, pin_salt, commission, trial_end, map_url, created_at)
+    VALUES (?,?,?,?,?,?,?,?,?) RETURNING id`).bind(s.code, s.name, s.category, hash, salt, s.commission, s.trial_end, s.map_url || null, Date.now()).first();
   return json({ ok: true, id: r.id });
 }
 
@@ -82,7 +87,7 @@ export async function updateShop(db, request, id) {
     if (dup) throw new HttpError(409, "رمز المحل مستخدم، اختر رمز ثاني");
   }
   const sets = [], vals = [];
-  for (const k of ["code", "name", "category", "commission", "trial_end", "active", "is_open"]) {
+  for (const k of ["code", "name", "category", "commission", "trial_end", "active", "is_open", "map_url"]) {
     if (k in s) { sets.push(`${k} = ?`); vals.push(s[k]); }
   }
   const stmts = [];
@@ -103,7 +108,8 @@ export async function shops(db, request) {
   await requireSession(db, request, "admin");
   const { weekStart, monthStart } = riyadhRanges(Date.now());
   const { results } = await db.prepare(`
-    SELECT s.id, s.code, s.name, s.category, s.commission, s.trial_end, s.is_open, s.active, s.created_at,
+    SELECT s.id, s.code, s.name, s.category, s.commission, s.trial_end, s.is_open, s.active, s.created_at, s.map_url,
+      AVG(p.shop_stars) AS rating, COUNT(p.shop_stars) AS rating_count,
       SUM(CASE WHEN p.status='ready' AND p.ready_at >= ?1 THEN 1 ELSE 0 END) AS week_count,
       SUM(CASE WHEN p.status='ready' AND p.ready_at >= ?1 THEN p.commission ELSE 0 END) AS week_commission,
       SUM(CASE WHEN p.status='ready' AND p.ready_at >= ?2 THEN 1 ELSE 0 END) AS month_count,
@@ -141,6 +147,10 @@ export async function orders(db, request) {
   const by = new Map(os.map(o => [o.id, { ...o, client_key: undefined, pack: safeParse(o.pack), parts: [] }]));
   for (const p of ps) by.get(p.order_id).parts.push(p);
   const st = await getSettings(db);
+  const { results: rt } = await db.prepare(`SELECT order_id, driver_stars, tags, comment FROM ratings WHERE order_id IN (${ids.map(() => "?").join(",")})`).bind(...ids).all();
+  const { results: rp } = await db.prepare(`SELECT order_id, COUNT(*) AS n, SUM(CASE WHEN status='open' THEN 1 ELSE 0 END) AS open FROM reports WHERE order_id IN (${ids.map(() => "?").join(",")}) GROUP BY order_id`).bind(...ids).all();
+  for (const r of rt) { const o = by.get(r.order_id); if (o) o.rating = { stars: r.driver_stars, tags: safeParse(r.tags), comment: r.comment }; }
+  for (const r of rp) { const o = by.get(r.order_id); if (o) o.reports = { count: r.n, open: r.open || 0 }; }
   return json({ orders: [...by.values()].map(o => ({ ...o, ...summarize(o, o.parts, st) })) });
 }
 
@@ -190,6 +200,12 @@ export async function drivers(db, request) {
     FROM drivers d LEFT JOIN orders o ON o.driver_id = d.id
     GROUP BY d.id ORDER BY d.active DESC, d.name`).bind(weekStart, monthStart).all();
   const n = v => v || 0;
+  for (const r of results) {
+    r.rating = await driverRating(db, r.id);
+    r.wallet = await walletFor(db, r.id);
+    const rp = await db.prepare("SELECT COUNT(*) AS n, SUM(CASE WHEN status='open' THEN 1 ELSE 0 END) AS open FROM reports WHERE driver_id = ?").bind(r.id).first();
+    r.reports = { count: rp.n || 0, open: rp.open || 0 };
+  }
   return json({ drivers: results.map(r => ({ ...r, active: !!r.active,
     week_count: n(r.week_count), week_fees: n(r.week_fees), month_count: n(r.month_count), month_fees: n(r.month_fees),
     all_count: n(r.all_count), open_count: n(r.open_count) })) });
@@ -272,6 +288,42 @@ export async function prepay(db, request, orderId) {
     await db.prepare("UPDATE orders SET prepay_status=NULL, prepay_amount=NULL WHERE id=?").bind(orderId).run();
   } else throw new HttpError(400, "إجراء غير معروف");
   return json({ ok: true });
+}
+
+/* ===== البلاغات ===== */
+export async function reports(db, request) {
+  await requireSession(db, request, "admin");
+  const status = new URL(request.url).searchParams.get("status");
+  const where = status === "open" ? "WHERE r.status = 'open'" : "";
+  const { results } = await db.prepare(`
+    SELECT r.id, r.order_id, r.kind, r.note, r.image_id, r.status, r.resolution, r.created_at, r.resolved_at,
+           o.order_no, o.customer_name, o.customer_phone, o.track_token, d.name AS driver_name
+    FROM reports r JOIN orders o ON o.id = r.order_id LEFT JOIN drivers d ON d.id = r.driver_id
+    ${where} ORDER BY (r.status = 'open') DESC, r.id DESC LIMIT 200`).all();
+  const open = await db.prepare("SELECT COUNT(*) AS n FROM reports WHERE status = 'open'").first();
+  return json({ reports: results, open: open.n });
+}
+
+export async function resolveReport(db, request, id) {
+  await requireSession(db, request, "admin");
+  const b = await readJson(request);
+  const r = await db.prepare("UPDATE reports SET status='resolved', resolution=?, resolved_at=? WHERE id=? AND status='open'").bind(str(b.resolution, 300), Date.now(), id).run();
+  if (!r.meta.changes) throw new HttpError(404, "البلاغ مو موجود أو محلول");
+  return json({ ok: true });
+}
+
+/* ===== تسوية محفظة المندوب ===== */
+export async function settle(db, request, driverId) {
+  await requireSession(db, request, "admin");
+  const b = await readJson(request);
+  const d = await db.prepare("SELECT id FROM drivers WHERE id = ?").bind(driverId).first();
+  if (!d) throw new HttpError(404, "المندوب مو موجود");
+  const amount = Number(String(b.amount ?? "").replace(/[٠-٩]/g, x => "٠١٢٣٤٥٦٧٨٩".indexOf(x)));
+  if (!Number.isFinite(amount) || amount <= 0 || amount > 100000) throw new HttpError(400, "اكتب المبلغ");
+  if (!["in", "out"].includes(b.direction)) throw new HttpError(400, "مين سلّم مين؟");
+  const signed = Math.round((b.direction === "in" ? amount : -amount) * 100) / 100;
+  await db.prepare("INSERT INTO settlements (driver_id, amount, note, created_at) VALUES (?,?,?,?)").bind(driverId, signed, str(b.note, 200), Date.now()).run();
+  return json({ ok: true, wallet: await walletFor(db, driverId) });
 }
 
 export async function image(db, request, id) {

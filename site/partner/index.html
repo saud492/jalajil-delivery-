@@ -172,6 +172,7 @@ input.ltr{direction:ltr;text-align:right}
       <div class="stat"><small>هالأسبوع</small><b id="wCount">٠</b><span>طلب مكتمل</span><span>العمولة: <em id="wCom">٠</em> ريال</span></div>
       <div class="stat"><small>هالشهر</small><b id="mCount">٠</b><span>طلب مكتمل</span><span>العمولة: <em id="mCom">٠</em> ريال</span></div>
     </div>
+    <div class="note" id="rateNote"></div>
     <div class="note" id="termsNote"></div>
     <p class="hint" style="color:var(--muted);font-size:13px;margin:0 4px">الطلب ينحسب مكتمل لما تضغط "جاهز للاستلام". الأسبوع يبدأ السبت.</p>
     <button class="out" id="logoutBtn">تسجيل خروج</button>
@@ -432,6 +433,7 @@ async function loadSummary(){
     const d = await api("summary");
     shop = d.shop; renderShop();
     $("#wCount").textContent = toAr(d.week.count); $("#wCom").textContent = money(d.week.commission);
+    $("#rateNote").textContent = d.rating && d.rating.avg ? `★ تقييم محلك من الزبائن: ${toAr(d.rating.avg)} من ٥ (${toAr(d.rating.count)} تقييم)` : "ما فيه تقييمات لمحلك للحين";
     $("#mCount").textContent = toAr(d.month.count); $("#mCom").textContent = money(d.month.commission);
     const n = $("#termsNote"); n.className = "note";
     const today = new Date(now() + 3*3600000).toISOString().slice(0,10);

@@ -84,6 +84,23 @@ button{font:inherit;cursor:pointer;color:inherit}
 .toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:var(--ink);color:var(--surface);padding:10px 18px;border-radius:999px;font-weight:600;z-index:50;font-size:14px;max-width:90vw;text-align:center}
 .imgv{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:60;display:flex;align-items:center;justify-content:center;padding:16px}
 .imgv img{max-width:100%;max-height:100%;border-radius:12px}
+.eta{flex-direction:row;align-items:baseline;gap:8px;flex-wrap:wrap;background:var(--accent);color:var(--accent-ink)}
+.eta .muted{color:inherit;opacity:.85}
+.eta b{font-family:var(--font-display);font-size:22px}
+.door{display:flex;gap:10px;align-items:flex-start;font-weight:600;cursor:pointer}
+.door input{width:22px;height:22px;flex:none;margin-top:3px;accent-color:var(--accent)}
+.stars{display:flex;gap:4px}
+.star{border:none;background:none;font-size:34px;line-height:1;color:var(--line);padding:2px}
+.star.on{color:#e0a020}
+.stars.static{font-size:26px;color:#e0a020;letter-spacing:2px}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tag{border:1.5px solid var(--line);background:var(--surface2);border-radius:999px;padding:5px 12px;font-size:14px;font-weight:600}
+.tag.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.note,select{font:inherit;font-size:16px;color:var(--ink);background:var(--surface2);border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;width:100%;resize:vertical}
+label.f{display:flex;flex-direction:column;gap:5px;font-size:14px;color:var(--muted);font-weight:500}
+.sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:40;display:flex;align-items:flex-end;justify-content:center;overflow:auto}
+.sheet{background:var(--surface);width:100%;max-width:560px;border-radius:22px 22px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px;margin-top:auto}
+.sheet h2{font-size:18px}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 </style>
 </head>
@@ -94,6 +111,19 @@ button{font:inherit;cursor:pointer;color:inherit}
   <div class="card empty" id="loading">جاري تحميل طلبك…</div>
 </main>
 
+<div class="sheet-bg hidden" id="repSheet">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="repT">
+    <h2 id="repT">⚠️ بلّغ عن مشكلة</h2>
+    <label class="f">نوع المشكلة<select id="repKind"></select></label>
+    <label class="f">التفاصيل (اختياري)<textarea id="repNote" rows="3" class="note" placeholder="مثال: ناقص علبة حليب"></textarea></label>
+    <button class="btn line" id="repPhoto" type="button" style="color:var(--ink)">📷 أرفق صورة (اختياري)</button>
+    <img id="repPrev" class="hidden" alt="الصورة المرفقة" style="max-height:160px;object-fit:contain;border-radius:12px">
+    <p class="muted" id="repMsg" style="color:var(--bad)" aria-live="polite"></p>
+    <button class="btn" id="repSend" type="button">إرسال البلاغ</button>
+    <button class="btn line" id="repCancel" type="button" style="color:var(--muted)">رجوع</button>
+  </div>
+</div>
+<input type="file" id="repFile" accept="image/*" class="hidden">
 <div class="imgv hidden" id="imgv" role="dialog" aria-label="صورة"><img id="imgvImg" alt="صورة الفاتورة"></div>
 <div class="toast hidden" id="toast" aria-live="polite"></div>
 <input type="file" id="file" accept="image/*" class="hidden">
@@ -105,7 +135,7 @@ const toAr = n => String(n).replace(/\d/g, d => AR[d]);
 const money = n => toAr((Math.round((+n||0)*100)/100).toString());
 const DEST = { home:"البيت", chalet:"شاليه", park:"المنتزه" };
 const K = new URLSearchParams(location.search).get("k") || "";
-let D = null, busy = false, lastStage = null;
+let D = null, busy = false, lastStage = null, skew = 0;
 
 function el(tag, cls, text){ const e = document.createElement(tag); if(cls) e.className = cls; if(text !== undefined) e.textContent = text; return e; }
 function toast(t){ const e = $("#toast"); e.textContent = t; e.classList.remove("hidden"); clearTimeout(toast.t); toast.t = setTimeout(()=>e.classList.add("hidden"), 2800); }
@@ -166,6 +196,32 @@ function render(){
   const a = actionCard();
   if(a) m.append(a);
 
+  // وقت الوصول المتوقع
+  if(D.eta){
+    const left = Math.max(1, Math.round((D.eta - (Date.now() + skew))/60000));
+    const e = el("section", "card eta");
+    e.append(el("div", "muted", "يوصلك تقريباً"), el("b", "", `خلال ${toAr(left)} دقيقة`), el("div", "muted", "الساعة " + clock(D.eta)));
+    m.append(e);
+  }
+
+  // التقييم بعد التوصيل
+  if(D.stage === "delivered") m.append(D.rating ? ratedCard() : rateCard());
+  if(D.order.delivery_photo){
+    const p = el("button", "pic", "📷 صورة التسليم عند الباب"); p.onclick = () => showImg(D.order.delivery_photo);
+    const c = el("section", "card"); c.append(el("h2", "", "سلّمك المندوب الطلب عند الباب"), p); m.append(c);
+  }
+
+  // اتركه عند الباب
+  if(["approve","prepay","prepay_check","buying","onway","pricing"].includes(D.stage)){
+    const c = el("section", "card");
+    const lb = el("label", "door"); const cb = el("input"); cb.type = "checkbox"; cb.checked = D.order.leave_at_door;
+    cb.onchange = () => send({action:"door", on: cb.checked}, cb.checked ? "تمام، المندوب يتركه عند الباب ويصوّره" : "المندوب بيسلّمك يد بيد");
+    lb.append(cb, el("span", "", "اتركه عند الباب: المندوب يصوّر الطلب عند بابك بدل ما يطلب الرمز"));
+    c.append(lb);
+    if(D.order.leave_at_door) c.append(el("p", "muted", "حوّل المبلغ للمندوب أو جهّزه له، لأنه ما راح يقابلك."));
+    m.append(c);
+  }
+
   // الخطوات
   if(D.stage !== "cancelled"){
     const s = el("section", "card"); s.append(el("h2", "", "وين وصل طلبك"));
@@ -211,13 +267,84 @@ function render(){
   b.append(el("div", "muted", "التوصيل إلى: " + (DEST[o.dest] || o.dest) + (o.place ? " · " + o.place : "") + (o.pay ? " · الدفع: " + o.pay : "")));
   m.append(b);
 
-  // مساعدة
+  // البلاغات
+  if(D.reports && D.reports.length){
+    const c = el("section", "card"); c.append(el("h2", "", "بلاغاتك"));
+    D.reports.forEach(r=>{
+      const d = el("div", "part"); const h = el("div", "part-h");
+      h.append(el("b", "", r.kind), el("span", "badge" + (r.status === "open" ? " x" : ""), r.status === "open" ? "نشوفه" : "انحل ✓"));
+      d.append(h); if(r.note) d.append(el("div", "items", r.note));
+      if(r.resolution) d.append(el("div", "muted", "الرد: " + r.resolution));
+      c.append(d);
+    });
+    m.append(c);
+  }
+  const rb = el("button", "help", "⚠️ عندي مشكلة في الطلب"); rb.onclick = openReport; m.append(rb);
   if(D.support){
-    const h = el("a", "help", "💬 عندي مشكلة في الطلب");
-    h.href = "https://wa.me/" + D.support + "?text=" + encodeURIComponent("مشكلة في طلب " + o.order_no + "\n" + location.href);
+    const h = el("a", "help", "💬 كلّمنا واتساب");
+    h.href = "https://wa.me/" + D.support + "?text=" + encodeURIComponent("بخصوص طلب " + o.order_no + "\n" + location.href);
     h.target = "_blank"; h.rel = "noopener"; m.append(h);
   }
 }
+
+function clock(ms){ try{ return new Intl.DateTimeFormat("ar-SA-u-nu-arab",{timeZone:"Asia/Riyadh",hour:"numeric",minute:"2-digit"}).format(new Date(ms)); }catch(e){ return ""; } }
+
+/* التقييم */
+let stars = 0, shopStars = {}, tags = new Set();
+function starRow(get, set, label){
+  const w = el("div", "stars"); w.setAttribute("role", "radiogroup"); w.setAttribute("aria-label", label);
+  for(let i=1;i<=5;i++){
+    const b = el("button", "star" + (i <= get() ? " on" : ""), "★"); b.type = "button";
+    b.setAttribute("role", "radio"); b.setAttribute("aria-checked", i === get() ? "true" : "false"); b.setAttribute("aria-label", toAr(i) + " من ٥");
+    b.onclick = () => { set(i); render(); }; w.append(b);
+  }
+  return w;
+}
+function rateCard(){
+  const c = el("section", "card act");
+  c.append(el("h2", "", "⭐ كيف كانت تجربتك؟"));
+  if(D.driver){ c.append(el("div", "muted", "المندوب " + D.driver.name)); c.append(starRow(()=>stars, v=>stars=v, "تقييم المندوب")); }
+  const tw = el("div", "tags");
+  (D.rating_tags || []).forEach(t=>{ const b = el("button", "tag" + (tags.has(t) ? " on" : ""), t); b.type = "button"; b.setAttribute("aria-pressed", tags.has(t)); b.onclick = () => { tags.has(t) ? tags.delete(t) : tags.add(t); render(); }; tw.append(b); });
+  c.append(tw);
+  D.parts.filter(p=>p.partner && !["cancelled","rejected"].includes(p.status)).forEach(p=>{
+    c.append(el("div", "muted", p.shop_name)); c.append(starRow(()=>shopStars[p.id]||0, v=>shopStars[p.id]=v, "تقييم " + p.shop_name));
+  });
+  const ta = el("textarea", "note"); ta.placeholder = "ملاحظة (اختياري)"; ta.rows = 2; ta.value = rateNote; ta.oninput = () => rateNote = ta.value; c.append(ta);
+  const b = el("button", "btn", "إرسال التقييم");
+  b.onclick = () => {
+    if(D.driver && !stars){ toast("اختر عدد النجوم للمندوب"); return; }
+    send({action:"rate", driver_stars: stars || 5, tags:[...tags], comment: rateNote, shops: Object.entries(shopStars).map(([part, s])=>({part:Number(part), stars:s}))}, "شكراً لتقييمك 🌟");
+  };
+  c.append(b); return c;
+}
+let rateNote = "";
+function ratedCard(){
+  const c = el("section", "card"); c.append(el("h2", "", "شكراً لتقييمك 🌟"));
+  c.append(el("div", "stars static", "★".repeat(D.rating.driver_stars) + "☆".repeat(5 - D.rating.driver_stars)));
+  if(D.rating.tags.length) c.append(el("div", "muted", D.rating.tags.join(" · ")));
+  return c;
+}
+
+/* البلاغ */
+let repImg = null;
+function openReport(){
+  const s = $("#repKind"); s.innerHTML = ""; s.append(new Option("اختر نوع المشكلة", ""));
+  (D.report_kinds || []).forEach(k=>s.append(new Option(k, k)));
+  $("#repNote").value = ""; repImg = null; $("#repPrev").classList.add("hidden"); $("#repMsg").textContent = "";
+  $("#repSheet").classList.remove("hidden");
+}
+$("#repPhoto").addEventListener("click", ()=>{ $("#repFile").value = ""; $("#repFile").click(); });
+$("#repFile").addEventListener("change", async ()=>{ const f = $("#repFile").files[0]; if(!f) return; try{ repImg = await compress(f); $("#repPrev").src = repImg; $("#repPrev").classList.remove("hidden"); }catch(err){ $("#repMsg").textContent = err.message; } });
+$("#repCancel").addEventListener("click", ()=>$("#repSheet").classList.add("hidden"));
+$("#repSend").addEventListener("click", async ()=>{
+  const kind = $("#repKind").value;
+  if(!kind){ $("#repMsg").textContent = "اختر نوع المشكلة"; return; }
+  $("#repSend").disabled = true;
+  try{ await api({action:"report", kind, note: $("#repNote").value, image: repImg || undefined}); $("#repSheet").classList.add("hidden"); toast("وصلنا بلاغك، بنرد عليك قريب"); load(); }
+  catch(err){ $("#repMsg").textContent = err.message; }
+  $("#repSend").disabled = false;
+});
 
 function actionCard(){
   const c = el("section", "card act");
@@ -279,10 +406,11 @@ $("#imgv").addEventListener("click", ()=>$("#imgv").classList.add("hidden"));
 async function load(){
   if(!K){ $("#main").innerHTML = '<div class="card empty">الرابط ناقص. افتح الرابط اللي في رسالة طلبك.</div>'; return; }
   try{
-    D = await api();
+    D = await api(); skew = D.now - Date.now();
     if(lastStage && lastStage !== D.stage && D.stage === "approve" && navigator.vibrate) try{ navigator.vibrate([200,100,200]); }catch(e){}
     lastStage = D.stage;
-    render();
+    const typing = document.activeElement && document.activeElement.closest && document.activeElement.closest("#main textarea, #main input");
+    if(!typing) render();
   }catch(err){
     if(!D){ const m = $("#main"); m.innerHTML = ""; const e = el("div", "card empty"); e.append(el("b", "", err.status === 404 ? "ما لقينا طلبك للحين" : "ما قدرنا نجيب طلبك")); e.append(el("p", "muted", err.message)); m.append(e); }
   }
