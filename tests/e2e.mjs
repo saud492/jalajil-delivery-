@@ -25,7 +25,7 @@ const admin = client(), shopA = client(), shopB = client(), anon = client();
 let r;
 
 // صفحات
-for (const p of ["/", "/partner/", "/admin/"]) {
+for (const p of ["/", "/partner/", "/admin/", "/driver/"]) {
   const res = await fetch(BASE + p);
   assert.equal(res.status, 200, p);
 }
@@ -123,6 +123,64 @@ r = await shopB("GET", "/api/partner/orders"); assert.equal(r.status, 401);
 
 // المحل ما يقدر يدخل اللوحة
 r = await shopB("GET", "/api/admin/orders"); assert.equal(r.status, 401);
+
+// رمز المحل بالعربي
+r = await admin("POST", "/api/admin/shops", { name: "محل عربي " + run, category: "بقالة", code: "الريف" + run, pin: "5555" });
+assert.equal(r.status, 200, JSON.stringify(r.data));
+const arab = client();
+r = await arab("POST", "/api/partner/login", { code: "الريف" + run, pin: "٥٥٥٥" }); assert.equal(r.status, 200, "arabic code + arabic digits");
+r = await admin("POST", "/api/admin/shops", { name: "x", category: "مطعم", code: "فيه مسافة", pin: "1234" }); assert.equal(r.status, 400, "no spaces in code");
+
+// المناديب
+const d1 = client(), d2 = client();
+r = await admin("POST", "/api/admin/drivers", { name: "مندوب ١", phone: "0511111111", code: "فهد" + run, pin: "7777" }); assert.equal(r.status, 200, JSON.stringify(r.data)); const drv1 = r.data.id;
+r = await admin("POST", "/api/admin/drivers", { name: "مندوب ٢", code: "d2" + run, pin: "8888" }); assert.equal(r.status, 200); const drv2 = r.data.id;
+r = await admin("POST", "/api/admin/drivers", { name: "مكرر", code: "فهد" + run, pin: "7777" }); assert.equal(r.status, 409);
+r = await d1("GET", "/api/driver/orders"); assert.equal(r.status, 401, "driver needs login");
+r = await d1("POST", "/api/driver/login", { code: "فهد" + run, pin: "7777" }); assert.equal(r.status, 200);
+r = await d2("POST", "/api/driver/login", { code: "d2" + run, pin: "8888" }); assert.equal(r.status, 200);
+r = await d1("GET", "/api/admin/orders"); assert.equal(r.status, 401, "driver can't open admin");
+
+const dkey = "drv" + run + "x1";
+r = await anon("POST", "/api/orders", { key: dkey, order_no: "JL-D-" + run, dest: "chalet", place: "شاليه النخيل", name: "زبون ٢", phone: "0522222222", fee: 5, pack: [], parts: [{ shop_id: idA, cat: "مطعم", items: "شاورما" }] });
+assert.equal(r.status, 200); const dOrder = r.data.id;
+r = await d1("GET", "/api/driver/orders");
+const av = r.data.available.find(o => o.id === dOrder);
+assert.ok(av, "new order is available to drivers");
+assert.ok(!("customer_phone" in av) && !("customer_name" in av), "no customer data before taking");
+assert.ok(!("items" in av.parts[0]), "no items before taking");
+r = await d1("POST", `/api/driver/orders/${dOrder}`, { action: "picked" }); assert.equal(r.status, 409, "can't pick before taking");
+r = await d1("POST", `/api/driver/orders/${dOrder}`, { action: "take" }); assert.equal(r.status, 200);
+r = await d2("POST", `/api/driver/orders/${dOrder}`, { action: "take" }); assert.equal(r.status, 409, "second driver can't take");
+r = await d2("GET", "/api/driver/orders"); assert.ok(!r.data.available.some(o => o.id === dOrder), "gone from available");
+r = await d1("GET", "/api/driver/orders");
+const mineD = r.data.mine.find(o => o.id === dOrder);
+assert.equal(mineD.customer_phone, "0522222222"); assert.equal(mineD.parts[0].items, "شاورما");
+r = await d2("POST", `/api/driver/orders/${dOrder}`, { action: "picked" }); assert.equal(r.status, 409, "other driver can't act");
+r = await d1("POST", `/api/driver/orders/${dOrder}`, { action: "release" }); assert.equal(r.status, 200);
+r = await d2("GET", "/api/driver/orders"); assert.ok(r.data.available.some(o => o.id === dOrder), "released back");
+// صاحب الخدمة يعيّن المندوب ٢
+r = await admin("POST", `/api/admin/orders/${dOrder}/driver`, { driver_id: drv2 }); assert.equal(r.status, 200);
+r = await d2("GET", "/api/driver/orders"); assert.equal(r.data.mine.find(o => o.id === dOrder).driver_status, "assigned");
+r = await d2("POST", `/api/driver/orders/${dOrder}`, { action: "picked" }); assert.equal(r.status, 200);
+r = await d2("POST", `/api/driver/orders/${dOrder}`, { action: "delivered" }); assert.equal(r.status, 200);
+r = await admin("POST", `/api/admin/orders/${dOrder}/driver`, { driver_id: drv1 }); assert.equal(r.status, 409, "can't reassign delivered");
+r = await d2("GET", "/api/driver/summary"); assert.equal(r.data.today.count, 1); assert.equal(r.data.week.fees, 5);
+r = await admin("GET", "/api/admin/drivers");
+assert.equal(r.data.drivers.find(d => d.id === drv2).month_count, 1);
+assert.equal(r.data.drivers.find(d => d.id === drv2).month_fees, 5);
+r = await admin("GET", "/api/admin/orders?days=1");
+assert.equal(r.data.orders.find(o => o.id === dOrder).driver_id, drv2);
+// طلب ملغي ما يطلع للمناديب
+r = await anon("POST", "/api/orders", { key: "drv" + run + "x2", order_no: "JL-D2-" + run, dest: "home", parts: [{ shop_id: null, cat: "بقالة", name: "بقالة", items: "خبز" }] });
+const cOrder = r.data.id;
+r = await admin("GET", "/api/admin/orders?days=1");
+const cPart = r.data.orders.find(o => o.id === cOrder).parts[0].id;
+r = await admin("POST", `/api/admin/parts/${cPart}`, { action: "cancel" }); assert.equal(r.status, 200, "cancel non-partner part");
+r = await d1("GET", "/api/driver/orders"); assert.ok(!r.data.available.some(o => o.id === cOrder), "cancelled order hidden");
+// إيقاف المندوب يطلّعه
+r = await admin("PUT", `/api/admin/drivers/${drv1}`, { active: false }); assert.equal(r.status, 200);
+r = await d1("GET", "/api/driver/orders"); assert.equal(r.status, 401);
 
 // قفل بعد ٥ محاولات غلط
 const lock = client();

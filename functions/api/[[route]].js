@@ -4,6 +4,7 @@ import { ensureSchema } from "../../server/schema.js";
 import * as pub from "../../server/orders.js";
 import * as partner from "../../server/partner.js";
 import * as admin from "../../server/admin.js";
+import * as driver from "../../server/driver.js";
 
 const routes = [
   ["GET", /^\/api\/shops$/, (db, r) => pub.listShops(db, r)],
@@ -25,6 +26,17 @@ const routes = [
   ["PUT", /^\/api\/admin\/shops\/(\d+)$/, (db, r, e, m) => admin.updateShop(db, r, Number(m[1]))],
   ["GET", /^\/api\/admin\/orders$/, (db, r) => admin.orders(db, r)],
   ["POST", /^\/api\/admin\/parts\/(\d+)$/, (db, r, e, m) => admin.actPart(db, r, Number(m[1]))],
+  ["GET", /^\/api\/admin\/drivers$/, (db, r) => admin.drivers(db, r)],
+  ["POST", /^\/api\/admin\/drivers$/, (db, r) => admin.createDriver(db, r)],
+  ["PUT", /^\/api\/admin\/drivers\/(\d+)$/, (db, r, e, m) => admin.updateDriver(db, r, Number(m[1]))],
+  ["POST", /^\/api\/admin\/orders\/(\d+)\/driver$/, (db, r, e, m) => admin.assignDriver(db, r, Number(m[1]))],
+
+  ["POST", /^\/api\/driver\/login$/, (db, r) => driver.login(db, r)],
+  ["POST", /^\/api\/driver\/logout$/, (db, r) => driver.logout(db, r)],
+  ["GET", /^\/api\/driver\/me$/, (db, r) => driver.me(db, r)],
+  ["GET", /^\/api\/driver\/orders$/, (db, r) => driver.orders(db, r)],
+  ["POST", /^\/api\/driver\/orders\/(\d+)$/, (db, r, e, m) => driver.act(db, r, Number(m[1]))],
+  ["GET", /^\/api\/driver\/summary$/, (db, r) => driver.summary(db, r)],
 ];
 
 export async function onRequest({ request, env }) {

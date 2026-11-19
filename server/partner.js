@@ -1,5 +1,5 @@
 // تطبيق الشريك: كل استعلام مربوط برقم المحل من الجلسة، فما يقدر محل يشوف طلبات غيره
-import { HttpError, json, readJson, str, commissionFor, riyadhRanges } from "./util.js";
+import { HttpError, json, readJson, str, commissionFor, riyadhRanges, cleanCode } from "./util.js";
 import { checkLock, recordFail, clearFails, createSession, sessionCookie, requireSession, endSession, verifyPin } from "./auth.js";
 
 const ip = r => r.headers.get("cf-connecting-ip") || "local";
@@ -10,8 +10,8 @@ function shopInfo(s) {
 
 export async function login(db, request) {
   const b = await readJson(request);
-  const code = str(b.code, 40).toLowerCase();
-  const pin = str(b.pin, 20);
+  const code = cleanCode(b.code) || str(b.code, 40).toLowerCase();
+  const pin = str(b.pin, 20).replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d));
   if (!code || !pin) throw new HttpError(400, "اكتب رمز المحل والرقم السري");
   const keys = [`shop:${code}:${ip(request)}`, `shop:${code}`];
   await checkLock(db, keys);

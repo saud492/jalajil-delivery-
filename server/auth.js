@@ -3,9 +3,9 @@ import { HttpError, b64url, fromB64url, getCookie, randomToken, sha256 } from ".
 
 const ITER = 100000; // أعلى رقم يسمح فيه Cloudflare
 const DAY = 24 * 3600_000;
-export const COOKIE = { shop: "jl_shop", admin: "jl_admin" };
-const LIFE = { shop: 60 * DAY, admin: 7 * DAY };
-const PATH = { shop: "/api/partner", admin: "/api/admin" };
+export const COOKIE = { shop: "jl_shop", admin: "jl_admin", driver: "jl_driver" };
+const LIFE = { shop: 60 * DAY, admin: 7 * DAY, driver: 60 * DAY };
+const PATH = { shop: "/api/partner", admin: "/api/admin", driver: "/api/driver" };
 
 async function derive(pin, salt) {
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(pin), "PBKDF2", false, ["deriveBits"]);
@@ -58,6 +58,12 @@ export async function getSession(db, request, kind) {
     const shop = await db.prepare("SELECT * FROM shops WHERE id = ? AND active = 1").bind(row.shop_id).first();
     if (!shop) return null;
     return { ...row, shop, token };
+  }
+  if (kind === "driver") {
+    // جلسة المندوب تحفظ رقمه في نفس عمود shop_id
+    const driver = await db.prepare("SELECT * FROM drivers WHERE id = ? AND active = 1").bind(row.shop_id).first();
+    if (!driver) return null;
+    return { ...row, driver, token };
   }
   return { ...row, token };
 }

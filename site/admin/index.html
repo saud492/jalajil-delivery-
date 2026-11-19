@@ -66,6 +66,14 @@ input,select{font:inherit;font-size:16px;color:var(--ink);background:var(--surfa
 input:focus,select:focus{outline:none;border-color:var(--accent);background:var(--surface)}
 input.ltr{direction:ltr;text-align:right}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+div.f{display:flex;flex-direction:column;gap:4px;font-size:14px;color:var(--muted);font-weight:500}
+.date3{display:grid;grid-template-columns:1fr 1.4fr 1.2fr;gap:6px}
+.date3 select{padding:10px 6px}
+.drv{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-top:1px dashed var(--line);padding-top:8px}
+.drv select{width:auto;flex:1;min-width:140px;padding:6px 8px;font-size:15px}
+.pill.assigned{background:var(--new-soft);color:var(--new)}
+.pill.picked{background:var(--accent-soft);color:var(--accent)}
+.pill.delivered{background:var(--accent);color:var(--accent-ink)}
 @media (max-width:480px){.grid2{grid-template-columns:1fr}}
 .msg{margin:0;font-size:14px;color:var(--bad);min-height:1.2em}
 .filters{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
@@ -105,7 +113,8 @@ tfoot td{font-weight:700;border-bottom:none}
     <nav class="tabs">
       <button class="on" data-tab="orders">الطلبات</button>
       <button data-tab="shops">المحلات</button>
-      <button data-tab="money">العمولات</button>
+      <button data-tab="drivers">المناديب</button>
+      <button data-tab="money">الحسابات</button>
     </nav>
   </div></header>
 
@@ -123,6 +132,12 @@ tfoot td{font-weight:700;border-bottom:none}
     <div id="shops"></div>
   </main>
 
+  <main class="wrap hidden" id="driversTab">
+    <button class="btn" id="addDriver">+ إضافة مندوب</button>
+    <p class="muted" style="margin:0 2px">المندوب يدخل من <b dir="ltr">jalajil-delivery.pages.dev/driver</b> بالرمز والرقم السري.</p>
+    <div id="drivers"></div>
+  </main>
+
   <main class="wrap hidden" id="moneyTab">
     <div class="card">
       <h2 style="font-size:17px">العمولات المستحقة</h2>
@@ -130,6 +145,14 @@ tfoot td{font-weight:700;border-bottom:none}
       <div class="scroll"><table>
         <thead><tr><th>المحل</th><th>الأسبوع</th><th>الشهر</th><th>من البداية</th></tr></thead>
         <tbody id="moneyBody"></tbody><tfoot id="moneyFoot"></tfoot>
+      </table></div>
+    </div>
+    <div class="card">
+      <h2 style="font-size:17px">توصيلات المناديب</h2>
+      <p class="muted" style="margin:0">الطلب ينحسب للمندوب لما يضغط "وصلت". المبلغ هو مجموع رسوم التوصيل للطلبات اللي وصّلها.</p>
+      <div class="scroll"><table>
+        <thead><tr><th>المندوب</th><th>الأسبوع</th><th>الشهر</th><th>من البداية</th></tr></thead>
+        <tbody id="drvMoneyBody"></tbody>
       </table></div>
     </div>
   </main>
@@ -141,15 +164,33 @@ tfoot td{font-weight:700;border-bottom:none}
     <div class="grid2">
       <label class="f">اسم المحل<input id="sName" placeholder="مثال: مطعم الريف"></label>
       <label class="f">النوع<select id="sCat"><option>مطعم</option><option>كافيه</option><option>بقالة</option><option>صيدلية</option><option>أخرى</option></select></label>
-      <label class="f">رمز المحل (للدخول)<input id="sCode" class="ltr" autocapitalize="none" spellcheck="false" placeholder="alrif"></label>
+      <label class="f">رمز المحل (للدخول، عربي أو إنجليزي)<input id="sCode" autocapitalize="none" spellcheck="false" placeholder="مثال: الريف"></label>
       <label class="f"><span id="pinLbl">الرقم السري (٤ إلى ٨ أرقام)</span><input id="sPin" class="ltr" inputmode="numeric" autocomplete="off" placeholder="مثال: 4821"></label>
       <label class="f">العمولة لكل طلب (ريال)<input id="sCom" class="ltr" inputmode="decimal" placeholder="2"></label>
-      <label class="f">نهاية فترة التجربة<input id="sTrial" type="date" lang="en-GB" dir="ltr" style="text-align:right"></label>
+      <div class="f" role="group" aria-labelledby="trialLbl"><span id="trialLbl">نهاية فترة التجربة</span>
+        <div class="date3"><select id="tD" aria-label="اليوم"></select><select id="tM" aria-label="الشهر"></select><select id="tY" aria-label="السنة"></select></div>
+      </div>
     </div>
     <label class="row hidden" id="activeRow" style="gap:10px;font-weight:600"><input type="checkbox" id="sActive" style="width:auto"> المحل فعّال (لو شلت الصح يختفي من موقع الطلب وما يقدر يدخل)</label>
     <p class="msg" id="formMsg"></p>
     <button class="btn" id="saveShop">حفظ</button>
     <button type="button" class="btn line" id="closeForm">إلغاء</button>
+  </form>
+</div>
+
+<div id="dSheet" class="sheet-bg hidden">
+  <form class="sheet" id="driverForm" novalidate>
+    <h2 id="dFormT" style="font-size:18px">إضافة مندوب</h2>
+    <div class="grid2">
+      <label class="f">اسم المندوب<input id="dName" placeholder="مثال: أبو فهد"></label>
+      <label class="f">جواله<input id="dPhone" class="ltr" inputmode="tel" placeholder="05XXXXXXXX"></label>
+      <label class="f">رمز المندوب (للدخول، عربي أو إنجليزي)<input id="dCode" autocapitalize="none" spellcheck="false" placeholder="مثال: فهد"></label>
+      <label class="f"><span id="dPinLbl">الرقم السري (٤ إلى ٨ أرقام)</span><input id="dPin" class="ltr" inputmode="numeric" autocomplete="off" placeholder="مثال: 4821"></label>
+    </div>
+    <label class="row hidden" id="dActiveRow" style="gap:10px;font-weight:600"><input type="checkbox" id="dActive" style="width:auto"> المندوب فعّال (لو شلت الصح ما يقدر يدخل)</label>
+    <p class="msg" id="dFormMsg"></p>
+    <button class="btn" id="saveDriver">حفظ</button>
+    <button type="button" class="btn line" id="closeDForm">إلغاء</button>
   </form>
 </div>
 
@@ -180,8 +221,8 @@ function dateAr(iso){ try{ return new Intl.DateTimeFormat("ar-SA-u-ca-gregory-nu
 function showLogin(){ clearInterval(timer); $("#appView").classList.add("hidden"); $("#loginView").classList.remove("hidden"); }
 async function showApp(){
   $("#loginView").classList.add("hidden"); $("#appView").classList.remove("hidden");
-  await loadShops(); loadOrders();
-  clearInterval(timer); timer = setInterval(()=>{ if(document.visibilityState==="visible"){ if(tab==="orders") loadOrders(); else loadShops(); } }, 30000);
+  await Promise.all([loadShops(), loadDrivers()]); loadOrders();
+  clearInterval(timer); timer = setInterval(()=>{ if(document.visibilityState==="visible"){ if(tab==="orders") loadOrders(); else { loadShops(); loadDrivers(); } } }, 30000);
 }
 $("#loginForm").addEventListener("submit", async e=>{
   e.preventDefault(); $("#loginBtn").disabled = true; $("#loginMsg").textContent = "";
@@ -194,9 +235,88 @@ $("#logout").addEventListener("click", async ()=>{ try{ await api("logout", "POS
 document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click", ()=>{
   tab = b.dataset.tab;
   document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on", x===b));
-  ["orders","shops","money"].forEach(t=>$("#"+t+"Tab").classList.toggle("hidden", t!==tab));
-  if(tab==="orders") loadOrders(); else loadShops();
+  ["orders","shops","drivers","money"].forEach(t=>$("#"+t+"Tab").classList.toggle("hidden", t!==tab));
+  if(tab==="orders") loadOrders(); else { loadShops(); loadDrivers(); }
 }));
+
+/* ===== المناديب ===== */
+let DRIVERS = [], editingD = null;
+async function loadDrivers(){
+  try{ const d = await api("drivers"); DRIVERS = d.drivers; renderDrivers(); renderDriverMoney(); }
+  catch(err){ toast(err.message); }
+}
+function renderDrivers(){
+  const box = $("#drivers"); box.innerHTML = "";
+  if(!DRIVERS.length){ box.append(el("div", "card empty", "ما أضفت مناديب للحين. اضغط \"إضافة مندوب\".")); return; }
+  DRIVERS.forEach(d=>{
+    const c = el("div", "card");
+    const r = el("div", "row"); r.append(el("h3", "grow", d.name));
+    r.append(el("span", "pill " + (d.active ? "open" : "off"), d.active ? "فعّال" : "موقوف")); c.append(r);
+    const m = el("div", "row cust muted"); m.append("الرمز: " + d.code);
+    const ph = (d.phone||"").replace(/[^\d+]/g, "");
+    if(ph){ const a = el("a", "", "📞 " + d.phone); a.href = "tel:" + ph; m.append(a); }
+    c.append(m);
+    c.append(el("div", "muted", `معه الحين: ${toAr(d.open_count)} · وصّل هالشهر: ${toAr(d.month_count)}`));
+    const b = el("div", "row"); const e = el("button", "btn sm line", "تعديل"); e.onclick = () => openDForm(d); b.append(e); c.append(b);
+    box.append(c);
+  });
+}
+function renderDriverMoney(){
+  const body = $("#drvMoneyBody"); body.innerHTML = "";
+  const cell = (n, f) => { const td = el("td"); td.append(el("b", "", toAr(n) + " طلب")); if(f !== undefined) td.append(el("div", "muted", money(f) + " ر توصيل")); return td; };
+  if(!DRIVERS.length){ const tr = el("tr"); const td = el("td", "muted", "ما فيه مناديب"); td.colSpan = 4; tr.append(td); body.append(tr); return; }
+  DRIVERS.forEach(d=>{ const tr = el("tr"); tr.append(el("td", "", d.name)); tr.append(cell(d.week_count, d.week_fees), cell(d.month_count, d.month_fees), cell(d.all_count)); body.append(tr); });
+}
+function openDForm(d){
+  editingD = d ? d.id : null;
+  $("#dFormT").textContent = d ? "تعديل " + d.name : "إضافة مندوب";
+  $("#dName").value = d ? d.name : ""; $("#dPhone").value = d ? (d.phone||"") : "";
+  $("#dCode").value = d ? d.code : ""; $("#dPin").value = "";
+  $("#dPinLbl").textContent = d ? "رقم سري جديد (اتركه فاضي لو ما تبي تغيّره)" : "الرقم السري (٤ إلى ٨ أرقام)";
+  $("#dActiveRow").classList.toggle("hidden", !d); $("#dActive").checked = d ? d.active : true;
+  $("#dFormMsg").textContent = "";
+  $("#dSheet").classList.remove("hidden"); $("#dName").focus();
+}
+$("#addDriver").addEventListener("click", ()=>openDForm(null));
+$("#closeDForm").addEventListener("click", ()=>$("#dSheet").classList.add("hidden"));
+$("#dSheet").addEventListener("click", e=>{ if(e.target.id==="dSheet") $("#dSheet").classList.add("hidden"); });
+$("#driverForm").addEventListener("submit", async e=>{
+  e.preventDefault();
+  const toEn = s => String(s).replace(/[٠-٩]/g, d => AR.indexOf(d));
+  const body = { name: $("#dName").value, phone: $("#dPhone").value, code: $("#dCode").value, pin: toEn($("#dPin").value.trim()) };
+  if(editingD) body.active = $("#dActive").checked;
+  $("#saveDriver").disabled = true; $("#dFormMsg").textContent = "";
+  try{
+    if(editingD) await api("drivers/" + editingD, "PUT", body); else await api("drivers", "POST", body);
+    $("#dSheet").classList.add("hidden");
+    toast(editingD ? "تم الحفظ ✓" : "تم إضافة المندوب ✓ أرسل له الرمز والرقم السري");
+    loadDrivers();
+  }catch(err){ $("#dFormMsg").textContent = err.message; }
+  $("#saveDriver").disabled = false;
+});
+
+const DSTATUS = { assigned:"معه، ما استلم", picked:"استلم، في الطريق", delivered:"وصل ✓" };
+function driverRow(o){
+  const w = el("div", "drv");
+  w.append(el("b", "", "🛵 المندوب:"));
+  if(o.driver_status === "delivered"){
+    const d = DRIVERS.find(x=>x.id===o.driver_id);
+    w.append(el("span", "", d ? d.name : "—"), el("span", "pill delivered", DSTATUS.delivered));
+    if(o.delivered_at) w.append(el("span", "muted", when(o.delivered_at)));
+    return w;
+  }
+  const s = el("select"); s.setAttribute("aria-label", "اختر المندوب");
+  s.append(new Option(o.driver_id ? "بدون مندوب (شيله)" : "بدون مندوب، يطلع لكل المناديب", ""));
+  DRIVERS.filter(d=>d.active || d.id===o.driver_id).forEach(d=>s.append(new Option(d.name, d.id)));
+  s.value = o.driver_id ? String(o.driver_id) : "";
+  s.onchange = async ()=>{
+    try{ await api("orders/" + o.id + "/driver", "POST", {driver_id: s.value ? Number(s.value) : null}); toast(s.value ? "تم تعيين المندوب ✓" : "شلت المندوب"); loadOrders(); }
+    catch(err){ toast(err.message); loadOrders(); }
+  };
+  w.append(s);
+  if(o.driver_status) w.append(el("span", "pill " + o.driver_status, DSTATUS[o.driver_status] || o.driver_status));
+  return w;
+}
 
 /* ===== المحلات ===== */
 async function loadShops(){
@@ -251,11 +371,33 @@ function openForm(s){
   $("#sCode").value = s ? s.code : ""; $("#sPin").value = "";
   $("#pinLbl").textContent = s ? "رقم سري جديد (اتركه فاضي لو ما تبي تغيّره)" : "الرقم السري (٤ إلى ٨ أرقام)";
   $("#sCom").value = s ? s.commission : "";
-  $("#sTrial").value = s ? (s.trial_end || "") : "";
+  setTrial(s ? s.trial_end : "");
   $("#activeRow").classList.toggle("hidden", !s); $("#sActive").checked = s ? s.active : true;
   $("#formMsg").textContent = "";
   $("#sheet").classList.remove("hidden"); $("#sName").focus();
 }
+/* تاريخ نهاية التجربة: ثلاث قوائم بدل حقل التاريخ، لأن حقل التاريخ يطلع مقلوب بالعربي */
+const MONTHS = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+(function fillDate(){
+  const d = $("#tD"), m = $("#tM"), y = $("#tY");
+  d.append(new Option("اليوم", "")); for(let i=1;i<=31;i++) d.append(new Option(toAr(i), String(i).padStart(2,"0")));
+  m.append(new Option("الشهر", "")); MONTHS.forEach((n,i)=>m.append(new Option(n, String(i+1).padStart(2,"0"))));
+  y.append(new Option("السنة", "")); const y0 = new Date().getFullYear(); for(let i=y0-1;i<=y0+3;i++) y.append(new Option(toAr(i), String(i)));
+})();
+function setTrial(iso){
+  const [y, m, d] = (iso || "").split("-");
+  if(y && !$("#tY").querySelector(`option[value="${y}"]`)) $("#tY").append(new Option(toAr(y), y));
+  $("#tY").value = y || ""; $("#tM").value = m || ""; $("#tD").value = d || "";
+}
+// يرجّع "" لو كله فاضي، null لو ناقص، false لو التاريخ ما له وجود
+function getTrial(){
+  const y = $("#tY").value, m = $("#tM").value, d = $("#tD").value;
+  if(!y && !m && !d) return "";
+  if(!y || !m || !d) return null;
+  const iso = `${y}-${m}-${d}`, t = new Date(iso + "T00:00:00Z");
+  return isNaN(t) || t.toISOString().slice(0,10) !== iso ? false : iso;
+}
+
 $("#addShop").addEventListener("click", ()=>openForm(null));
 $("#closeForm").addEventListener("click", ()=>$("#sheet").classList.add("hidden"));
 $("#sheet").addEventListener("click", e=>{ if(e.target.id==="sheet") $("#sheet").classList.add("hidden"); });
@@ -263,7 +405,9 @@ $("#shopForm").addEventListener("submit", async e=>{
   e.preventDefault();
   const toEn = s => String(s).replace(/[٠-٩]/g, d => AR.indexOf(d));
   const body = { name: $("#sName").value, category: $("#sCat").value, code: $("#sCode").value,
-    pin: toEn($("#sPin").value.trim()), commission: toEn($("#sCom").value.trim() || "0"), trial_end: $("#sTrial").value };
+    pin: toEn($("#sPin").value.trim()), commission: toEn($("#sCom").value.trim() || "0"), trial_end: getTrial() };
+  if(body.trial_end === null){ $("#formMsg").textContent = "كمّل تاريخ نهاية التجربة (اليوم والشهر والسنة)، أو خلّه كله فاضي"; return; }
+  if(body.trial_end === false){ $("#formMsg").textContent = "تاريخ نهاية التجربة غلط، هالشهر ما فيه هاليوم"; return; }
   if(editing) body.active = $("#sActive").checked;
   $("#saveShop").disabled = true; $("#formMsg").textContent = "";
   try{
@@ -326,6 +470,7 @@ function renderOrders(list){
       }
       c.append(d);
     });
+    c.append(driverRow(o));
     box.append(c);
   });
 }

@@ -51,12 +51,40 @@ const STATEMENTS = [
     fails INTEGER NOT NULL,
     locked_until INTEGER NOT NULL DEFAULT 0
   )`,
+  `CREATE TABLE IF NOT EXISTS drivers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT NOT NULL UNIQUE COLLATE NOCASE,
+    name TEXT NOT NULL,
+    phone TEXT,
+    pin_hash TEXT NOT NULL,
+    pin_salt TEXT NOT NULL,
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at INTEGER NOT NULL
+  )`,
 ];
+
+// أعمدة انضافت بعد أول نسخة: تنضاف للجداول القديمة لو ناقصة
+const COLUMNS = {
+  orders: [
+    ["driver_id", "INTEGER REFERENCES drivers(id)"],
+    ["driver_status", "TEXT"],       // null = بدون مندوب، assigned، picked، delivered
+    ["assigned_at", "INTEGER"],
+    ["picked_at", "INTEGER"],
+    ["delivered_at", "INTEGER"],
+  ],
+};
 
 let ready = false;
 
 export async function ensureSchema(db) {
   if (ready) return;
   await db.batch(STATEMENTS.map(s => db.prepare(s)));
+  for (const [table, cols] of Object.entries(COLUMNS)) {
+    const { results } = await db.prepare(`PRAGMA table_info(${table})`).all();
+    const have = new Set(results.map(r => r.name));
+    const add = cols.filter(([n]) => !have.has(n));
+    if (add.length) await db.batch(add.map(([n, t]) => db.prepare(`ALTER TABLE ${table} ADD COLUMN ${n} ${t}`)));
+  }
+  await db.prepare("CREATE INDEX IF NOT EXISTS orders_driver ON orders(driver_id, driver_status)").run();
   ready = true;
 }

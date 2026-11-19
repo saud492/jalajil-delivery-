@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>مناديب توصيل جلاجل</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0a4f4c">
+<link rel="manifest" href="/driver/manifest.webmanifest">
+<link rel="icon" href="/driver/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/driver/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="مناديب توصيل جلاجل">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@500;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f3f1ec;--surface:#fffdf9;--surface2:#f7f5f0;--ink:#1f2a2b;--muted:#5f6b6b;--line:#e2ded5;
+  --accent:#0f6a66;--accent-2:#0a4f4c;--accent-ink:#ffffff;--accent-soft:#e1efed;--stone:#a4652f;--sand:#ecd5b3;
+  --ok:#0f6a66;--bad:#b3261e;--bad-soft:#fbe9e7;--new:#a4652f;--new-soft:#f8ecdc;
+  --shadow:0 1px 2px rgba(31,42,43,.05),0 6px 20px rgba(31,42,43,.06);
+  --font-display:"Readex Pro","IBM Plex Sans Arabic",system-ui,sans-serif;
+  --font-body:"IBM Plex Sans Arabic",system-ui,"Segoe UI",Tahoma,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121818;--surface:#1a2222;--surface2:#151c1c;--ink:#e9eeec;--muted:#a3b0ae;--line:#2b3636;
+    --accent:#4fb8b0;--accent-2:#0f6a66;--accent-ink:#0b1414;--accent-soft:#1d3332;--stone:#d39a63;--sand:#e4c99f;
+    --ok:#4fb8b0;--bad:#ff8a80;--bad-soft:#3a2220;--new:#d39a63;--new-soft:#33291f;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25);
+    color-scheme:dark;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.6;-webkit-tap-highlight-color:transparent;min-height:100vh}
+.hidden{display:none !important}
+button{font:inherit;cursor:pointer;color:inherit}
+a{color:inherit}
+h1,h2,h3{font-family:var(--font-display);margin:0}
+
+/* header */
+.top{position:sticky;top:0;z-index:20;color:#fff;background:radial-gradient(120% 140% at 85% 0%,#17847e 0%,#0f6a66 45%,#0a4f4c 100%);
+  padding:calc(12px + env(safe-area-inset-top)) 16px 0}
+.top-in{max-width:560px;margin:0 auto}
+.top-row{display:flex;align-items:center;gap:12px}
+.top h1{font-size:20px;font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.top small{display:block;font-size:12px;color:var(--sand);font-family:var(--font-body);font-weight:500}
+.switch{display:flex;align-items:center;gap:8px;border:none;border-radius:999px;padding:6px 8px 6px 14px;font-weight:700;font-size:14px;background:rgba(255,255,255,.16);color:#fff}
+.switch i{width:44px;height:26px;border-radius:999px;background:#ff8a80;position:relative;transition:background .2s;flex:none}
+.switch i::after{content:"";position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s}
+.switch.on i{background:#5be39a}
+.switch.on i::after{transform:translateX(-18px)}
+.tabs{display:flex;gap:4px;margin-top:10px}
+.tabs button{flex:1;border:none;background:none;color:rgba(255,255,255,.75);font-weight:700;padding:10px 0 12px;border-bottom:3px solid transparent;font-family:var(--font-display);font-size:15px}
+.tabs button.on{color:#fff;border-color:var(--sand)}
+.tabs b{display:inline-grid;place-items:center;min-width:22px;height:22px;border-radius:999px;background:var(--stone);color:#fff;font-size:12px;padding:0 6px;margin-inline-start:6px}
+
+.wrap{max-width:560px;margin:0 auto;padding:14px 14px calc(40px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:12px}
+.banner{border:none;width:100%;text-align:start;display:flex;align-items:center;gap:10px;border-radius:14px;padding:12px 14px;font-weight:600;background:var(--new-soft);color:var(--ink);border:1.5px solid var(--new)}
+.banner.err{background:var(--bad-soft);border-color:var(--bad)}
+.sec-t{font-family:var(--font-display);font-weight:700;font-size:15px;color:var(--muted);margin:6px 2px -2px;display:flex;align-items:center;gap:8px}
+.empty{text-align:center;color:var(--muted);padding:40px 10px;background:var(--surface);border-radius:20px;box-shadow:var(--shadow)}
+.empty b{display:block;font-family:var(--font-display);font-size:18px;color:var(--ink);margin-bottom:4px}
+
+/* order card */
+.card{background:var(--surface);border-radius:20px;padding:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px;border:2px solid transparent}
+.card.new{border-color:var(--new);animation:pop .5s ease}
+@keyframes pop{0%{transform:scale(.97);opacity:.4}100%{transform:none;opacity:1}}
+.c-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.c-head h3{font-size:17px;font-weight:700}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 10px;font-size:13px;font-weight:700}
+.pill.new{background:var(--new);color:#fff}
+.pill.accepted{background:var(--accent-soft);color:var(--accent)}
+.pill.ready{background:var(--accent);color:var(--accent-ink)}
+.pill.rejected,.pill.cancelled{background:var(--bad-soft);color:var(--bad)}
+.ago{margin-inline-start:auto;color:var(--muted);font-size:13px}
+.items{white-space:pre-wrap;word-break:break-word;background:var(--surface2);border-radius:12px;padding:10px 12px;font-size:17px;font-weight:600;line-height:1.7}
+.meta{display:flex;flex-direction:column;gap:2px;font-size:14px;color:var(--muted)}
+.meta b{color:var(--ink);font-weight:600}
+.cust{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cust a{display:inline-flex;align-items:center;gap:4px;text-decoration:none;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:3px 12px;font-size:14px}
+.acts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.btn{border:none;border-radius:14px;padding:13px 6px;font-weight:700;font-size:16px;background:var(--accent);color:var(--accent-ink);font-family:var(--font-display)}
+.btn small{display:block;font-size:12px;font-weight:500;opacity:.85;font-family:var(--font-body)}
+.btn.big{grid-column:1/-1;padding:16px;font-size:18px}
+.btn.line{background:none;color:var(--bad);border:1.5px solid var(--line);grid-column:1/-1;padding:10px;font-size:15px}
+.btn[disabled]{opacity:.5}
+.timer{font-weight:700;font-variant-numeric:tabular-nums;color:var(--accent)}
+.timer.late{color:var(--bad)}
+.done-list .card{opacity:.85}
+
+/* summary */
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{background:var(--surface);border-radius:18px;padding:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:2px}
+.stat small{color:var(--muted);font-size:13px}
+.stat b{font-family:var(--font-display);font-size:30px;color:var(--accent);line-height:1.2}
+.stat span{font-size:14px;color:var(--muted)}
+.stat em{font-style:normal;font-weight:700;color:var(--ink)}
+.note{background:var(--surface);border-radius:18px;padding:14px;box-shadow:var(--shadow);font-size:15px}
+.note.trial{background:var(--accent-soft);box-shadow:none}
+
+/* login */
+.login{max-width:420px;margin:0 auto;padding:calc(40px + env(safe-area-inset-top)) 18px 40px;display:flex;flex-direction:column;gap:14px}
+.login .logo{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;margin-bottom:8px}
+.login .logo img{width:84px;height:84px;border-radius:22px;box-shadow:var(--shadow)}
+.login h1{font-size:24px;font-weight:800}
+.login p{margin:0;color:var(--muted)}
+label.f{display:flex;flex-direction:column;gap:5px;font-size:14px;color:var(--muted);font-weight:500}
+input,textarea{font:inherit;font-size:18px;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;width:100%}
+input:focus,textarea:focus{outline:none;border-color:var(--accent)}
+input.ltr{direction:ltr;text-align:right}
+.msg{margin:0;font-size:14px;color:var(--bad);min-height:1.4em}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.out{background:none;border:1.5px solid var(--line);border-radius:14px;padding:12px;font-weight:600;color:var(--muted)}
+
+/* sheet */
+.sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:40;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--surface);width:100%;max-width:560px;border-radius:22px 22px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px;animation:up .2s ease}
+@keyframes up{from{transform:translateY(40px);opacity:0}}
+.sheet h2{font-size:18px}
+.reasons{display:flex;flex-direction:column;gap:8px}
+.reasons button{border:1.5px solid var(--line);background:var(--surface2);border-radius:14px;padding:13px;font-weight:600;text-align:start}
+.toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:var(--ink);color:var(--surface);padding:10px 18px;border-radius:999px;font-weight:600;z-index:50;font-size:14px;max-width:90vw;text-align:center}
+@media (prefers-reduced-motion: reduce){*{transition:none !important;animation:none !important}}
+.parts{display:flex;flex-direction:column;gap:6px}
+.pt{background:var(--surface2);border-radius:12px;padding:8px 12px;display:flex;flex-direction:column;gap:2px}
+.pt-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pt-h b{flex:1;min-width:0}
+.pt .it{white-space:pre-wrap;word-break:break-word;font-weight:600}
+.pill.assigned{background:var(--new-soft);color:var(--new)}
+.pill.picked{background:var(--accent-soft);color:var(--accent)}
+.pill.delivered{background:var(--accent);color:var(--accent-ink)}
+.fee{font-family:var(--font-display);font-weight:700;color:var(--accent);font-size:17px}
+.acts2{display:grid;grid-template-columns:1fr;gap:8px}
+.stats3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+@media (max-width:380px){.stats3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- تسجيل الدخول -->
+<div id="loginView" class="login hidden">
+  <div class="logo">
+    <img src="/driver/icon-192.png" alt="">
+    <h1>مناديب توصيل جلاجل</h1>
+    <p>ادخل برمز المندوب والرقم السري اللي وصلك منّا</p>
+  </div>
+  <form id="loginForm" novalidate style="display:flex;flex-direction:column;gap:14px">
+    <label class="f">رمز المندوب<input id="code" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="مثال: فهد"></label>
+    <label class="f">الرقم السري<input id="pin" class="ltr" type="password" inputmode="numeric" autocomplete="current-password" placeholder="••••"></label>
+    <p class="msg" id="loginMsg" aria-live="polite"></p>
+    <button class="btn big" id="loginBtn">دخول</button>
+  </form>
+</div>
+
+<!-- التطبيق -->
+<div id="appView" class="hidden">
+  <header class="top">
+    <div class="top-in">
+      <div class="top-row">
+        <h1><small>مناديب توصيل جلاجل</small><span id="drvName"></span></h1>
+      </div>
+      <nav class="tabs">
+        <button class="on" data-tab="avail">متاحة<b id="availCount" class="hidden"></b></button>
+        <button data-tab="mine">طلباتي<b id="mineCount" class="hidden"></b></button>
+        <button data-tab="summary">الملخص</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap" id="availTab">
+    <button class="banner" id="soundBanner">🔔 <span>اضغط هنا عشان يشتغل صوت التنبيه للطلبات الجديدة</span></button>
+    <div class="banner err hidden" id="netBanner">⚠️ <span>ما فيه اتصال بالإنترنت. نحاول مرة ثانية…</span></div>
+    <div id="availList" style="display:flex;flex-direction:column;gap:12px"></div>
+  </main>
+
+  <main class="wrap hidden" id="mineTab">
+    <div id="mineList"></div>
+  </main>
+
+  <main class="wrap hidden" id="summaryTab">
+    <div class="stats3">
+      <div class="stat"><small>اليوم</small><b id="dCount">٠</b><span>توصيلة</span><span><em id="dFees">٠</em> ريال</span></div>
+      <div class="stat"><small>هالأسبوع</small><b id="wCount">٠</b><span>توصيلة</span><span><em id="wFees">٠</em> ريال</span></div>
+      <div class="stat"><small>هالشهر</small><b id="mCount">٠</b><span>توصيلة</span><span><em id="mFees">٠</em> ريال</span></div>
+    </div>
+    <p class="hint" style="color:var(--muted);font-size:13px;margin:0 4px">التوصيلة تنحسب لما تضغط "وصلت". المبلغ هو مجموع رسوم التوصيل. الأسبوع يبدأ السبت.</p>
+    <button class="out" id="logoutBtn">تسجيل خروج</button>
+  </main>
+</div>
+
+<div class="toast hidden" id="toast" aria-live="polite"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const AR = "٠١٢٣٤٥٦٧٨٩";
+const toAr = n => String(n).replace(/\d/g, d => AR[d]);
+const money = n => toAr((Math.round((+n||0)*100)/100).toString());
+const DEST = { home:"البيت", chalet:"شاليه", park:"المنتزه" };
+const POLL = 15000, REMIND = 60000;
+
+let me = null, avail = [], mine = [], serverSkew = 0, timer = null, tickTimer = null, busy = false;
+let seenAvail = new Set(), seenMine = new Set(), lastChime = 0, firstLoad = true;
+
+async function api(path, body){
+  const opt = body === undefined ? {cache:"no-store"} : {method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify(body)};
+  const r = await fetch("/api/driver/" + path, opt);
+  let d = {}; try{ d = await r.json(); }catch(e){}
+  if(r.status === 401 && path !== "login"){ showLogin(); throw new Error(d.error || "سجّل دخولك"); }
+  if(!r.ok) throw new Error(d.error || "صار خطأ، جرّب مرة ثانية");
+  return d;
+}
+function toast(t){ const e = $("#toast"); e.textContent = t; e.classList.remove("hidden"); clearTimeout(toast.t); toast.t = setTimeout(()=>e.classList.add("hidden"), 2600); }
+function el(tag, cls, text){ const e = document.createElement(tag); if(cls) e.className = cls; if(text !== undefined) e.textContent = text; return e; }
+
+/* ===== الصوت: يتولّد بالجوال نفسه ===== */
+let ctx = null;
+function unlockSound(){
+  try{
+    if(!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if(ctx.state === "suspended") ctx.resume();
+    if(ctx.state === "running") $("#soundBanner").classList.add("hidden");
+  }catch(e){}
+  keepAwake();
+}
+function chime(){
+  if(navigator.vibrate) try{ navigator.vibrate([200,100,200]); }catch(e){}
+  if(!ctx || ctx.state !== "running") return;
+  const t = ctx.currentTime;
+  [[660,0],[990,.16],[1320,.32]].forEach(([f,d])=>{
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = "triangle"; o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, t+d); g.gain.exponentialRampToValueAtTime(0.5, t+d+.02); g.gain.exponentialRampToValueAtTime(0.0001, t+d+.4);
+    o.connect(g); g.connect(ctx.destination); o.start(t+d); o.stop(t+d+.45);
+  });
+}
+$("#soundBanner").addEventListener("click", ()=>{ unlockSound(); setTimeout(()=>{ if(ctx && ctx.state==="running"){ $("#soundBanner").classList.add("hidden"); chime(); toast("تمام، الصوت شغّال ✓"); } }, 150); });
+let wake = null;
+async function keepAwake(){
+  try{ if("wakeLock" in navigator && !wake && document.visibilityState === "visible"){ wake = await navigator.wakeLock.request("screen"); wake.addEventListener("release", ()=>{ wake = null; }); } }catch(e){}
+}
+
+/* ===== الشاشات ===== */
+function showLogin(){
+  stopPolling(); me = null;
+  $("#appView").classList.add("hidden"); $("#loginView").classList.remove("hidden");
+  document.title = "مناديب توصيل جلاجل";
+}
+function showApp(){
+  $("#loginView").classList.add("hidden"); $("#appView").classList.remove("hidden");
+  $("#drvName").textContent = me.name; firstLoad = true; startPolling();
+}
+$("#loginForm").addEventListener("submit", async e=>{
+  e.preventDefault(); unlockSound();
+  const code = $("#code").value.trim(), pin = $("#pin").value.trim();
+  if(!code || !pin){ $("#loginMsg").textContent = "اكتب رمز المندوب والرقم السري"; return; }
+  $("#loginBtn").disabled = true; $("#loginMsg").textContent = "";
+  try{ const d = await api("login", {code, pin}); me = d.driver; $("#pin").value = ""; if(ctx && ctx.state === "running") $("#soundBanner").classList.add("hidden"); showApp(); }
+  catch(err){ $("#loginMsg").textContent = err.message; }
+  $("#loginBtn").disabled = false;
+});
+$("#logoutBtn").addEventListener("click", async ()=>{
+  if(!confirm("تبي تسجّل خروج؟ ما راح توصلك تنبيهات الطلبات على هالجوال.")) return;
+  try{ await api("logout", {}); }catch(e){}
+  showLogin();
+});
+function setTab(t){
+  document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on", x.dataset.tab===t));
+  ["avail","mine","summary"].forEach(x=>$("#"+x+"Tab").classList.toggle("hidden", x!==t));
+  if(t==="summary") loadSummary();
+}
+document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click", ()=>setTab(b.dataset.tab)));
+
+/* ===== الطلبات ===== */
+function startPolling(){ stopPolling(); refresh(); timer = setInterval(refresh, POLL); tickTimer = setInterval(render, 30000); }
+function stopPolling(){ clearInterval(timer); clearInterval(tickTimer); timer = tickTimer = null; }
+document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState === "visible" && me){ refresh(); keepAwake(); } });
+
+async function refresh(){
+  if(busy) return;
+  try{
+    const d = await api("orders");
+    $("#netBanner").classList.add("hidden");
+    me = d.driver; serverSkew = d.now - Date.now(); avail = d.available || []; mine = d.mine || [];
+    $("#drvName").textContent = me.name;
+    // طلب جديد متاح، أو صاحب الخدمة عيّن لي طلب
+    const newAvail = avail.some(o=>!seenAvail.has(o.id));
+    const newMine = mine.some(o=>!seenMine.has(o.id) && o.driver_status === "assigned");
+    avail.forEach(o=>seenAvail.add(o.id)); mine.forEach(o=>seenMine.add(o.id));
+    if(!firstLoad && newMine){ chime(); lastChime = Date.now(); toast("🛵 عندك طلب جديد في \"طلباتي\""); }
+    else if((!firstLoad && newAvail) || (avail.length && Date.now() - lastChime > REMIND)){ chime(); lastChime = Date.now(); }
+    firstLoad = false;
+    render();
+  }catch(err){
+    if(me && (!navigator.onLine || /Failed to fetch|NetworkError|Load failed/i.test(err.message))) $("#netBanner").classList.remove("hidden");
+  }
+}
+
+const now = () => Date.now() + serverSkew;
+function ago(ms){
+  const m = Math.max(0, Math.round((now() - ms)/60000));
+  if(m < 1) return "الحين";
+  if(m < 60) return "قبل " + toAr(m) + " د";
+  return "قبل " + toAr(Math.floor(m/60)) + " س";
+}
+function partStatus(p){
+  if(p.status === "ready") return ["ready", "جاهز للاستلام ✓"];
+  if(p.status === "accepted"){
+    const left = Math.round((p.accepted_at + p.prep_minutes*60000 - now())/60000);
+    return ["accepted", left > 0 ? `يجهز، باقي ${toAr(left)} د` : "يجهز، المفروض خلص"];
+  }
+  if(p.status === "new") return ["new", "بانتظار المحل"];
+  if(p.status === "rejected") return ["rejected", "المحل رفض"];
+  if(p.status === "cancelled") return ["cancelled", "ملغي"];
+  return ["", p.status];
+}
+function partsBox(parts, withItems){
+  const box = el("div", "parts");
+  if(!parts.length){ box.append(el("div", "pt", "طلب تجهيزات بس، بدون محل")); return box; }
+  parts.forEach(p=>{
+    const b = el("div", "pt"); const h = el("div", "pt-h");
+    h.append(el("b", "", (p.category ? p.category + " · " : "") + (p.shop_name || "محل")));
+    const [cls, txt] = partStatus(p); h.append(el("span", "pill " + cls, txt));
+    b.append(h);
+    if(withItems && p.items) b.append(el("div", "it", p.items));
+    box.append(b);
+  });
+  return box;
+}
+function head(o, pill){
+  const h = el("div", "c-head");
+  if(pill) h.append(pill);
+  h.append(el("h3", "", "طلب " + o.order_no), el("span", "ago", ago(o.created_at)));
+  return h;
+}
+function whereLine(o){
+  const m = el("div", "meta"); const p = el("div");
+  p.append("التوصيل إلى: "); p.append(el("b", "", (DEST[o.dest] || o.dest || "—") + (o.place ? " · " + o.place : ""))); m.append(p);
+  if(o.fee != null){ const f = el("div"); f.append("رسوم التوصيل: "); f.append(el("span", "fee", money(o.fee) + " ريال")); m.append(f); }
+  return m;
+}
+
+function availCard(o){
+  const c = el("article", "card new");
+  c.append(head(o), whereLine(o), partsBox(o.parts, false));
+  const a = el("div", "acts2");
+  const b = el("button", "btn big", "🛵 آخذه"); b.onclick = () => act(o.id, "take", "الطلب صار معك ✓", ()=>setTab("mine"));
+  a.append(b); c.append(a);
+  return c;
+}
+const MS = { assigned:"معك، روح استلم", picked:"في الطريق للزبون", delivered:"وصل ✓" };
+function mineCard(o){
+  const c = el("article", "card" + (o.driver_status === "assigned" ? " new" : ""));
+  c.append(head(o, el("span", "pill " + o.driver_status, MS[o.driver_status] || o.driver_status)));
+  const m = el("div", "meta");
+  const cust = el("div", "cust"); cust.append(el("b", "", o.customer_name || "زبون"));
+  const phone = (o.customer_phone || "").replace(/[^\d+]/g, "");
+  if(phone){
+    const a = el("a", "", "📞 اتصال"); a.href = "tel:" + phone; cust.append(a);
+    const intl = phone.replace(/^\+/, "").replace(/^0(5\d{8})$/, "966$1");
+    const w = el("a", "", "💬 واتساب"); w.href = "https://wa.me/" + intl; w.target = "_blank"; w.rel = "noopener"; cust.append(w);
+  }
+  if(/^https?:\/\//i.test(o.map_url || "")){ const a = el("a", "", "📍 الموقع"); a.href = o.map_url; a.target = "_blank"; a.rel = "noopener"; cust.append(a); }
+  m.append(cust);
+  c.append(m, whereLine(o));
+  const extra = el("div", "meta");
+  const line = (k, v) => { if(!v) return; const p = el("div"); p.append(k + ": "); p.append(el("b", "", v)); extra.append(p); };
+  line("الدفع", o.pay); line("ملاحظة", o.note);
+  if(o.pack && o.pack.length) line("تجهيزات", o.pack.join("، "));
+  if(extra.children.length) c.append(extra);
+  c.append(partsBox(o.parts, true));
+  const a = el("div", "acts2");
+  if(o.driver_status === "assigned"){
+    const b = el("button", "btn big", "📦 استلمت الطلب"); b.onclick = () => act(o.id, "picked", "تمام، بالتوفيق في الطريق 🛵"); a.append(b);
+    const r = el("button", "btn line", "ما أقدر، رجّعه للمناديب"); r.onclick = () => { if(confirm("ترجّع الطلب؟ بيطلع لباقي المناديب.")) act(o.id, "release", "رجّعت الطلب"); }; a.append(r);
+  } else if(o.driver_status === "picked"){
+    const b = el("button", "btn big", "✅ وصلت للزبون"); b.onclick = () => { if(confirm("أكيد سلّمت الطلب للزبون؟")) act(o.id, "delivered", "يعطيك العافية ✓"); }; a.append(b);
+  }
+  if(a.children.length) c.append(a);
+  return c;
+}
+
+function sec(list, title, arr, cls){
+  if(!arr.length) return;
+  list.append(el("div", "sec-t", title));
+  const box = el("div", cls || ""); box.style.cssText = "display:flex;flex-direction:column;gap:12px;margin-bottom:12px";
+  arr.forEach(o=>box.append(mineCard(o))); list.append(box);
+}
+function render(){
+  const al = $("#availList"); al.innerHTML = "";
+  const ac = $("#availCount"); ac.textContent = toAr(avail.length); ac.classList.toggle("hidden", !avail.length);
+  const open = mine.filter(o=>o.driver_status !== "delivered");
+  const mc = $("#mineCount"); mc.textContent = toAr(open.length); mc.classList.toggle("hidden", !open.length);
+  document.title = avail.length ? `(${toAr(avail.length)}) طلب متاح · مناديب جلاجل` : "مناديب توصيل جلاجل";
+  if(!avail.length){ const e = el("div", "empty"); e.append(el("b", "", "ما فيه طلبات متاحة الحين")); e.append("خلّ التطبيق مفتوح، وأول ما يجي طلب بيرن الجوال."); al.append(e); }
+  else avail.slice().sort((a,b)=>a.created_at-b.created_at).forEach(o=>al.append(availCard(o)));
+
+  const ml = $("#mineList"); ml.innerHTML = "";
+  if(!mine.length){ const e = el("div", "empty"); e.append(el("b", "", "ما معك طلبات")); e.append("خذ طلب من \"متاحة\"، أو انتظر صاحب الخدمة يعيّن لك."); ml.append(e); return; }
+  sec(ml, "📦 روح استلمها", mine.filter(o=>o.driver_status==="assigned"));
+  sec(ml, "🛵 في الطريق", mine.filter(o=>o.driver_status==="picked"));
+  sec(ml, "آخر ٢٤ ساعة", mine.filter(o=>o.driver_status==="delivered"), "done-list");
+}
+
+async function act(id, action, done, after){
+  if(busy) return; busy = true;
+  document.querySelectorAll(".acts2 button").forEach(b=>b.disabled = true);
+  try{ await api("orders/" + id, {action}); if(action === "take") seenMine.add(id); toast(done); if(after) after(); }
+  catch(err){ toast(err.message); }
+  busy = false; refresh();
+}
+
+async function loadSummary(){
+  try{
+    const d = await api("summary");
+    $("#dCount").textContent = toAr(d.today.count); $("#dFees").textContent = money(d.today.fees);
+    $("#wCount").textContent = toAr(d.week.count); $("#wFees").textContent = money(d.week.fees);
+    $("#mCount").textContent = toAr(d.month.count); $("#mFees").textContent = money(d.month.fees);
+  }catch(err){ toast(err.message); }
+}
+
+(async ()=>{
+  if("serviceWorker" in navigator) navigator.serviceWorker.register("/driver/sw.js", {scope:"/driver/"}).catch(()=>{});
+  try{ const d = await api("me"); me = d.driver; showApp(); }
+  catch(e){ if(!me) showLogin(); }
+})();
+</script>
+</body>
+</html>

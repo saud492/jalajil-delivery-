@@ -82,5 +82,12 @@ export function getCookie(request, name) {
   return null;
 }
 
+// رمز الدخول للمحل أو المندوب: عربي أو إنجليزي أو أرقام، والأرقام العربية تتحول لإنجليزية
+// يرجّع فاضي لو الرمز غير صالح
+export function cleanCode(v) {
+  const c = str(v, 30).replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).toLowerCase();
+  return /^[\p{L}\p{N}_-]{2,30}$/u.test(c) ? c : "";
+}
+
 export const ACTIVE = ["new", "accepted"];
 export const STATUSES = ["new", "accepted", "ready", "rejected", "cancelled"];

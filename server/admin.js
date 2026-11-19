@@ -1,5 +1,5 @@
 // لوحة صاحب الخدمة
-import { HttpError, json, readJson, str, riyadhRanges, STATUSES, sha256 } from "./util.js";
+import { HttpError, json, readJson, str, riyadhRanges, STATUSES, sha256, cleanCode } from "./util.js";
 import { checkLock, recordFail, clearFails, createSession, sessionCookie, requireSession, endSession, hashPin, safeEqual } from "./auth.js";
 
 const ip = r => r.headers.get("cf-connecting-ip") || "local";
@@ -30,8 +30,8 @@ export async function me(db, request) {
 function cleanShop(b, creating) {
   const out = {};
   if (creating || b.code !== undefined) {
-    out.code = str(b.code, 30).toLowerCase();
-    if (!/^[a-z0-9-]{2,30}$/.test(out.code)) throw new HttpError(400, "رمز المحل: حروف إنجليزية صغيرة أو أرقام، من ٢ إلى ٣٠ حرف");
+    out.code = cleanCode(b.code);
+    if (!out.code) throw new HttpError(400, "رمز المحل: حروف (عربي أو إنجليزي) أو أرقام بدون مسافات، من ٢ إلى ٣٠ حرف");
   }
   if (creating || b.name !== undefined) {
     out.name = str(b.name, 60);
@@ -151,5 +151,95 @@ export async function actPart(db, request, partId) {
   const r = await db.prepare("UPDATE parts SET status='cancelled', commission=0, updated_at=? WHERE id=? AND status != 'cancelled'")
     .bind(Date.now(), partId).run();
   if (!r.meta.changes) throw new HttpError(404, "الطلب مو موجود أو ملغي");
+  return json({ ok: true });
+}
+
+/* ===== المناديب ===== */
+function cleanDriver(b, creating) {
+  const out = {};
+  if (creating || b.code !== undefined) {
+    out.code = cleanCode(b.code);
+    if (!out.code) throw new HttpError(400, "رمز المندوب: حروف (عربي أو إنجليزي) أو أرقام بدون مسافات، من ٢ إلى ٣٠ حرف");
+  }
+  if (creating || b.name !== undefined) {
+    out.name = str(b.name, 60);
+    if (!out.name) throw new HttpError(400, "اكتب اسم المندوب");
+  }
+  if (creating || b.phone !== undefined) out.phone = str(b.phone, 30).replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d));
+  if (creating || (b.pin !== undefined && b.pin !== "")) {
+    out.pin = str(b.pin, 20);
+    if (!/^\d{4,8}$/.test(out.pin)) throw new HttpError(400, "الرقم السري من ٤ إلى ٨ أرقام");
+  }
+  if (b.active !== undefined) out.active = b.active ? 1 : 0;
+  return out;
+}
+
+export async function drivers(db, request) {
+  await requireSession(db, request, "admin");
+  const { weekStart, monthStart } = riyadhRanges(Date.now());
+  const { results } = await db.prepare(`
+    SELECT d.id, d.code, d.name, d.phone, d.active, d.created_at,
+      SUM(CASE WHEN o.driver_status='delivered' AND o.delivered_at >= ?1 THEN 1 ELSE 0 END) AS week_count,
+      SUM(CASE WHEN o.driver_status='delivered' AND o.delivered_at >= ?1 THEN COALESCE(o.fee,0) ELSE 0 END) AS week_fees,
+      SUM(CASE WHEN o.driver_status='delivered' AND o.delivered_at >= ?2 THEN 1 ELSE 0 END) AS month_count,
+      SUM(CASE WHEN o.driver_status='delivered' AND o.delivered_at >= ?2 THEN COALESCE(o.fee,0) ELSE 0 END) AS month_fees,
+      SUM(CASE WHEN o.driver_status='delivered' THEN 1 ELSE 0 END) AS all_count,
+      SUM(CASE WHEN o.driver_status IN ('assigned','picked') THEN 1 ELSE 0 END) AS open_count
+    FROM drivers d LEFT JOIN orders o ON o.driver_id = d.id
+    GROUP BY d.id ORDER BY d.active DESC, d.name`).bind(weekStart, monthStart).all();
+  const n = v => v || 0;
+  return json({ drivers: results.map(r => ({ ...r, active: !!r.active,
+    week_count: n(r.week_count), week_fees: n(r.week_fees), month_count: n(r.month_count), month_fees: n(r.month_fees),
+    all_count: n(r.all_count), open_count: n(r.open_count) })) });
+}
+
+export async function createDriver(db, request) {
+  await requireSession(db, request, "admin");
+  const d = cleanDriver(await readJson(request), true);
+  const dup = await db.prepare("SELECT id FROM drivers WHERE code = ?").bind(d.code).first();
+  if (dup) throw new HttpError(409, "رمز المندوب مستخدم، اختر رمز ثاني");
+  const { hash, salt } = await hashPin(d.pin);
+  const r = await db.prepare("INSERT INTO drivers (code, name, phone, pin_hash, pin_salt, created_at) VALUES (?,?,?,?,?,?) RETURNING id")
+    .bind(d.code, d.name, d.phone, hash, salt, Date.now()).first();
+  return json({ ok: true, id: r.id });
+}
+
+export async function updateDriver(db, request, id) {
+  await requireSession(db, request, "admin");
+  const d = cleanDriver(await readJson(request), false);
+  const row = await db.prepare("SELECT id FROM drivers WHERE id = ?").bind(id).first();
+  if (!row) throw new HttpError(404, "المندوب مو موجود");
+  if (d.code) {
+    const dup = await db.prepare("SELECT id FROM drivers WHERE code = ? AND id != ?").bind(d.code, id).first();
+    if (dup) throw new HttpError(409, "رمز المندوب مستخدم، اختر رمز ثاني");
+  }
+  const sets = [], vals = [], stmts = [];
+  for (const k of ["code", "name", "phone", "active"]) if (k in d) { sets.push(`${k} = ?`); vals.push(d[k]); }
+  if (d.pin) {
+    const { hash, salt } = await hashPin(d.pin);
+    sets.push("pin_hash = ?", "pin_salt = ?"); vals.push(hash, salt);
+  }
+  // رقم سري جديد أو إيقاف: نطلّعه من كل الأجهزة
+  if (d.pin || d.active === 0) stmts.push(db.prepare("DELETE FROM sessions WHERE kind = 'driver' AND shop_id = ?").bind(id));
+  if (sets.length) stmts.unshift(db.prepare(`UPDATE drivers SET ${sets.join(", ")} WHERE id = ?`).bind(...vals, id));
+  if (stmts.length) await db.batch(stmts);
+  return json({ ok: true });
+}
+
+// تعيين مندوب لطلب، أو شيله (driver_id = null)
+export async function assignDriver(db, request, orderId) {
+  await requireSession(db, request, "admin");
+  const b = await readJson(request);
+  const o = await db.prepare("SELECT id, driver_status FROM orders WHERE id = ?").bind(orderId).first();
+  if (!o) throw new HttpError(404, "الطلب مو موجود");
+  if (o.driver_status === "delivered") throw new HttpError(409, "الطلب توصّل، ما تقدر تغيّر المندوب");
+  if (b.driver_id === null || b.driver_id === "" || b.driver_id === undefined) {
+    await db.prepare("UPDATE orders SET driver_id=NULL, driver_status=NULL, assigned_at=NULL, picked_at=NULL WHERE id=?").bind(orderId).run();
+    return json({ ok: true });
+  }
+  const id = Number(b.driver_id);
+  const d = Number.isInteger(id) && await db.prepare("SELECT id FROM drivers WHERE id = ? AND active = 1").bind(id).first();
+  if (!d) throw new HttpError(400, "اختر مندوب فعّال");
+  await db.prepare("UPDATE orders SET driver_id=?, driver_status='assigned', assigned_at=?, picked_at=NULL WHERE id=?").bind(id, Date.now(), orderId).run();
   return json({ ok: true });
 }
