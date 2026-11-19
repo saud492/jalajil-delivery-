@@ -100,7 +100,7 @@ svg{overflow:visible}
         </div>
       </div>
       <div class="sec" id="sec3"><h4><span class="num">٣</span>أرسل</h4>
-        <div class="btn" id="sendbtn"><span id="sendlbl">أرسل الطلب بالواتساب</span></div>
+        <div class="btn" id="sendbtn"><span id="sendlbl">أرسل الطلب بالواتساب</span><div id="btn-shine" style="position:absolute;top:0;bottom:0;left:-200px;width:140px;background:linear-gradient(100deg,transparent,rgba(255,255,255,.65),transparent)"></div></div>
       </div>
     </div></div>
     <svg class="cursor" id="cursor" viewBox="0 0 64 64"><path d="M14 6 L14 50 L25 40 L33 58 L41 54 L33 37 L48 37 Z" fill="#111" stroke="#fff" stroke-width="4" stroke-linejoin="round"/></svg>
@@ -263,11 +263,13 @@ const SC = {
   },
   app(t, a, b) {
     // camera keyframes: [time, focusX, focusY, scale, rotX, rotY]
-    const K = [[a, 540, 850, .8, 35, -25], [a + .8, 540, 850, .92, 12, -16], [a + 1.4, 540, 520, 1.55, 8, -10], [a + 3.2, 540, 640, 1.6, 6, 8], [a + 3.6, 540, 920, 1.55, 8, -8],
-      [a + 5.1, 540, 920, 1.55, 6, 6], [a + 5.4, 540, 1170, 1.6, 8, -6], [a + 6.4, 540, 1170, 1.62, 4, 4], [a + 7.0, 540, 900, .82, 4, 0], [b, 540, 1000, .78, 0, 0]];
+    const K = [[a, 540, 850, .8, 35, -25], [a + .8, 540, 850, .92, 12, -16], [a + 1.4, 600, 580, 1.55, 8, -10], [a + 3.2, 540, 690, 1.6, 6, 8], [a + 3.6, 540, 930, 1.55, 8, -8],
+      [a + 5.1, 540, 930, 1.55, 6, 6], [a + 5.4, 540, 1180, 1.6, 8, -6], [a + 6.4, 540, 1180, 1.62, 4, 4], [a + 7.0, 540, 900, .82, 4, 0], [b, 540, 1000, .78, 0, 0]];
     let i = 0; while (i < K.length - 2 && t > K[i + 1][0]) i++;
     const k = E.io(pr(t, K[i][0], K[i + 1][0])), L = j => lerp(K[i][j], K[i + 1][j], k);
-    const fx = L(1), fy = L(2), s = L(3), rx = L(4), ry = L(5), enter = 1 - E.out5(pr(t, a, a + .5));
+    const punch = [[a + 1.2, .07], [a + 4.0, .07], [a + 5.8, .14]].reduce((m, [tt, amt]) => m + amt * E.out(pr(t, tt - .1, tt + .04)) * (1 - E.io(pr(t, tt + .04, tt + .6))), 0);
+    const hand = clamp(pr(t, a + .6, a + 1.2)) * (1 - pr(t, a + 6.6, a + 7.0));
+    const fx = L(1), fy = L(2), s = L(3) * (1 + punch), rx = L(4) + Math.sin(t * 1.7) * 1.4 * hand, ry = L(5) + Math.cos(t * 1.3) * 1.6 * hand, enter = 1 - E.out5(pr(t, a, a + .5));
     st('a-cam', { transformOrigin: `${fx}px ${fy}px`, transform: `translate(${540 - fx}px,${850 - fy + enter * 900}px) scale(${s}) rotateX(${rx}deg) rotateY(${ry}deg)` });
     st('phone', { transform: `rotateZ(${lerp(-8, 0, E.out(pr(t, a, a + .9)))}deg)` });
     // 1. pick shop
@@ -281,16 +283,16 @@ const SC = {
     st('loc-pin', { opacity: clamp(pk), transform: `translateY(${(1 - clamp(pk)) * -60}px) scale(${clamp(pk, 0, 1.2)})` });
     // 4. send
     const tap3 = a + 5.8, press = Math.sin(Math.PI * pr(t, tap3, tap3 + .2));
-    st('sendbtn', { transform: `scale(${1 - .06 * press})` }); $('sendlbl').textContent = t >= tap3 + .15 ? '✓ تم الإرسال' : 'أرسل الطلب بالواتساب';
+    st('sendbtn', { transform: `scale(${1 - .06 * press})`, background: t >= tap3 + .15 ? '#1fb85a' : '' }); st('btn-shine', { left: lerp(-200, 620, E.io(pr(t, tap3 + .12, tap3 + .55))) + 'px' }); $('sendlbl').textContent = t >= tap3 + .15 ? '✓ تم الإرسال' : 'أرسل الطلب بالواتساب';
     // cursor path (in phone/camera space) and taps
-    const chip = [745, 405], box = [560, 520], loc = [540, 800], btn = [540, 1080];
+    const chip = [705, 528], box = [520, 678], loc = [526, 926], btn = [546, 1174];
     const CK = [[a, 980, 1500], [a + 1.0, chip[0], chip[1]], [a + 1.5, chip[0], chip[1]], [a + 1.8, box[0] + 120, box[1]], [a + 3.4, box[0] + 120, box[1]], [a + 3.85, loc[0], loc[1]], [a + 4.6, loc[0], loc[1]], [a + 5.6, btn[0], btn[1]], [a + 6.3, btn[0], btn[1]], [a + 6.8, 1100, 1500]];
     let j = 0; while (j < CK.length - 2 && t > CK[j + 1][0]) j++;
     const ck = E.io(pr(t, CK[j][0], CK[j + 1][0])), cx = lerp(CK[j][1], CK[j + 1][1], ck), cy = lerp(CK[j][2], CK[j + 1][2], ck);
     const taps = [tap1, tap2, tap3]; let rp = -1, at = 0; taps.forEach(tt => { const q = pr(t, tt, tt + .45); if (q > 0 && q < 1) { rp = q; at = tt; } });
     const down = taps.some(tt => t >= tt - .06 && t < tt + .1);
     st('cursor', { transform: `translate(${cx}px,${cy}px) scale(${down ? .82 : 1})`, opacity: t < a + 6.9 ? 1 : 0 });
-    st('ripple', { left: cx - 8 + 'px', top: cy - 8 + 'px', width: '16px', height: '16px', opacity: rp < 0 ? 0 : 1 - rp, transform: `scale(${1 + rp * 9})` });
+    st('ripple', { left: cx + 6 + 'px', top: cy - 2 + 'px', width: '16px', height: '16px', opacity: rp < 0 ? 0 : 1 - rp, transform: `scale(${1 + rp * 9})` });
     // notifications stack in at the end
     NOTI.forEach((_, n) => { const at = a + 6.7 + n * .42, k = E.back(pr(t, at, at + .4)), order = Math.max(0, Math.min(2, Math.floor((t - a - 6.7) / .42)) - n);
       st('n' + n, { top: (300 + order * 30) + 'px', opacity: clamp(k) * (1 - order * .25), zIndex: 10 - order + n * 3, transform: `translateY(${(1 - clamp(k)) * -260}px) scale(${1 - order * .06}) perspective(1200px) rotateX(${(1 - clamp(k)) * 40}deg)` });
