@@ -1,0 +1,375 @@
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<style>
+@font-face{font-family:"Readex Pro";font-weight:160 900;src:url(readex.woff2) format("woff2");}
+:root{--teal:#0F6A66;--teal2:#0a4f4c;--deep:#062b29;--cream:#F2F0EC;--copper:#A8622C;--sand:#ECD5B3;--ink:#1D2321;--wa:#25D366;--hl:#FFD24A}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1080px;height:1920px;overflow:hidden;background:#000;font-family:"Readex Pro",Tahoma,sans-serif;color:var(--ink)}
+.emo{font-family:"Noto Color Emoji";font-weight:400}
+#stage{position:absolute;inset:0;overflow:hidden;perspective:1700px}
+.scene{position:absolute;inset:0;display:none;overflow:hidden;transform-style:preserve-3d}
+.cam{position:absolute;inset:0;transform-style:preserve-3d;transform-origin:540px 850px;will-change:transform}
+.abs{position:absolute}
+.c{left:0;right:0;text-align:center}
+.word{display:block;font-weight:900;will-change:transform,filter,opacity}
+.dots{position:absolute;inset:-200px;background-image:radial-gradient(rgba(255,255,255,.16) 2.2px,transparent 2.6px);background-size:30px 30px}
+.card{position:absolute;background:#fff;border-radius:56px;box-shadow:0 40px 80px rgba(0,0,0,.14),0 8px 18px rgba(0,0,0,.06)}
+.pill{display:inline-flex;align-items:center;gap:14px;border-radius:999px;padding:14px 34px;font-weight:800}
+.phone{position:absolute;left:240px;top:250px;width:600px;height:1200px;border-radius:84px;background:#111;padding:16px;
+  box-shadow:0 70px 120px rgba(0,0,0,.28),0 0 0 3px #2a2a2a inset;transform-style:preserve-3d}
+.screen{position:relative;width:100%;height:100%;border-radius:70px;background:#f7f6f3;overflow:hidden;direction:rtl;padding:96px 34px 0}
+.notch{position:absolute;top:22px;left:50%;width:170px;height:46px;margin-left:-85px;border-radius:30px;background:#111}
+.sec{background:#fff;border-radius:30px;padding:24px 24px;margin-bottom:22px;box-shadow:0 4px 14px rgba(0,0,0,.05)}
+.sec h4{font-size:27px;font-weight:800;display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.num{width:40px;height:40px;border-radius:50%;background:#e6efee;color:var(--teal);display:inline-flex;align-items:center;justify-content:center;font-size:22px}
+.chips{display:flex;gap:10px;flex-wrap:wrap}
+.chip{border-radius:999px;padding:10px 20px;background:#f0efeb;font-size:24px;font-weight:700;color:#555}
+.chip.on{background:var(--teal);color:#fff}
+.box{border-radius:20px;background:#f3f2ee;min-height:96px;padding:18px 20px;font-size:26px;font-weight:600;color:#333;margin-top:16px}
+.btn{border-radius:26px;background:var(--wa);color:#fff;font-weight:800;font-size:30px;text-align:center;padding:28px 0;position:relative;overflow:hidden}
+.cursor{position:absolute;width:64px;height:64px;left:0;top:0;z-index:50;pointer-events:none}
+.ripple{position:absolute;border-radius:50%;border:5px solid var(--teal);pointer-events:none}
+.noti{position:absolute;left:110px;width:860px;height:150px;border-radius:44px;background:rgba(255,255,255,.96);box-shadow:0 30px 60px rgba(0,0,0,.18);
+  display:flex;align-items:center;gap:26px;padding:0 34px;direction:rtl}
+.wa{width:96px;height:96px;border-radius:26px;background:var(--wa);display:flex;align-items:center;justify-content:center;flex:none}
+.tile{position:absolute;width:300px;height:300px;border-radius:70px;display:flex;align-items:center;justify-content:center;box-shadow:0 40px 70px rgba(0,0,0,.18)}
+svg{overflow:visible}
+</style></head><body><div id="stage">
+
+<!-- 1 HOOK -->
+<div class="scene" id="s-hook" style="background:var(--cream)"><div class="cam">
+  <div class="abs c" style="top:470px">
+    <span class="mask" style="display:block;overflow:hidden;padding:24px 0 40px;margin:-24px 0 -77px"><span class="word" id="h0" style="font-size:150px">للحين</span></span>
+    <span class="mask" style="display:block;overflow:hidden;padding:24px 0 40px;margin:-34px 0 -77px"><span class="word" id="h1" style="font-size:150px">تطلع</span></span>
+    <span class="mask" style="display:block;overflow:hidden;padding:24px 0 40px;margin:-34px 0 -77px"><span class="word" id="h2" style="font-size:150px">بنفسك</span></span>
+    <span class="mask" style="display:block;overflow:hidden;padding:24px 0 40px;margin:-30px 0 -77px"><span class="word" id="h3" style="font-size:170px;color:var(--copper)">للبقالة؟</span></span>
+  </div>
+  <svg class="abs" style="left:260px;top:1235px" width="560" height="60"><path id="h-ul" d="M10 30 C 140 8, 300 52, 550 22" fill="none" stroke="var(--hl)" stroke-width="16" stroke-linecap="round"/></svg>
+  <svg class="abs" id="h-cart" style="left:455px;top:1320px" width="170" height="150" viewBox="-8 -6 132 116"><g fill="none" stroke="var(--teal)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"><path d="M0 4H16L30 70H96L110 22H22"/><path d="M40 38H100M35 54H96" stroke-width="6" opacity=".55"/></g><circle cx="38" cy="92" r="9" fill="var(--copper)"/><circle cx="88" cy="92" r="9" fill="var(--copper)"/></svg>
+</div></div>
+
+<!-- 2 PAIN (cover-flow whip) -->
+<div class="scene" id="s-pain" style="background:#e8e5de"><div class="cam" id="pain-cam"></div></div>
+
+<!-- 3 WHAT IF (dark, dotted) -->
+<div class="scene" id="s-what" style="background:radial-gradient(120% 80% at 50% 110%,#127a74 0%,#0a3f3c 35%,#031716 70%)">
+  <div class="dots" id="w-dots"></div>
+  <div class="abs" id="w-glow" style="left:-200px;right:-200px;bottom:-300px;height:900px;background:radial-gradient(50% 50% at 50% 50%,rgba(236,213,179,.35),rgba(168,98,44,.18) 40%,transparent 70%)"></div>
+  <div class="cam" id="w-cam">
+    <div class="abs c" style="top:640px;color:#fff;font-weight:800">
+      <span class="word" id="w0" style="font-size:96px;font-weight:700;color:var(--sand)">طيب،</span>
+      <span class="word" id="w1" style="font-size:110px">لو المحلات</span>
+      <span class="word" id="w2" style="font-size:92px;display:inline-flex;align-items:center;gap:26px;justify-content:center">
+        <span>هي اللي تجيك؟</span>
+        <span id="w-pin" style="width:120px;height:120px;border-radius:32px;background:#fff;display:inline-flex;align-items:center;justify-content:center">
+          <svg width="56" height="76" viewBox="-60 -170 120 170"><path d="M0 0C-18-34-60-70-60-110A60 60 0 0 1 60-110C60-70 18-34 0 0Z" fill="var(--teal)"/><circle cx="0" cy="-110" r="24" fill="#fff"/></svg>
+        </span>
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- 4 BRAND -->
+<div class="scene" id="s-brand" style="background:radial-gradient(90% 60% at 50% 40%,#14817c,var(--teal) 55%,var(--teal2))">
+  <div class="dots" style="opacity:.35"></div>
+  <div class="cam" id="b-cam">
+    <div class="abs" id="b-ring" style="left:540px;top:760px;width:10px;height:10px;border-radius:50%;border:6px solid rgba(236,213,179,.8)"></div>
+    <div class="abs" id="b-shadow" style="left:440px;top:772px;width:200px;height:40px;border-radius:50%;background:rgba(0,0,0,.35);filter:blur(8px)"></div>
+    <svg class="abs" id="b-pin" style="left:450px;top:560px" width="180" height="230" viewBox="-75 -190 150 195"><path d="M0 0C-18-34-60-70-60-110A60 60 0 0 1 60-110C60-70 18-34 0 0Z" fill="#fff"/><circle cx="0" cy="-110" r="24" fill="var(--teal)"/></svg>
+    <div class="abs c" style="top:880px;overflow:hidden;height:190px"><div id="b-t1" style="font-size:136px;font-weight:900;color:#fff;line-height:190px">توصيل جلاجل</div></div>
+    <div class="abs" id="b-line" style="left:440px;top:1085px;width:200px;height:12px;border-radius:6px;background:var(--copper)"></div>
+    <div class="abs c" id="b-t2" style="top:1130px;font-size:66px;font-weight:700;color:var(--sand)">لمّة جلاجل على بابك</div>
+  </div>
+</div>
+
+<!-- 5 APP -->
+<div class="scene" id="s-app" style="background:radial-gradient(80% 50% at 30% 20%,#ffffff,var(--cream) 60%,#e6e2d9)">
+  <div class="abs" style="left:-300px;top:1200px;width:900px;height:900px;border-radius:50%;background:radial-gradient(rgba(15,106,102,.18),transparent 65%)"></div>
+  <div class="cam" id="a-cam">
+    <div class="phone" id="phone"><div class="screen" id="screen">
+      <div class="notch"></div>
+      <div style="font-size:36px;font-weight:900;color:var(--teal);margin:0 6px 22px">اطلب من محلات جلاجل</div>
+      <div class="sec" id="sec1"><h4><span class="num">١</span>وش تبي؟</h4>
+        <div class="chips"><span class="chip" id="chip0">بقالة</span><span class="chip">مطعم</span><span class="chip">كافيه</span><span class="chip">صيدلية</span><span class="chip">أخرى</span></div>
+        <div class="box" id="typebox"><span id="typed"></span><span id="caret" style="display:inline-block;width:3px;height:32px;background:var(--teal);vertical-align:middle;margin-right:2px"></span></div>
+      </div>
+      <div class="sec" id="sec2"><h4><span class="num">٢</span>موقعك</h4>
+        <div id="locbox" style="border-radius:20px;overflow:hidden;position:relative;height:150px;background:#e8efe9">
+          <svg width="100%" height="100%" style="position:absolute;inset:0"><g stroke="#fff" stroke-width="10"><path d="M-10 50 L600 90"/><path d="M-10 120 L600 140"/><path d="M120 -10 L90 200"/><path d="M330 -10 L360 200"/></g></svg>
+          <div id="loc-label" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;color:var(--teal);background:rgba(255,255,255,.75)">📍 أرسل موقعك على الخريطة</div>
+          <svg id="loc-pin" style="position:absolute;left:236px;top:20px" width="56" height="76" viewBox="-60 -170 120 170"><path d="M0 0C-18-34-60-70-60-110A60 60 0 0 1 60-110C60-70 18-34 0 0Z" fill="#e0473c"/><circle cx="0" cy="-110" r="24" fill="#fff"/></svg>
+        </div>
+      </div>
+      <div class="sec" id="sec3"><h4><span class="num">٣</span>أرسل</h4>
+        <div class="btn" id="sendbtn"><span id="sendlbl">أرسل الطلب بالواتساب</span><div id="btn-shine" style="position:absolute;top:0;bottom:0;left:-200px;width:140px;background:linear-gradient(100deg,transparent,rgba(255,255,255,.65),transparent)"></div></div>
+      </div>
+    </div></div>
+    <svg class="cursor" id="cursor" viewBox="0 0 64 64"><path d="M14 6 L14 50 L25 40 L33 58 L41 54 L33 37 L48 37 Z" fill="#111" stroke="#fff" stroke-width="4" stroke-linejoin="round"/></svg>
+    <div class="ripple" id="ripple"></div>
+  </div>
+  <div id="notis"></div>
+</div>
+
+<!-- 6 PRICE -->
+<div class="scene" id="s-price" style="background:var(--cream)"><div class="cam" id="p-cam">
+  <div class="abs c" id="p-t0" style="top:300px;font-size:92px;font-weight:800">تدفع</div>
+  <div class="tile" id="p-house" style="left:610px;top:470px;background:var(--teal)"><svg width="170" height="170" viewBox="-60 -60 120 120"><g fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"><path d="M-50 -5L0 -50L50 -5M-36 -16V45H36V-16"/><rect x="-11" y="15" width="22" height="30"/></g></svg></div>
+  <div class="abs" id="p-eq" style="left:480px;top:540px;font-size:140px;font-weight:900;color:var(--copper)">=</div>
+  <div class="tile" id="p-store" style="left:170px;top:470px;background:#fff"><svg width="170" height="170" viewBox="-62 -60 124 120"><g fill="none" stroke="var(--teal)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"><path d="M-50 -45H50L56 -12H-56Z"/><path d="M-28 -45L-31 -12M0 -45V-12M28 -45L31 -12"/><path d="M-44 -12V45H44V-12"/><rect x="-14" y="12" width="28" height="33"/></g></svg></div>
+  <div class="abs" id="p-l1" style="left:610px;top:800px;width:300px;text-align:center;font-size:44px;font-weight:700">سعرك</div>
+  <div class="abs" id="p-l2" style="left:170px;top:800px;width:300px;text-align:center;font-size:44px;font-weight:700">سعر المحل</div>
+  <div class="abs c" id="p-t1" style="top:900px;font-size:118px;font-weight:900;color:var(--copper)">بدون أي زيادة</div>
+  <div class="abs c" id="p-chipwrap" style="top:1110px"><span class="pill" id="p-chip" style="background:var(--teal);color:#fff;font-size:58px">+ توصيل <span id="p-3" style="position:relative;margin:0 34px">٣ ريال</span> بس</span></div>
+  <svg class="abs" style="left:245px;top:1080px" width="330" height="170"><path id="p-circ" transform="translate(229 80) scale(1.2 1.05) translate(-229 -80)" d="M326 54 C 334 6, 152 4, 132 48 C 114 92, 144 146, 230 144 C 314 142, 336 98, 318 56 C 306 36, 282 24, 250 22" fill="none" stroke="var(--hl)" stroke-width="10" stroke-linecap="round"/></svg>
+  <div class="abs c" id="p-t2" style="top:1290px;font-size:46px;font-weight:600;color:#6b6b66">و ٥ ريال للشاليه والمنتزه</div>
+</div></div>
+
+<!-- 7 MAP -->
+<div class="scene" id="s-map" style="background:#dfe9e4">
+  <div class="cam" id="m-cam" style="transform-origin:540px 960px">
+    <div class="abs" id="m-plane" style="left:-460px;top:-500px;width:2000px;height:2900px;transform-style:preserve-3d;background:#e3ece6">
+      <svg width="2000" height="2900" id="m-svg">
+        <g fill="#cfe0d6"><rect x="140" y="160" width="420" height="380" rx="30"/><rect x="700" y="140" width="520" height="420" rx="30"/><rect x="1360" y="180" width="460" height="360" rx="30"/>
+          <rect x="140" y="700" width="420" height="520" rx="30"/><rect x="1360" y="680" width="460" height="560" rx="30"/><rect x="140" y="1380" width="420" height="460" rx="30"/>
+          <rect x="700" y="1400" width="520" height="440" rx="30"/><rect x="1360" y="1400" width="460" height="420" rx="30"/><rect x="140" y="2000" width="420" height="500" rx="30"/><rect x="700" y="2000" width="520" height="520" rx="30"/><rect x="1360" y="1980" width="460" height="540" rx="30"/></g>
+        <rect x="760" y="720" width="400" height="500" rx="40" fill="#bfdcc6"/>
+        <g stroke="#fff" stroke-width="70" stroke-linecap="round"><path d="M630 0V2900M1290 0V2900M0 620H2000M0 1310H2000M0 1920H2000"/></g>
+        <path id="route" d="M630 2250 L630 1920 L1290 1920 L1290 1310 L630 1310 L630 620" fill="none" stroke="var(--teal)" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div class="abs" id="m-store" style="left:530px;top:2120px;width:200px;transform-origin:50% 100%;transform:rotateX(-55deg)"><div style="background:#fff;border-radius:40px;padding:20px 0;text-align:center;box-shadow:0 20px 30px rgba(0,0,0,.2)"><div id="m-store-i" style="line-height:0;margin-bottom:8px"></div><div style="font-size:30px;font-weight:800;color:var(--teal)">المحل</div></div></div>
+      <div class="abs" id="m-house" style="left:530px;top:420px;width:200px;transform-origin:50% 100%;transform:rotateX(-55deg)"><div style="background:#fff;border-radius:40px;padding:20px 0;text-align:center;box-shadow:0 20px 30px rgba(0,0,0,.2)"><div id="m-house-i" style="line-height:0;margin-bottom:8px"></div><div style="font-size:30px;font-weight:800;color:var(--teal)">بيتك</div></div>
+        <div id="m-ok" class="pill" style="position:absolute;top:-90px;left:-10px;background:var(--wa);color:#fff;font-size:40px;white-space:nowrap">✓ وصل</div></div>
+      <div class="abs" id="m-scoot" style="left:0;top:0;line-height:0;transform-origin:50% 100%"></div>
+    </div>
+  </div>
+  <div class="abs" style="left:0;right:0;top:0;height:560px;background:linear-gradient(#dfe9e4 30%,rgba(223,233,228,0))"></div>
+  <div class="abs c" id="m-t1" style="top:300px;font-size:100px;font-weight:900;color:var(--teal)">من المحل…</div>
+  <div class="abs c" style="top:1300px"><span class="pill" id="m-ok2" style="background:var(--wa);color:#fff;font-size:56px;box-shadow:0 20px 40px rgba(0,0,0,.2)">✓ وصل طلبك</span></div>
+  <div class="abs c" id="m-t2" style="top:300px;font-size:110px;font-weight:900;color:var(--ink)">لباب بيتك</div>
+</div>
+
+<!-- 8 CATEGORIES (match-cut) -->
+<div class="scene" id="s-cats"><div class="cam" id="c-cam">
+  <div class="abs c" id="c-head" style="top:420px;font-size:70px;font-weight:800">من أي محل في جلاجل</div>
+  <div class="abs c" id="c-emo" style="top:590px;line-height:0"></div>
+  <div class="abs" id="c-box" style="left:190px;top:900px;width:700px;height:250px;border-radius:44px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 30px 60px rgba(0,0,0,.18)">
+    <span id="c-word" style="font-size:140px;font-weight:900;color:var(--teal)"></span></div>
+  <div class="abs" id="c-flash" style="inset:0;position:absolute;background:#fff;pointer-events:none"></div>
+</div></div>
+
+<!-- 9 CTA -->
+<div class="scene" id="s-cta" style="background:radial-gradient(90% 60% at 50% 35%,#14817c,var(--teal) 55%,var(--teal2))">
+  <div class="dots" style="opacity:.3"></div>
+  <div class="cam" id="t-cam">
+    <svg class="abs" id="t-pin" style="left:480px;top:330px" width="120" height="155" viewBox="-75 -190 150 195"><path d="M0 0C-18-34-60-70-60-110A60 60 0 0 1 60-110C60-70 18-34 0 0Z" fill="#fff"/><circle cx="0" cy="-110" r="24" fill="var(--teal)"/></svg>
+    <div class="abs c" id="t-t1" style="top:540px;font-size:160px;font-weight:900;color:#fff">اطلب الحين</div>
+    <div class="abs" id="t-url" style="left:110px;top:800px;width:860px;height:150px;border-radius:44px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 30px 60px rgba(0,0,0,.25);overflow:hidden">
+      <span style="font-size:56px;font-weight:800;color:var(--teal);direction:ltr">jalajil-delivery.netlify.app</span>
+      <div id="t-shine" class="abs" style="top:0;bottom:0;width:180px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.8),transparent)"></div></div>
+    <div class="abs c" id="t-t2" style="top:1000px;font-size:50px;font-weight:600;color:var(--sand)">وطلبك يوصلنا على الواتساب مباشرة</div>
+    <div class="abs c" id="t-t3" style="top:1150px;font-size:110px;font-weight:900;color:var(--sand)">خلّك مرتاح</div>
+    <svg class="abs" style="left:300px;top:1300px" width="480" height="60"><path id="t-ul" d="M470 30 C 330 6, 160 50, 10 22" fill="none" stroke="var(--hl)" stroke-width="14" stroke-linecap="round"/></svg>
+    <svg class="cursor" id="t-cursor" viewBox="0 0 64 64" style="width:80px;height:80px"><path d="M14 6 L14 50 L25 40 L33 58 L41 54 L33 37 L48 37 Z" fill="#111" stroke="#fff" stroke-width="4" stroke-linejoin="round"/></svg>
+    <div class="ripple" id="t-ripple" style="border-color:#fff"></div>
+  </div>
+</div>
+
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v)), lerp = (a, b, k) => a + (b - a) * k, pr = (t, a, b) => clamp((t - a) / (b - a));
+const E = { out: k => 1 - Math.pow(1 - k, 3), out5: k => 1 - Math.pow(1 - k, 5), in: k => k * k * k, io: k => k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2,
+  expo: k => k === 1 ? 1 : 1 - Math.pow(2, -10 * k), back: k => { const s = 1.9; return 1 + (s + 1) * Math.pow(k - 1, 3) + s * Math.pow(k - 1, 2); } };
+const st = (el, o) => { el = typeof el === 'string' ? $(el) : el; for (const k in o) el.style[k] = o[k]; };
+// kinetic word: scale-from-big + blur -> sharp
+const slam = (id, t, at, d = .28, from = 1.6, dy = 0) => { const k = E.out5(pr(t, at, at + d)); st(id, { opacity: clamp(k * 1.6), transform: `translateY(${(1 - k) * dy}px) scale(${lerp(from, 1, k)})`, filter: `blur(${(1 - k) * 22}px)` }); };
+const rise = (id, t, at, d = .4, dy = 60) => { const k = E.out5(pr(t, at, at + d)); st(id, { opacity: k, transform: `translateY(${(1 - k) * dy}px)`, filter: `blur(${(1 - k) * 14}px)` }); };
+const draw = (id, t, a, b) => { const p = $(id), L = p.getTotalLength(); p.style.strokeDasharray = L; p.style.strokeDashoffset = L * (1 - E.io(pr(t, a, b))); };
+// whip: fast camera move with blur proportional to speed
+function whip(t, a, b, dx, dy = 0) { const k = pr(t, a, b), e = E.io(k), v = Math.sin(Math.PI * k); return { x: dx * e, y: dy * e, blur: v * 26, k }; }
+
+const S = [['hook', 0, 2.6], ['pain', 2.6, 4.4], ['what', 4.4, 6.4], ['brand', 6.4, 8.6], ['app', 8.6, 17.2],
+  ['price', 17.2, 20.6], ['map', 20.6, 24.0], ['cats', 24.0, 27.0], ['cta', 27.0, 30.0]];
+window.DUR = 30;
+const ICON = {
+  sun: `<circle r="27" fill="#FFC93C"/><g stroke="#F2A33A" stroke-width="9" stroke-linecap="round">${[0,45,90,135,180,225,270,315].map(a=>`<path d="M0 -38V-52" transform="rotate(${a})"/>`).join('')}</g>`,
+  car: `<path d="M-54 22V2Q-54-8-44-10L-32-12-20-34Q-16-40-8-40H20Q28-40 32-34L44-12Q56-10 56 2V22Z" fill="#A8622C"/><path d="M-24-14-16-30H-2V-14ZM6-14V-30H18L28-14Z" fill="#ECD5B3"/><g fill="#1D2321"><circle cx="-30" cy="22" r="13"/><circle cx="32" cy="22" r="13"/></g><g fill="#cfcfcf"><circle cx="-30" cy="22" r="5"/><circle cx="32" cy="22" r="5"/></g>`,
+  bread: `<path d="M-50 32V0C-64-8-58-42-28-42H28C58-42 64-8 50 0V32Z" fill="#E9B36A" stroke="#A8622C" stroke-width="6" stroke-linejoin="round"/><g stroke="#A8622C" stroke-width="6" stroke-linecap="round"><path d="M-26-24-32-8M-4-24-10-8M18-24 12-8"/></g>`,
+  cart: `<g transform="translate(-58,-55)"><g fill="none" stroke="#0F6A66" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"><path d="M0 4H16L30 70H96L110 22H22"/><path d="M40 38H100M35 54H96" stroke-width="6" opacity=".55"/></g><circle cx="38" cy="92" r="9" fill="#A8622C"/><circle cx="88" cy="92" r="9" fill="#A8622C"/></g>`,
+  burger: `<path d="M-50-6C-50-50 50-50 50-6Z" fill="#E9A24A"/><g fill="#fff"><ellipse cx="-18" cy="-26" rx="4" ry="2.5"/><ellipse cx="4" cy="-32" rx="4" ry="2.5"/><ellipse cx="22" cy="-22" rx="4" ry="2.5"/></g><path d="M-54 -2Q-45 6-36-2T-18-2 0-2 18-2 36-2 54-2V4H-54Z" fill="#7cc35b"/><rect x="-52" y="4" width="104" height="16" rx="8" fill="#5a3420"/><rect x="-50" y="22" width="100" height="20" rx="10" fill="#E9A24A"/>`,
+  coffee: `<g fill="none" stroke="#fff" stroke-linecap="round" stroke-width="6" opacity=".85"><path d="M-14-30C-20-40-8-46-14-56M6-30C0-40 12-46 6-56"/></g><path d="M-38-18H30V16Q30 38 8 38H-16Q-38 38-38 16Z" fill="#fff"/><path d="M30-8C50-8 50 22 28 22" fill="none" stroke="#fff" stroke-width="8"/><rect x="-50" y="42" width="96" height="7" rx="3.5" fill="#fff"/>`,
+  pill: `<g transform="rotate(-35)"><path d="M0-22H-28A22 22 0 0 0-28 22H0Z" fill="#ECD5B3"/><path d="M0-22H28A22 22 0 0 1 28 22H0Z" fill="#fff"/></g><circle cx="34" cy="34" r="14" fill="#fff"/><path d="M26 34H42" stroke="#062b29" stroke-width="3"/>`,
+  box: `<path d="M-44-10L-30-36H30L44-10Z" fill="#DDA66A"/><path d="M-44-10H44V42H-44Z" fill="#B87A3E"/><path d="M-8-36H8L10-10V12H-10V-10Z" fill="#F2F0EC" opacity=".85"/>`,
+  store: `<g fill="none" stroke="#0F6A66" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"><path d="M-50 -45H50L56 -12H-56Z"/><path d="M-28 -45L-31 -12M0 -45V-12M28 -45L31 -12"/><path d="M-44 -12V45H44V-12"/><rect x="-14" y="12" width="28" height="33"/></g>`,
+  house: `<g fill="none" stroke="#0F6A66" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"><path d="M-50 -5L0 -50L50 -5M-36 -16V45H36V-16"/><rect x="-11" y="15" width="22" height="30"/></g>`,
+  scooter: `<path d="M-40 26-26-22" stroke="#0F6A66" stroke-width="8" stroke-linecap="round"/><path d="M-36-24H-16" stroke="#1D2321" stroke-width="8" stroke-linecap="round"/><path d="M-30 14H20C24-4 38-6 50 6V20H-30Z" fill="#0F6A66"/><rect x="14" y="-34" width="38" height="32" rx="7" fill="#A8622C"/><g fill="#1D2321"><circle cx="-38" cy="30" r="14"/><circle cx="38" cy="30" r="14"/></g><g fill="#cfcfcf"><circle cx="-38" cy="30" r="5"/><circle cx="38" cy="30" r="5"/></g>`
+};
+const ic = (n, px) => `<svg width="${px}" height="${px}" viewBox="-62 -62 124 124" style="display:inline-block;overflow:visible">${ICON[n]}</svg>`;
+let pinR = null, okR = null, emoR = null;
+const PIN_SVG = `<svg width="190" height="241" viewBox="-75 -190 150 195" style="display:inline-block"><path d="M0 0C-18-34-60-70-60-110A60 60 0 0 1 60-110C60-70 18-34 0 0Z" fill="#fff"/><circle cx="0" cy="-110" r="24" fill="var(--teal)"/></svg>`;
+
+// build pain cards
+const PAIN = [['sun', 'الحر ٤٥ درجة'], ['car', 'زحمة وطوابير'], ['bread', 'نسيت الخبز… مرة ثانية']];
+PAIN.forEach(([e, s], i) => { const d = document.createElement('div'); d.className = 'card'; d.id = 'pc' + i;
+  Object.assign(d.style, { left: (230 - i * 760) + 'px', top: '400px', width: '620px', height: '880px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '50px' });
+  d.innerHTML = `<div style="line-height:0">${ic(e, 300)}</div><div style="font-size:74px;font-weight:900;text-align:center;padding:0 40px;line-height:1.3">${s}</div>`; $('pain-cam').appendChild(d); });
+// notifications
+const NOTI = [['توصيل جلاجل', 'وصلنا طلبك JL-1444-124 ✓'], ['توصيل جلاجل', 'نجهّز طلبك من البقالة 🛒'], ['توصيل جلاجل', 'المندوب بالطريق لبيتك 🛵']];
+NOTI.forEach(([h, b], i) => { const d = document.createElement('div'); d.className = 'noti'; d.id = 'n' + i;
+  d.innerHTML = `<div class="wa"><svg width="56" height="56" viewBox="0 0 32 32"><path d="M16 4a12 12 0 0 0-10.4 18L4 28l6.2-1.6A12 12 0 1 0 16 4z" fill="#fff"/></svg></div><div style="flex:1"><div style="display:flex;justify-content:space-between;font-size:30px;font-weight:800">${h}<span style="font-size:24px;color:#888;font-weight:500">الحين</span></div><div style="font-size:30px;font-weight:500;color:#333;margin-top:6px">${b}</div></div>`;
+  $('notis').appendChild(d); });
+
+const SC = {
+  hook(t, a, b) {
+    // each line rises out of a hidden mask with a slight tilt; the last word lands with a bounce
+    ['h0', 'h1', 'h2', 'h3'].forEach((id, i) => { const at = [.12, .42, .72, 1.05][i], k = E.out5(pr(t, at, at + .5)), sk = (1 - k) * 8;
+      const pop = i === 3 ? 1 + .14 * Math.sin(Math.PI * pr(t, 1.3, 1.6)) : 1;
+      st(id, { transform: `translateY(${(1 - k) * 115}%) rotate(${sk}deg) scale(${pop})`, opacity: 1, filter: 'none' }); });
+    draw('h-ul', t, 1.65, 1.95);
+    const ck = E.back(pr(t, 1.85, 2.15)); st('h-cart', { opacity: clamp(ck), transform: `rotate(${lerp(-40, -12, clamp(ck))}deg) scale(${ck})` });
+    const w = whip(t, 2.3, 2.6, 1500);
+    st($('s-hook').firstElementChild, { transform: `translateX(${w.x}px) scale(${lerp(1, 1.08, pr(t, 0, 2.3))}) rotate(${lerp(-2, 0, E.out(pr(t, 0, 1.5)))}deg)`, filter: `blur(${w.blur}px)` });
+  },
+  pain(t, a, b) {
+    // camera slides from card to card (RTL: content moves right), ease between holds
+    const holds = [a, a + .6, a + 1.2], seg = i => E.io(pr(t, holds[i] + .42, holds[i] + .6));
+    let pos = seg(0) + seg(1), v = 0; for (let i = 0; i < 2; i++) { const k = pr(t, holds[i] + .42, holds[i] + .6); v = Math.max(v, Math.sin(Math.PI * k)); }
+    const enter = 1 - E.out5(pr(t, a, a + .25)), exit = E.in(pr(t, b - .22, b));
+    const camX = pos * 760 - enter * 900 + exit * 1400;
+    st('pain-cam', { transform: `translateX(${camX}px)`, filter: `blur(${v * 24 + enter * 30 + exit * 30}px)` });
+    PAIN.forEach((_, i) => { const off = (i - pos); st('pc' + i, { transform: `translateZ(${-Math.abs(off) * 260}px) rotateY(${clamp(off, -1, 1) * -28}deg)`, opacity: 1 - Math.min(.6, Math.abs(off) * .5) }); });
+  },
+  what(t, a, b) {
+    rise('w0', t, a + .12); rise('w1', t, a + .45); rise('w2', t, a + .85);
+    const pk = E.back(pr(t, a + 1.15, a + 1.45)); st('w-pin', { transform: `scale(${pk}) rotate(${(1 - clamp(pk)) * 30}deg)` });
+    const z = lerp(1, 1.14, E.io(pr(t, a, b))), out = E.in(pr(t, b - .25, b));
+    if (out === 0) pinR = $('w-pin').getBoundingClientRect();
+    st('w-cam', { transform: `scale(${z + out * 2.5})`, filter: `blur(${out * 20}px)`, opacity: 1 - out });
+    st('w-dots', { transform: `translateY(${-(t - a) * 30}px)` }); st('w-glow', { transform: `translateX(${Math.sin(t * 1.4) * 140}px)`, opacity: .7 + .3 * Math.sin(t * 2) });
+  },
+  brand(t, a, b) {
+    // match cut: the pin from "هي اللي تجيك؟" flies into place and lands
+    const drop = pr(t, a, a + .32), r = pinR || { x: 700, y: 980, width: 120, height: 120 }, fk = E.io(drop);
+    const fs = lerp(r.width / 180, 1, fk), fx = lerp(r.x + r.width / 2 - 540, 0, fk), fy = lerp(r.y + r.height - 790, 0, fk);
+    const sq = drop < 1 ? 1 : 1 - .25 * Math.sin(Math.PI * clamp(pr(t, a + .32, a + .52)));
+    st('b-pin', { transform: `translate(${fx}px,${fy}px) scale(${fs}) scaleY(${sq}) scaleX(${2 - sq})`, transformOrigin: '50% 100%' });
+    st('b-shadow', { opacity: lerp(.1, 1, E.in(drop)), transform: `scale(${lerp(.3, 1, E.in(drop))})` });
+    const rk = pr(t, a + .32, a + 1.1); st('b-ring', { opacity: rk > 0 && rk < 1 ? 1 - rk : 0, transform: `translate(-50%,-50%) scale(${1 + E.out(rk) * 90})`, borderWidth: (6 / (1 + E.out(rk) * 90) * 3) + 'px' });
+    const tk = E.out5(pr(t, a + .55, a + 1.0)); st('b-t1', { transform: `translateY(${(1 - tk) * 190}px)` });
+    st('b-line', { transform: `scaleX(${E.out(pr(t, a + .85, a + 1.2))})` });
+    rise('b-t2', t, a + 1.0, .5, 40);
+    const shake = Math.max(0, 1 - pr(t, a + .32, a + .7)) * (t > a + .32 ? 1 : 0);
+    const zoomIn = E.in(pr(t, b - .35, b));   // fly through the pin's hole
+    st('b-cam', { transformOrigin: '540px 690px', transform: `translate(${Math.sin(t * 90) * 10 * shake}px,${Math.cos(t * 80) * 10 * shake}px) scale(${lerp(1.15, 1, E.out(pr(t, a, a + 1.6))) * (1 + zoomIn * 14)})`, filter: `blur(${zoomIn * 10}px)` });
+  },
+  app(t, a, b) {
+    // camera keyframes: [time, focusX, focusY, scale, rotX, rotY]
+    const K = [[a, 540, 850, .8, 35, -25], [a + .8, 540, 850, .92, 12, -16], [a + 1.4, 600, 580, 1.55, 8, -10], [a + 3.2, 540, 690, 1.6, 6, 8], [a + 3.6, 540, 930, 1.55, 8, -8],
+      [a + 5.1, 540, 930, 1.55, 6, 6], [a + 5.4, 540, 1180, 1.6, 8, -6], [a + 6.4, 540, 1180, 1.62, 4, 4], [a + 7.0, 540, 900, .82, 4, 0], [b, 540, 1000, .78, 0, 0]];
+    let i = 0; while (i < K.length - 2 && t > K[i + 1][0]) i++;
+    const k = E.io(pr(t, K[i][0], K[i + 1][0])), L = j => lerp(K[i][j], K[i + 1][j], k);
+    const punch = [[a + 1.2, .07], [a + 4.0, .07], [a + 5.8, .14]].reduce((m, [tt, amt]) => m + amt * E.out(pr(t, tt - .1, tt + .04)) * (1 - E.io(pr(t, tt + .04, tt + .6))), 0);
+    const hand = clamp(pr(t, a + .6, a + 1.2)) * (1 - pr(t, a + 6.6, a + 7.0));
+    const fx = L(1), fy = L(2), s = L(3) * (1 + punch), rx = L(4) + Math.sin(t * 1.7) * 1.4 * hand, ry = L(5) + Math.cos(t * 1.3) * 1.6 * hand, enter = 1 - E.out5(pr(t, a, a + .5));
+    st('a-cam', { transformOrigin: `${fx}px ${fy}px`, transform: `translate(${540 - fx}px,${850 - fy + enter * 900}px) scale(${s}) rotateX(${rx}deg) rotateY(${ry}deg)` });
+    st('phone', { transform: `rotateZ(${lerp(-8, 0, E.out(pr(t, a, a + .9)))}deg)` });
+    // 1. pick shop
+    const tap1 = a + 1.2; $('chip0').classList.toggle('on', t >= tap1); st('chip0', { transform: `scale(${t >= tap1 ? 1 + .15 * Math.sin(Math.PI * pr(t, tap1, tap1 + .2)) : 1})` });
+    // 2. typing
+    const txt = 'حليب ×٢، خبز ×١، بيض كرتون', n = Math.floor(txt.length * pr(t, a + 1.9, a + 3.1)); $('typed').textContent = txt.slice(0, n);
+    st('caret', { opacity: (t > a + 1.6 && t < a + 3.4 && Math.floor(t * 3) % 2 === 0) || (t > a + 1.9 && t < a + 3.1) ? 1 : 0 });
+    // 3. location
+    const tap2 = a + 4.0, pk = E.back(pr(t, tap2 + .1, tap2 + .4));
+    st('loc-label', { opacity: 1 - pr(t, tap2, tap2 + .2) * .0, background: t >= tap2 ? 'rgba(255,255,255,0)' : 'rgba(255,255,255,.75)', color: t >= tap2 ? 'transparent' : '' });
+    st('loc-pin', { opacity: clamp(pk), transform: `translateY(${(1 - clamp(pk)) * -60}px) scale(${clamp(pk, 0, 1.2)})` });
+    // 4. send
+    const tap3 = a + 5.8, press = Math.sin(Math.PI * pr(t, tap3, tap3 + .2));
+    st('sendbtn', { transform: `scale(${1 - .06 * press})`, background: t >= tap3 + .15 ? '#1fb85a' : '' }); st('btn-shine', { left: lerp(-200, 620, E.io(pr(t, tap3 + .12, tap3 + .55))) + 'px' }); $('sendlbl').textContent = t >= tap3 + .15 ? '✓ تم الإرسال' : 'أرسل الطلب بالواتساب';
+    // cursor path (in phone/camera space) and taps
+    const chip = [705, 528], box = [520, 678], loc = [526, 926], btn = [546, 1174];
+    const CK = [[a, 980, 1500], [a + 1.0, chip[0], chip[1]], [a + 1.5, chip[0], chip[1]], [a + 1.8, box[0] + 120, box[1]], [a + 3.4, box[0] + 120, box[1]], [a + 3.85, loc[0], loc[1]], [a + 4.6, loc[0], loc[1]], [a + 5.6, btn[0], btn[1]], [a + 6.3, btn[0], btn[1]], [a + 6.8, 1100, 1500]];
+    let j = 0; while (j < CK.length - 2 && t > CK[j + 1][0]) j++;
+    const ck = E.io(pr(t, CK[j][0], CK[j + 1][0])), cx = lerp(CK[j][1], CK[j + 1][1], ck), cy = lerp(CK[j][2], CK[j + 1][2], ck);
+    const taps = [tap1, tap2, tap3]; let rp = -1, at = 0; taps.forEach(tt => { const q = pr(t, tt, tt + .45); if (q > 0 && q < 1) { rp = q; at = tt; } });
+    const down = taps.some(tt => t >= tt - .06 && t < tt + .1);
+    st('cursor', { transform: `translate(${cx}px,${cy}px) scale(${down ? .82 : 1})`, opacity: t < a + 6.9 ? 1 : 0 });
+    st('ripple', { left: cx + 6 + 'px', top: cy - 2 + 'px', width: '16px', height: '16px', opacity: rp < 0 ? 0 : 1 - rp, transform: `scale(${1 + rp * 9})` });
+    // notifications stack in at the end
+    NOTI.forEach((_, n) => { const at = a + 6.7 + n * .42, k = E.back(pr(t, at, at + .4)), order = Math.max(0, Math.min(2, Math.floor((t - a - 6.7) / .42)) - n);
+      st('n' + n, { top: (300 + order * 30) + 'px', opacity: clamp(k) * (1 - order * .25), zIndex: 10 - order + n * 3, transform: `translateY(${(1 - clamp(k)) * -260}px) scale(${1 - order * .06}) perspective(1200px) rotateX(${(1 - clamp(k)) * 40}deg)` });
+      if (order === 0 && n < 2) st('n' + n, {}); });
+    const out = E.in(pr(t, b - .25, b)); st('s-app', { filter: `blur(${out * 26}px)` }); $('notis').style.transform = `translateY(${-out * 1600}px)`; $('a-cam').style.opacity = 1;
+    if (out > 0) st('a-cam', { transform: $('a-cam').style.transform + ` translateY(${-out * 1600}px)` });
+  },
+  price(t, a, b) {
+    const enter = 1 - E.out5(pr(t, a, a + .3));
+    rise('p-t0', t, a + .1, .35);
+    const hk = E.back(pr(t, a + .45, a + .8)), sk = E.back(pr(t, a + .6, a + .95));
+    st('p-house', { opacity: clamp(hk), transform: `perspective(900px) rotateY(${lerp(50, -14, clamp(hk)) + Math.sin(t * 1.3) * 4}deg) rotateX(8deg) scale(${hk})` });
+    st('p-store', { opacity: clamp(sk), transform: `perspective(900px) rotateY(${lerp(-50, 14, clamp(sk)) - Math.sin(t * 1.3) * 4}deg) rotateX(8deg) scale(${sk})` });
+    slam('p-eq', t, a + .9, .25, 2.4); rise('p-l1', t, a + .7, .3, 30); rise('p-l2', t, a + .85, .3, 30);
+    slam('p-t1', t, a + 1.2, .3, 1.5);
+    const ck = E.back(pr(t, a + 1.75, a + 2.1)); st('p-chip', { transform: `translateY(${(1 - clamp(ck)) * 120}px) scale(${ck})`, opacity: clamp(ck * 2) });
+    draw('p-circ', t, a + 2.15, a + 2.55); rise('p-t2', t, a + 2.4, .35, 30);
+    const w = whip(t, b - .28, b, -1500);
+    st('p-cam', { transform: `translate(${w.x}px,${enter * 900}px) rotate(${lerp(1.5, -1.5, pr(t, a, b))}deg) scale(${lerp(1.04, .98, pr(t, a, b))})`, filter: `blur(${w.blur + enter * 25}px)` });
+  },
+  map(t, a, b) {
+    const path = $('route'), Lp = path.getTotalLength(), p = .955 * E.io(pr(t, a + .4, a + 2.5));
+    path.style.strokeDasharray = Lp; path.style.strokeDashoffset = Lp * (1 - p);
+    const P = path.getPointAtLength(Lp * p), P2 = path.getPointAtLength(Math.min(Lp, Lp * p + 2));
+    st('m-scoot', { transform: `translate(${P.x - 60}px,${P.y - 130}px) rotateX(-55deg) scaleX(${P2.x - P.x < -0.1 ? 1 : -1})` });
+    // camera follows the scooter over a tilted map
+    const cx = P.x - 460, cy = P.y - 500, zoom = lerp(1.25, 1.05, E.io(pr(t, a, b)));
+    const enter = 1 - E.out5(pr(t, a, a + .35));
+    st('m-plane', { transformOrigin: `${P.x}px ${P.y}px`, transform: `translate(${1000 - P.x}px,${1630 - P.y}px) rotateX(55deg) rotateZ(${lerp(-12, 8, pr(t, a, b))}deg)` });
+    st('m-cam', { transform: `scale(${zoom})`, filter: `blur(${enter * 25}px)` });
+    const ok = E.back(pr(t, a + 2.5, a + 2.8)); st('m-ok', { opacity: 0 }); st('m-ok2', { transform: `scale(${ok})`, opacity: clamp(ok) });
+    const sw = pr(t, a + 1.6, a + 1.85); st('m-t1', { opacity: 1 - sw, transform: `translateY(${-sw * 60}px)`, filter: `blur(${sw * 12}px)` });
+    if (t < a + .3) rise('m-t1', t, a + .05, .3);
+    st('m-t2', { opacity: sw, transform: `translateY(${(1 - sw) * 60}px) scale(${lerp(1.3, 1, E.out(sw))})`, filter: `blur(${(1 - sw) * 12}px)` });
+    const mv = E.in(pr(t, b - .32, b)); st('m-ok2', { transform: `translateY(${-mv * 300}px) scale(${ok * (1 + mv * .35)})`, opacity: clamp(ok) }); okR = $('m-ok2').getBoundingClientRect();
+  },
+  cats(t, a, b) {
+    const C = [['cart', 'بقالة', '#F2F0EC', 'var(--ink)'], ['burger', 'مطعم', '#0F6A66', '#fff'], ['coffee', 'كافيه', '#A8622C', '#fff'], ['pill', 'صيدلية', '#062b29', '#fff'], ['box', 'أخرى', '#ECD5B3', 'var(--ink)']];
+    const step = .48, i = Math.floor((t - a) / step), last = i >= C.length;
+    const [e, w, bg, fg] = last ? ['', 'كل محلات جلاجل', '#0F6A66', '#fff'] : C[i];
+    $('s-cats').style.background = bg; $('c-head').style.color = fg; const want = last ? 'pin' : e; if ($('c-emo').dataset.v !== want) { $('c-emo').dataset.v = want; $('c-emo').innerHTML = last ? PIN_SVG : ic(e, 260); } $('c-word').textContent = w;
+    $('c-word').style.fontSize = last ? '86px' : '140px';
+    const local = last ? pr(t, a + C.length * step, a + C.length * step + .3) : pr(t, a + i * step, a + i * step + .2);
+    const kick = 1 - E.out(local);
+    st('c-cam', { transform: `scale(${1 + kick * .1}) rotate(${(i % 2 ? 1 : -1) * kick * 3}deg)` });
+    st('c-emo', { transform: `scale(${lerp(.6, 1, E.back(local))}) rotate(${(1 - local) * (i % 2 ? 20 : -20)}deg)` });
+    st('c-flash', { opacity: (1 - pr(local, 0, .35)) * .5 });
+    rise('c-head', t, a + .05, .3, 30);
+    const r = okR || { x: 330, y: 1290, width: 420, height: 100 }, m = E.back(pr(t, a, a + .38)), mc = pr(t, a, a + .18);
+    st('c-box', { left: lerp(r.x, 190, m) + 'px', top: lerp(r.y, 900, m) + 'px', width: lerp(r.width, 700, m) + 'px', height: lerp(r.height, 250, m) + 'px',
+      borderRadius: lerp(r.height / 2, 44, clamp(m)) + 'px', background: mc < 1 ? `color-mix(in srgb, #25D366 ${(1 - mc) * 100}%, #fff)` : '#fff' });
+    st('c-word', { opacity: pr(t, a + .12, a + .28) });
+    if (last) emoR = $('c-emo').querySelector('svg').getBoundingClientRect();
+  },
+  cta(t, a, b) {
+    const r = emoR || { x: 445, y: 560, width: 190, height: 241 }, pk = E.back(pr(t, a, a + .45));
+    st('t-pin', { left: lerp(r.x, 480, pk) + 'px', top: lerp(r.y, 330, pk) + 'px', width: lerp(r.width, 120, pk) + 'px', height: lerp(r.height, 155, pk) + 'px',
+      transform: `translateY(${Math.sin(t * 3) * 8 * pr(t, a + .45, a + .8)}px)` });
+    slam('t-t1', t, a + .15, .3, 2.0);
+    const uk = E.back(pr(t, a + .6, a + .95)); st('t-url', { transform: `scale(${uk})`, opacity: clamp(uk * 2) });
+    st('t-shine', { left: lerp(-200, 900, pr(t, a + 1.35, a + 1.9)) + 'px' });
+    rise('t-t2', t, a + 1.5, .35, 30); slam('t-t3', t, a + 1.95, .3, 1.6); draw('t-ul', t, a + 2.2, a + 2.5);
+    const ck = E.io(pr(t, a + .7, a + 1.25)), cx = lerp(1000, 700, ck), cy = lerp(1300, 890, ck), tap = a + 1.3;
+    const down = t >= tap - .05 && t < tap + .1; st('t-cursor', { transform: `translate(${cx}px,${cy}px) scale(${down ? .82 : 1})`, opacity: t > a + .6 && t < a + 1.9 ? 1 : 0 });
+    const rp = pr(t, tap, tap + .45); st('t-ripple', { left: cx - 8 + 'px', top: cy - 8 + 'px', width: '16px', height: '16px', opacity: rp > 0 && rp < 1 ? 1 - rp : 0, transform: `scale(${1 + rp * 10})` });
+    st('t-url', { transform: `scale(${uk * (1 - .04 * Math.sin(Math.PI * pr(t, tap, tap + .2)))})` });
+    const enter = 0;
+    st('t-cam', { transform: `scale(${lerp(1, 1.06, pr(t, a, b)) + enter * .4})`, filter: `blur(${enter * 20}px)` });
+  }
+};
+$('m-store-i').innerHTML = ic('store', 90); $('m-house-i').innerHTML = ic('house', 90); $('m-scoot').innerHTML = ic('scooter', 130);
+let cur = null;
+window.frame = t => {
+  const s = S.find(([, a, b]) => t >= a && t < b) || S[S.length - 1];
+  if (cur !== s[0]) { S.forEach(([n]) => $('s-' + n).style.display = n === s[0] ? 'block' : 'none'); cur = s[0]; }
+  SC[s[0]](t, s[1], s[2]);
+};
+window.ready = async () => { await document.fonts.load('900 100px "Readex Pro"'); await document.fonts.load('100px "Noto Color Emoji"'); };
+if (!navigator.webdriver) { const t0 = performance.now(); (function loop() { window.frame(((performance.now() - t0) / 1000) % 30); requestAnimationFrame(loop); })(); }
+</script></body></html>

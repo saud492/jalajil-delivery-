@@ -1,0 +1,258 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>@font-face{font-family:"Readex Pro";font-weight:160 900;src:url(readex.woff2) format("woff2");}
+html,body{margin:0;background:#000}canvas{display:block}</style></head>
+<body><canvas id="c"></canvas>
+<script>
+// Jalajil Delivery, 30 s promo (9:16). Nadr's 7 effects reworked for a product ad without a person:
+// match-cut -> spotlight -> orbit -> apple-toggles -> glass-widgets -> timeline -> todo -> CTA.
+const q = new URLSearchParams(location.search);
+const W = +(q.get('w') || 1080), H = +(q.get('h') || 1920), U = W / 1080;
+const c = document.getElementById('c'); c.width = W; c.height = H; const x = c.getContext('2d');
+const B = document.createElement('canvas'); B.width = W; B.height = H; const bx = B.getContext('2d');   // backdrop for frosted glass
+const COL = { teal: '#0F6A66', teal2: '#0a4f4c', deep: '#05302d', night: '#021816', cream: '#f2f0ec', copper: '#a8622c',
+  sand: '#ecd5b3', sand2: '#f6e6c8', ink: '#1d2321', wa: '#25d366', white: '#fff' };
+const FONT = '"Readex Pro",Tahoma,sans-serif', EMO = '"Noto Color Emoji"';
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v)), lerp = (a, b, t) => a + (b - a) * t, pr = (t, a, b) => clamp((t - a) / (b - a));
+const E = { out: k => 1 - Math.pow(1 - k, 3), in: k => k * k * k, io: k => k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2,
+  back: k => { const s = 1.70158; return 1 + (s + 1) * Math.pow(k - 1, 3) + s * Math.pow(k - 1, 2); } };
+const rnd = i => { const s = Math.sin(i * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
+const inOut = (t, a, b, fi = .4, fo = .25) => clamp(Math.min(E.back(pr(t, a, a + fi)), 1 - E.in(pr(t, b - fo, b))), 0, 1.2);
+const ar = n => String(n).replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[d]);
+
+function rr(g, px, py, w, h, r) { g.beginPath(); g.moveTo(px + r, py); g.arcTo(px + w, py, px + w, py + h, r); g.arcTo(px + w, py + h, px, py + h, r); g.arcTo(px, py + h, px, py, r); g.arcTo(px, py, px + w, py, r); g.closePath(); }
+function text(s, px, py, size, o = {}) {
+  x.save(); x.font = `${o.weight || 700} ${size * U}px ${o.emoji ? EMO : FONT}`;
+  x.textAlign = o.align || 'center'; x.textBaseline = 'middle'; x.direction = o.dir || (/[؀-ۿ]/.test(s) ? 'rtl' : 'ltr');
+  x.globalAlpha = clamp(o.alpha == null ? 1 : o.alpha); if (o.glow) { x.shadowColor = o.glow; x.shadowBlur = (o.blur || 30) * U; }
+  x.fillStyle = o.color || COL.white; x.fillText(s, px, py); const w = x.measureText(s).width; x.restore(); return w;
+}
+const tw = (s, size, weight = 700) => { x.save(); x.font = `${weight} ${size * U}px ${FONT}`; const w = x.measureText(s).width; x.restore(); return w; };
+function scaleAt(cx, cy, s, fn) { x.save(); x.translate(cx, cy); x.scale(s, s); x.translate(-cx, -cy); fn(); x.restore(); }
+function glass(gx, gy, gw, gh, r, a = 1, tint = 'rgba(255,255,255,.14)') {
+  if (a <= 0) return; x.save(); x.globalAlpha = clamp(a); rr(x, gx, gy, gw, gh, r); x.clip();
+  x.filter = 'blur(26px)'; x.drawImage(B, 0, 0); x.filter = 'none'; x.fillStyle = tint; x.fillRect(gx, gy, gw, gh);
+  const g = x.createLinearGradient(gx, gy, gx, gy + gh); g.addColorStop(0, 'rgba(255,255,255,.20)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = g; x.fillRect(gx, gy, gw, gh); x.restore();
+  x.save(); x.globalAlpha = clamp(a); rr(x, gx, gy, gw, gh, r); x.strokeStyle = 'rgba(255,255,255,.42)'; x.lineWidth = 2 * U; x.stroke(); x.restore();
+}
+function pin(px, py, s, col = COL.white, hole = COL.teal, a = 1) {   // map pin, tip at (px,py)
+  x.save(); x.globalAlpha = clamp(a); x.translate(px, py); x.scale(s * U, s * U);
+  x.beginPath(); x.moveTo(0, 0); x.bezierCurveTo(-18, -34, -60, -70, -60, -110); x.arc(0, -110, 60, Math.PI, 0); x.bezierCurveTo(60, -70, 18, -34, 0, 0); x.closePath();
+  x.fillStyle = col; x.fill(); x.beginPath(); x.arc(0, -110, 24, 0, 7); x.fillStyle = hole; x.fill(); x.restore();
+}
+function house(px, py, s, col, lw = 7) { x.save(); x.translate(px, py); x.scale(s * U, s * U); x.strokeStyle = col; x.lineWidth = lw; x.lineJoin = 'round'; x.lineCap = 'round';
+  x.beginPath(); x.moveTo(-50, -5); x.lineTo(0, -50); x.lineTo(50, -5); x.moveTo(-36, -16); x.lineTo(-36, 45); x.lineTo(36, 45); x.lineTo(36, -16); x.stroke();
+  x.strokeRect(-11, 15, 22, 30); x.restore(); }
+function store(px, py, s, col, lw = 7) { x.save(); x.translate(px, py); x.scale(s * U, s * U); x.strokeStyle = col; x.lineWidth = lw; x.lineJoin = 'round'; x.lineCap = 'round';
+  x.beginPath(); x.moveTo(-50, -45); x.lineTo(50, -45); x.lineTo(56, -12); x.lineTo(-56, -12); x.closePath(); x.stroke();
+  x.beginPath(); for (const k of [-28, 0, 28]) { x.moveTo(k, -45); x.lineTo(k * 1.1, -12); } x.stroke();
+  x.beginPath(); x.moveTo(-44, -12); x.lineTo(-44, 45); x.lineTo(44, 45); x.lineTo(44, -12); x.stroke(); x.strokeRect(-14, 12, 28, 33); x.restore(); }
+
+// ---------- backdrop: a slowly drifting street map in Jalajil teal ----------
+function backdrop(t, mode) {
+  const g = bx.createRadialGradient(W * .5, H * .35, 0, W * .5, H * .5, H * .8);
+  if (mode === 'dark') { g.addColorStop(0, COL.deep); g.addColorStop(1, COL.night); } else { g.addColorStop(0, '#14817c'); g.addColorStop(.6, COL.teal); g.addColorStop(1, COL.teal2); }
+  bx.fillStyle = g; bx.fillRect(0, 0, W, H);
+  bx.save(); bx.translate(W / 2, H / 2); bx.rotate(-.18); bx.translate(-W / 2 + Math.sin(t * .15) * 30 * U, -H / 2 - t * 14 * U);
+  bx.strokeStyle = mode === 'dark' ? 'rgba(236,213,179,.05)' : 'rgba(255,255,255,.07)';
+  for (let i = -6; i < 20; i++) { bx.lineWidth = (i % 4 ? 3 : 10) * U; bx.beginPath(); bx.moveTo(-400 * U, i * 150 * U); bx.lineTo(W + 400 * U, i * 150 * U + 60 * U); bx.stroke(); }
+  for (let j = -4; j < 12; j++) { bx.lineWidth = (j % 3 ? 3 : 9) * U; bx.beginPath(); bx.moveTo(j * 170 * U, -600 * U); bx.lineTo(j * 170 * U - 120 * U, H + 900 * U); bx.stroke(); }
+  bx.restore();
+  for (const [px, py, r, a] of [[.2 + .04 * Math.sin(t * .5), .18, .6, .16], [.85, .8 + .03 * Math.cos(t * .4), .55, .12]]) {
+    const gg = bx.createRadialGradient(W * px, H * py, 0, W * px, H * py, W * r);
+    gg.addColorStop(0, `rgba(236,213,179,${a})`); gg.addColorStop(1, 'rgba(236,213,179,0)'); bx.fillStyle = gg; bx.fillRect(0, 0, W, H);
+  }
+}
+
+// ---------- scenes ----------
+const S = [
+  ['match', 0, 3.4], ['spot', 3.4, 7.0], ['orbit', 7.0, 10.8], ['toggles', 10.8, 15.8],
+  ['glass', 15.8, 20.0], ['timeline', 20.0, 23.6], ['todo', 23.6, 27.0], ['cta', 27.0, 30.0]];
+window.DUR = 30;
+
+const SC = {
+  // 1. MATCH-CUT: fast cuts through "errand pain" pages, one locked word in a copper box
+  match(t, a, b) {
+    const step = .3, i = Math.floor((Math.min(t, b - .75) - a) / step);
+    const pages = [[COL.cream, 'الحر ٤٥ درجة ☀️'], [COL.teal, 'زحمة عند البقالة'], ['#ffffff', 'نسيت الخبز… مرة ثانية'], [COL.deep, 'الصيدلية بعيدة'],
+      [COL.sand2, 'المطعم ما يوصّل لحيّك'], [COL.teal2, 'مشوار عشان علبة حليب؟']];
+    const [bg, head] = pages[i % pages.length], dark = bg === COL.teal || bg === COL.deep || bg === COL.teal2;
+    const ink = dark ? 'rgba(255,255,255,' : 'rgba(29,35,33,';
+    x.fillStyle = bg; x.fillRect(0, 0, W, H);
+    // page "design": header, headline, image block, text lines (a different layout each cut)
+    text('جلاجل', W - 80 * U, 260 * U, 44, { align: 'right', color: dark ? COL.sand : COL.teal, weight: 800 });
+    x.fillStyle = ink + '.15)'; x.fillRect(70 * U, 310 * U, W - 140 * U, 3 * U);
+    text(head, W - 80 * U, 420 * U, 64, { align: 'right', color: ink + '1)', weight: 800 });
+    x.fillStyle = ink + '.08)'; rr(x, 80 * U, 500 * U, W - 160 * U, 110 * U + rnd(i) * 70 * U, 28 * U); x.fill();
+    for (let l = 0; l < 4; l++) { x.fillStyle = ink + '.13)'; rr(x, 80 * U + (l % 3) * 50 * U, 1300 * U + l * 52 * U, W - 160 * U - (l % 3) * 50 * U, 22 * U, 11 * U); x.fill(); }
+    // locked box: same spot every page
+    const rest = t >= b - .75, bw = 640 * U, bh = 190 * U, bxx = (W - bw) / 2, by = 960 * U - bh / 2;
+    text('لسّا تطلع بنفسك', W / 2, by - 90 * U, 62, { color: ink + '1)', weight: 800 });
+    const pk = rest ? E.back(pr(t, b - .75, b - .5)) : 1;
+    scaleAt(W / 2, by + bh / 2, .85 + .15 * pk, () => { x.save(); x.shadowColor = 'rgba(0,0,0,.25)'; x.shadowBlur = 30 * U; rr(x, bxx, by, bw, bh, 24 * U); x.fillStyle = rest ? COL.teal : COL.copper; x.fill(); x.restore();
+      text(rest ? 'خلّك مرتاح' : 'للبقالة؟', W / 2, by + bh / 2, 108, { color: COL.white, weight: 800 }); });
+    const fl = t >= b - .75 ? 1 - pr(t, b - .75, b - .6) : 1 - pr((t - a) % step, 0, .07); if (fl > 0) { x.fillStyle = `rgba(255,255,255,${.4 * fl})`; x.fillRect(0, 0, W, H); }
+    const out = pr(t, b - .2, b); if (out > 0) { x.fillStyle = `rgba(2,24,22,${out})`; x.fillRect(0, 0, W, H); }
+  },
+  // 2. SPOTLIGHT: lights off, the brand name glows in gold
+  spot(t, a, b) {
+    backdrop(t, 'dark'); x.drawImage(B, 0, 0);
+    const k = inOut(t, a, b, .6, .3), on = E.out(pr(t, a + .1, a + .9));
+    x.fillStyle = `rgba(0,0,0,${.45 * (1 - on)})`; x.fillRect(0, 0, W, H);
+    const g = x.createRadialGradient(W / 2, -100 * U, 0, W / 2, H * .45, W * .95);   // light cone from above
+    g.addColorStop(0, `rgba(246,230,200,${.30 * on})`); g.addColorStop(.6, `rgba(246,230,200,${.07 * on})`); g.addColorStop(1, 'rgba(246,230,200,0)');
+    x.fillStyle = g; x.fillRect(0, 0, W, H);
+    text('توصيل', W / 2, 640 * U, 70, { color: COL.sand, alpha: E.out(pr(t, a + .2, a + .7)) * k, weight: 600 });
+    const s = lerp(1.25, 1, E.out(pr(t, a, a + 1))) + .02 * Math.sin(t * 2);
+    scaleAt(W / 2, 900 * U, s, () => {
+      x.save(); x.globalAlpha = clamp(on * k); x.font = `900 ${300 * U}px ${FONT}`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.direction = 'rtl';
+      const tg = x.createLinearGradient(0, 760 * U, 0, 1040 * U); tg.addColorStop(0, COL.sand2); tg.addColorStop(.55, '#d9a86a'); tg.addColorStop(1, COL.copper);
+      x.shadowColor = 'rgba(236,190,120,.85)'; x.shadowBlur = 70 * U; x.fillStyle = tg; x.fillText('جلاجل', W / 2, 900 * U); x.restore();
+    });
+    const pk = E.back(pr(t, a + 1.0, a + 1.5)); pin(W / 2, lerp(1080, 1260, clamp(pk)) * U, .9, COL.white, COL.deep, pk * k);
+    x.save(); x.globalAlpha = clamp(.35 * pk * k); x.fillStyle = '#000'; x.beginPath(); x.ellipse(W / 2, 1268 * U, 46 * U * pk, 12 * U, 0, 0, 7); x.fill(); x.restore();
+    x.fillStyle = COL.copper; x.globalAlpha = clamp(k); x.fillRect(W / 2 - 70 * U * E.out(pr(t, a + 1.3, a + 1.8)), 1320 * U, 140 * U * E.out(pr(t, a + 1.3, a + 1.8)), 8 * U); x.globalAlpha = 1;
+    text('لمّة جلاجل على بابك', W / 2, 1420 * U, 62, { color: COL.sand, alpha: E.out(pr(t, a + 1.5, a + 2.1)) * k, weight: 700 });
+  },
+  // 3. ORBIT: the local shops circle around Jalajil, passing behind and in front
+  orbit(t, a, b) {
+    backdrop(t); x.drawImage(B, 0, 0);
+    const k = inOut(t, a, b, .6, .3), cx = W / 2, cy = 960 * U;
+    text('من محلات جلاجل', W / 2, 330 * U, 74, { alpha: E.out(pr(t, a, a + .5)) * k, weight: 800 });
+    text('المحلية', W / 2, 440 * U, 84, { color: COL.sand, alpha: E.out(pr(t, a + .15, a + .65)) * k, weight: 800 });
+    const cats = [['🛒', 'بقالة'], ['🍔', 'مطعم'], ['☕', 'كافيه'], ['💊', 'صيدلية'], ['📦', 'أخرى']], N = 5;
+    const items = [...Array(N).keys()].map(i => { const ang = i / N * Math.PI * 2 + (t - a) * 1.0; return [i, ang, Math.sin(ang)]; });
+    const rx = 340 * U * (.55 + .45 * clamp(k)), ry = 250 * U;
+    const card = ([i, ang, d]) => {
+      const px = cx + Math.cos(ang) * rx, py = cy + d * ry, s = (.72 + .28 * (d + 1) / 2) * clamp(k);
+      const cw = 210 * U * s, ch = 230 * U * s; if (s <= 0) return;
+      glass(px - cw / 2, py - ch / 2, cw, ch, 30 * U * s, clamp(k) * (.6 + .4 * (d + 1) / 2), 'rgba(242,240,236,.80)');
+      const [em, lb] = cats[i % 5]; text(em, px, py - 22 * U * s, 76 * s, { emoji: true, alpha: k });
+      text(lb, px, py + 70 * U * s, 36 * s, { color: COL.teal, weight: 800, alpha: k });
+    };
+    items.filter(p => p[2] < 0).sort((p, q) => p[2] - q[2]).forEach(card);
+    // centre: the Jalajil store
+    const ck = E.back(pr(t, a + .2, a + .7)) * clamp(k);
+    scaleAt(cx, cy, ck, () => { x.save(); x.shadowColor = 'rgba(0,0,0,.35)'; x.shadowBlur = 40 * U; x.beginPath(); x.arc(cx, cy, 150 * U, 0, 7); x.fillStyle = COL.cream; x.fill(); x.restore();
+      store(cx, cy - 10 * U, 1.35, COL.teal, 7); });
+    items.filter(p => p[2] >= 0).sort((p, q) => p[2] - q[2]).forEach(card);
+    text('بقالة · مطعم · كافيه · صيدلية · وأكثر', W / 2, 1420 * U, 44, { color: COL.sand2, alpha: E.out(pr(t, a + 1, a + 1.5)) * k, weight: 600 });
+  },
+  // 4. APPLE-TOGGLES: the three ordering steps switch on one by one
+  toggles(t, a, b) {
+    backdrop(t); x.drawImage(B, 0, 0);
+    const k = inOut(t, a, b, .5, .3);
+    text('طلبك بثلاث خطوات', W / 2, 400 * U, 78, { alpha: E.out(pr(t, a, a + .5)) * k, weight: 800 });
+    const rows = [['اختر المحل', 'بقالة، مطعم، كافيه، صيدلية', .9], ['حدّد موقعك', 'أرسل موقعك على الخريطة', 2.0], ['أرسل الطلب بالواتساب', 'يوصلنا مباشرة', 3.1]];
+    const pw = 880 * U, rh = 200 * U, ph = rows.length * rh + 40 * U, px = (W - pw) / 2, py = 560 * U;
+    x.save(); x.translate(0, (1 - clamp(k)) * 90 * U); glass(px, py, pw, ph, 44 * U, k, 'rgba(255,255,255,.12)');
+    rows.forEach(([lb, sub, at], i) => {
+      const ry = py + 20 * U + rh * i + rh / 2, on = E.io(pr(t, a + at, a + at + .3)), ia = clamp(k) * E.out(pr(t, a + .2 + i * .1, a + .6 + i * .1));
+      if (i) { x.globalAlpha = ia; x.fillStyle = 'rgba(255,255,255,.18)'; x.fillRect(px + 40 * U, ry - rh / 2, pw - 80 * U, 2 * U); x.globalAlpha = 1; }
+      x.save(); x.globalAlpha = ia; x.beginPath(); x.arc(px + pw - 80 * U, ry, 34 * U, 0, 7); x.fillStyle = on > .5 ? COL.sand : 'rgba(255,255,255,.2)'; x.fill(); x.restore();
+      text(ar(i + 1), px + pw - 80 * U, ry + 2 * U, 38, { color: on > .5 ? COL.teal : '#fff', alpha: ia, weight: 800 });
+      text(lb, px + pw - 140 * U, ry - 24 * U, 46, { align: 'right', alpha: ia, weight: 800 });
+      text(sub, px + pw - 140 * U, ry + 36 * U, 30, { align: 'right', alpha: ia * (.45 + .45 * on), color: COL.sand2, weight: 500 });
+      const sw = 150 * U, sh = 86 * U, sx = px + 50 * U, onCol = i === 2 ? COL.wa : COL.copper;
+      x.save(); x.globalAlpha = ia; rr(x, sx, ry - sh / 2, sw, sh, sh / 2); x.fillStyle = on > .5 ? onCol : 'rgba(255,255,255,.25)'; x.fill();
+      x.fillStyle = '#fff'; x.shadowColor = 'rgba(0,0,0,.3)'; x.shadowBlur = 10 * U; x.beginPath(); x.arc(sx + sh / 2 + (sw - sh) * on, ry, sh / 2 - 7 * U, 0, 7); x.fill(); x.restore();
+    });
+    x.restore();
+    const done = E.back(pr(t, a + 3.7, a + 4.1));
+    scaleAt(W / 2, 1360 * U, done, () => { x.save(); rr(x, W / 2 - 300 * U, 1300 * U, 600 * U, 120 * U, 60 * U); x.fillStyle = COL.wa; x.globalAlpha = clamp(k); x.fill(); x.restore();
+      text('✓ وصلنا طلبك', W / 2, 1362 * U, 46, { weight: 800, alpha: k }); });
+  },
+  // 5. GLASS-WIDGETS: frosted cards float around the pin: the order, the price, the payment
+  glass(t, a, b) {
+    backdrop(t); x.drawImage(B, 0, 0);
+    const k = inOut(t, a, b, .5, .3), cx = W / 2, cy = 860 * U;
+    const pk = E.back(pr(t, a, a + .5)); pin(cx, cy + 90 * U + Math.sin(t * 2) * 10 * U, 1.2, COL.cream, COL.teal, pk * clamp(k));
+    const card = (i, px, py, w, h, fn, tint) => { const ck = clamp(inOut(t, a + .25 + i * .35, b, .45, .25)); if (ck <= 0) return;
+      const bob = Math.sin(t * 1.5 + i * 1.9) * 10 * U, s = .75 + .25 * ck; x.save(); x.translate(px + w / 2, py + h / 2 + bob); x.scale(s, s); x.translate(-px - w / 2, -py - h / 2);
+      glass(px, py, w, h, 34 * U, ck, tint); fn(px, py, w, h, ck); x.restore(); };
+    card(0, 120 * U, 250 * U, 840 * U, 290 * U, (px, py, w, h, ck) => {          // WhatsApp order message
+      text('توصيل جلاجل | طلب JL-1444-124', px + w - 44 * U, py + 66 * U, 36, { align: 'right', weight: 800, alpha: ck });
+      text('بقالة: حليب ×٢، خبز ×١', px + w - 44 * U, py + 134 * U, 34, { align: 'right', alpha: ck, weight: 500, color: COL.sand2 });
+      text('📍 الموقع على الخريطة', px + w - 44 * U, py + 194 * U, 34, { align: 'right', alpha: ck, weight: 500, color: COL.sand2 });
+      text('✓✓ ١٠:٤٢', px + 44 * U, py + h - 38 * U, 26, { align: 'left', dir: 'rtl', alpha: ck, color: '#9be7ff', weight: 600 });
+    }, 'rgba(37,211,102,.22)');
+    card(1, 60 * U, 1110 * U, 470 * U, 340 * U, (px, py, w, h, ck) => {           // same price as the shop
+      house(px + w * .74, py + 100 * U, .9, '#fff', 8); text('=', px + w / 2, py + 100 * U, 64, { color: COL.sand, alpha: ck, weight: 800 }); store(px + w * .26, py + 100 * U, .9, '#fff', 8);
+      text('سعر المحل نفسه', px + w / 2, py + 215 * U, 40, { alpha: ck, weight: 800 });
+      text('بدون أي زيادة', px + w / 2, py + 275 * U, 36, { alpha: ck, color: COL.sand, weight: 700 });
+    });
+    card(2, 550 * U, 1110 * U, 470 * U, 340 * U, (px, py, w, h, ck) => {          // delivery fee
+      text('🛵', px + w / 2, py + 80 * U, 66, { emoji: true, alpha: ck });
+      text('التوصيل ٣ ريال', px + w / 2, py + 180 * U, 42, { alpha: ck, weight: 800 });
+      text('٥ للشاليه والمنتزه', px + w / 2, py + 250 * U, 32, { alpha: ck, color: COL.sand, weight: 600 });
+    });
+  },
+  // 6. TIMELINE: an editor-style track for the order, playhead runs from shop to door
+  timeline(t, a, b) {
+    backdrop(t); x.drawImage(B, 0, 0);
+    const k = inOut(t, a, b, .5, .3), p = E.io(pr(t, a + .5, b - .6));
+    text('من المحل…', W / 2, 360 * U, 70, { alpha: E.out(pr(t, a, a + .4)) * k, weight: 800, color: COL.sand });
+    text('لباب بيتك', W / 2, 470 * U, 92, { alpha: E.out(pr(t, a + .2, a + .6)) * k, weight: 800 });
+    const tx = 50 * U, twd = W - 100 * U, ty = 640 * U, th = 760 * U;
+    x.save(); x.translate(0, (1 - clamp(k)) * 90 * U); x.globalAlpha = clamp(k);
+    rr(x, tx, ty, twd, th, 36 * U); x.fillStyle = 'rgba(2,24,22,.82)'; x.fill(); x.strokeStyle = 'rgba(236,213,179,.45)'; x.lineWidth = 2 * U; x.stroke();
+    const R = tx + twd - 230 * U, L = tx + 50 * U;   // RTL: time runs right -> left
+    const tracks = [['استلمنا', COL.sand, .0], ['نجهّزه', COL.copper, .25], ['بالطريق', '#2fa79b', .5], ['وصل', COL.wa, .78]];
+    tracks.forEach(([n, col, st], i) => {
+      const y = ty + 150 * U + i * 140 * U, x0 = lerp(R, L, st), x1 = lerp(R, L, Math.min(1, st + .26));
+      const reached = p >= st; text(n, tx + twd - 40 * U, y, 36, { align: 'right', color: reached ? '#fff' : 'rgba(255,255,255,.45)', weight: 700 });
+      x.fillStyle = 'rgba(255,255,255,.08)'; rr(x, L, y - 34 * U, R - L, 68 * U, 14 * U); x.fill();
+      const fillTo = lerp(R, L, clamp(Math.min(p, st + .26))); if (p > st) { x.fillStyle = col; rr(x, fillTo, y - 34 * U, x0 - fillTo, 68 * U, 14 * U); x.fill(); }
+    });
+    // road with a moving scooter under the tracks
+    const ry = ty + th - 110 * U; x.strokeStyle = 'rgba(255,255,255,.35)'; x.setLineDash([18 * U, 16 * U]); x.lineWidth = 4 * U; x.beginPath(); x.moveTo(L, ry); x.lineTo(R, ry); x.stroke(); x.setLineDash([]);
+    store(R + 10 * U, ry - 10 * U, .55, COL.sand, 9); house(L - 5 * U, ry - 8 * U, .55, COL.sand, 9);
+    text('🛵', lerp(R - 60 * U, L + 70 * U, p), ry - 46 * U, 64, { emoji: true });
+    const phx = lerp(R, L, p); x.shadowColor = COL.sand2; x.shadowBlur = 28 * U; x.fillStyle = COL.sand2; x.fillRect(phx - 3 * U, ty + 80 * U, 6 * U, th - 240 * U);
+    x.beginPath(); x.moveTo(phx - 16 * U, ty + 68 * U); x.lineTo(phx + 16 * U, ty + 68 * U); x.lineTo(phx, ty + 90 * U); x.fill(); x.shadowBlur = 0;
+    const pct = Math.round(100 * p); text(pct >= 100 ? 'وصل طلبك ✓' : 'طلبك ' + ar(pct) + '٪', tx + 44 * U, ty + 50 * U, 32, { align: 'left', dir: 'rtl', color: pct >= 100 ? COL.wa : '#fff', weight: 800 });
+    x.restore();
+  },
+  // 7. TODO: why Jalajil, each point ticks on time
+  todo(t, a, b) {
+    backdrop(t); x.drawImage(B, 0, 0);
+    const k = inOut(t, a, b, .5, .3);
+    const items = [['سعر المحل نفسه', .6], ['التوصيل ٣ ريال بس', 1.2], ['موقعك على الخريطة', 1.8], ['طلبك يوصلنا واتساب', 2.4]];
+    const pw = 820 * U, ph = (200 + items.length * 130) * U, px = (W - pw) / 2, py = 560 * U;
+    scaleAt(W / 2, py, .85 + .15 * clamp(k), () => {
+      glass(px, py, pw, ph, 44 * U, k, 'rgba(242,240,236,.12)'); text('ليش جلاجل؟', W / 2, py + 100 * U, 66, { alpha: k, color: COL.sand, weight: 800 });
+      items.forEach(([s, at], i) => {
+        const ry = py + 230 * U + i * 130 * U, on = E.back(pr(t, a + at, a + at + .3)), ia = clamp(k) * E.out(pr(t, a + .15 + i * .1, a + .5 + i * .1)), cxx = px + pw - 80 * U;
+        x.save(); x.globalAlpha = ia; x.strokeStyle = '#fff'; x.lineWidth = 4 * U; x.beginPath(); x.arc(cxx, ry, 30 * U, 0, 7); x.stroke();
+        if (on > 0) { x.fillStyle = COL.wa; x.beginPath(); x.arc(cxx, ry, 30 * U * clamp(on, 0, 1.2), 0, 7); x.fill();
+          x.strokeStyle = '#fff'; x.lineWidth = 6 * U; x.lineCap = 'round'; x.beginPath(); x.moveTo(cxx - 13 * U, ry); x.lineTo(cxx - 3 * U, ry + 11 * U); x.lineTo(cxx + 14 * U, ry - 11 * U); x.stroke(); }
+        x.restore(); text(s, cxx - 64 * U, ry, 48, { align: 'right', alpha: ia * (on > 0 ? 1 : .55), weight: on > 0 ? 800 : 500 });
+      });
+    });
+  },
+  // 8. CTA
+  cta(t, a, b) {
+    backdrop(t); x.drawImage(B, 0, 0);
+    const pk = E.back(pr(t, a, a + .5)); pin(W / 2, 760 * U + Math.sin(t * 2.4) * 10 * U, 1.25, COL.white, COL.teal, pk);
+    x.fillStyle = COL.copper; const lk = E.out(pr(t, a + .3, a + .7)); x.fillRect(W / 2 - 90 * U * lk, 810 * U, 180 * U * lk, 9 * U);
+    text('اطلب الحين', W / 2, 960 * U, 120, { alpha: E.out(pr(t, a + .3, a + .8)), weight: 900 });
+    const uk = E.back(pr(t, a + .7, a + 1.2));
+    scaleAt(W / 2, 1150 * U, uk, () => { x.save(); x.shadowColor = 'rgba(0,0,0,.3)'; x.shadowBlur = 30 * U; rr(x, W / 2 - 400 * U, 1085 * U, 800 * U, 130 * U, 34 * U); x.fillStyle = '#fff'; x.fill(); x.restore();
+      text('jalajil-delivery.netlify.app', W / 2, 1152 * U, 50, { color: COL.teal, weight: 800, dir: 'ltr' }); });
+    text('وطلبك يوصلنا على الواتساب مباشرة', W / 2, 1300 * U, 42, { color: COL.sand, alpha: E.out(pr(t, a + 1.1, a + 1.6)), weight: 600 });
+    const sh = pr(t, a + 1.3, a + 2.3); if (sh > 0 && sh < 1) { x.save(); x.globalCompositeOperation = 'lighter'; rr(x, W / 2 - 400 * U, 1085 * U, 800 * U, 130 * U, 34 * U); x.clip();
+      const gx = lerp(W / 2 + 500 * U, W / 2 - 500 * U, sh), g = x.createLinearGradient(gx - 80 * U, 0, gx + 80 * U, 0); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(.5, 'rgba(255,255,255,.55)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+      x.fillStyle = g; x.fillRect(gx - 80 * U, 1085 * U, 160 * U, 130 * U); x.restore(); }
+  }
+};
+
+window.frame = async t => {
+  x.clearRect(0, 0, W, H);
+  const cur = S.find(([, a, b]) => t >= a && t < b) || S[S.length - 1];
+  SC[cur[0]](t, cur[1], cur[2]);
+  // short white flash on every cut after the first scene
+  S.forEach(([, a]) => { if (a > 0) { const f = 1 - pr(t, a, a + .12); if (t >= a && f > 0) { x.fillStyle = `rgba(255,255,255,${.22 * f})`; x.fillRect(0, 0, W, H); } } });
+};
+window.ready = () => {};
+if (!navigator.webdriver) { let t0 = performance.now(); (function loop() { window.frame(((performance.now() - t0) / 1000) % window.DUR); requestAnimationFrame(loop); })(); }
+</script></body></html>

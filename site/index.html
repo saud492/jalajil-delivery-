@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>توصيل جلاجل</title>
+<meta name="description" content="اطلب من محلات جلاجل: بقالة، مطعم، كافيه، صيدلية. سعر المحل نفسه بدون أي زيادة، والتوصيل ٣ ريال للبيت.">
+<!-- شكل الرابط لما ينرسل في الواتساب وتويتر وسناب -->
+<meta property="og:type" content="website">
+<meta property="og:locale" content="ar_SA">
+<meta property="og:site_name" content="توصيل جلاجل">
+<meta property="og:title" content="توصيل جلاجل · لمّة جلاجل على بابك">
+<meta property="og:description" content="اطلب من محلات جلاجل بسعر المحل نفسه، والتوصيل ٣ ريال للبيت. طلبك يوصلنا على الواتساب مباشرة.">
+<meta property="og:url" content="https://jalajil-delivery.netlify.app/">
+<meta property="og:image" content="https://jalajil-delivery.netlify.app/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0f6a66">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="توصيل جلاجل">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@500;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f3f1ec;--surface:#fffdf9;--ink:#1f2a2b;--muted:#5f6b6b;--line:#dcd8cf;
+  --accent:#0f6a66;--accent-ink:#ffffff;--accent-soft:#e1efed;--stone:#a4652f;--wa:#1f8f4e;--ok:#0f6a66;
+  --font-display:"Readex Pro","IBM Plex Sans Arabic",system-ui,sans-serif;
+  --font-body:"IBM Plex Sans Arabic",system-ui,"Segoe UI",Tahoma,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#141a1a;--surface:#1c2424;--ink:#e9eeec;--muted:#a3b0ae;--line:#2f3a3a;
+    --accent:#4fb8b0;--accent-ink:#0b1414;--accent-soft:#1f3433;--stone:#d39a63;--wa:#3cc178;--ok:#4fb8b0;
+    color-scheme:dark;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.6}
+.wrap{max-width:560px;margin:0 auto;padding:20px 16px 48px;display:flex;flex-direction:column;gap:16px}
+header{display:flex;flex-direction:column;gap:6px;padding:4px 2px 8px}
+.tag{align-self:flex-start;font-size:12px;font-weight:600;color:var(--stone);border:1px solid var(--stone);border-radius:999px;padding:2px 10px}
+h1{font-family:var(--font-display);font-weight:700;font-size:28px;line-height:1.25;margin:0;text-wrap:balance}
+.lead{margin:0;color:var(--muted)}
+.lead b{color:var(--ink)}
+.fees{display:flex;flex-wrap:wrap;gap:8px}
+.fees>span{background:var(--accent-soft);border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:14px;color:var(--ink)}
+.fees b{color:var(--accent)}
+.promo-banner{background:var(--accent-soft);border:1px solid var(--accent);color:var(--ink);border-radius:12px;padding:10px 14px;font-size:15px}
+.promo-banner b{color:var(--accent)}
+section.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px}
+h2{font-family:var(--font-display);font-weight:500;font-size:17px;margin:0;display:flex;align-items:center;gap:8px}
+h2 .n{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-size:13px;font-variant-numeric:tabular-nums}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.opt{position:relative}
+.opt input{position:absolute;opacity:0;inset:0;width:100%;height:100%;margin:0;cursor:pointer}
+.opt span{display:block;text-align:center;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--bg);font-weight:500;cursor:pointer}
+.opt input:checked + span{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.opt input:focus-visible + span{outline:2px solid var(--accent);outline-offset:2px}
+.chips .opt span{padding:7px 14px;border-radius:999px;font-size:15px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:14px;color:var(--muted);font-weight:500}
+input[type=text],input[type=tel],input[type=url],input[type=time],textarea,select{
+  font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%}
+textarea{min-height:84px;resize:vertical}
+input:focus-visible,textarea:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:400px){.row{grid-template-columns:1fr}}
+.shop{border:1px dashed var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.shop-top{display:flex;justify-content:space-between;align-items:center;font-size:14px;color:var(--muted)}
+button{font:inherit;cursor:pointer}
+.ghost{background:none;border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:8px 12px}
+.link{background:none;border:none;color:var(--stone);padding:2px 4px;font-size:14px}
+.pack{display:flex;flex-direction:column;gap:6px}
+.item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.item:last-child{border-bottom:none}
+.qty{display:flex;align-items:center;gap:6px}
+.qty button{width:32px;height:32px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:18px;line-height:1}
+.qty output{min-width:22px;text-align:center;font-variant-numeric:tabular-nums;font-weight:600}
+.hint{font-size:13px;color:var(--muted);margin:0}
+.hidden{display:none !important}
+.summary{border-color:var(--accent)}
+.codebox{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end}
+.codebox .ghost{height:44px}
+.codemsg{font-size:13px;margin:0}
+.codemsg.ok{color:var(--ok)}
+.codemsg.bad{color:#b3261e}
+@media (prefers-color-scheme: dark){.codemsg.bad{color:#ff8a80}}
+.totals{display:flex;flex-direction:column;gap:4px;font-size:15px}
+.totals div{display:flex;justify-content:space-between}
+.totals .v{font-variant-numeric:tabular-nums;font-weight:600}
+.totals .old{text-decoration:line-through;color:var(--muted);font-weight:400;margin-inline-end:6px}
+pre.msg{margin:0;white-space:pre-wrap;word-break:break-word;font-family:var(--font-body);font-size:14px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px;max-height:320px;overflow:auto}
+.actions{display:grid;grid-template-columns:1fr;gap:8px}
+.wa{display:flex;align-items:center;justify-content:center;gap:8px;background:var(--wa);color:#fff;text-decoration:none;border-radius:12px;padding:12px;font-weight:600}
+.wa[aria-disabled="true"]{opacity:.45;pointer-events:none}
+.err{color:#b3261e;font-size:13px;margin:0}
+@media (prefers-color-scheme: dark){.err{color:#ff8a80}}
+footer{font-size:13px;color:var(--muted);text-align:center}
+.locate{display:flex;align-items:center;justify-content:center;gap:8px;background:var(--accent);color:var(--accent-ink);border:none;border-radius:12px;padding:12px;font-weight:600}
+.locate[disabled]{opacity:.6}
+.status{display:flex;align-items:center;gap:8px;border-radius:12px;padding:10px 14px;font-size:15px;border:1px solid var(--line);background:var(--surface)}
+.status::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--muted);flex:none}
+.status.open::before{background:#1f8f4e;box-shadow:0 0 0 4px rgba(31,143,78,.18)}
+.status.closed::before{background:#b3261e}
+.again{background:var(--surface);border:1px dashed var(--accent);color:var(--accent);border-radius:12px;padding:12px;font-weight:600}
+.share{display:flex;align-items:center;justify-content:center;gap:8px;background:none;border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:12px;font-weight:600;width:100%}
+@media (prefers-reduced-motion: reduce){*{transition:none !important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="tag">تجربة ٣ أسابيع</span>
+    <h1>اطلب من محلات جلاجل</h1>
+    <p style="margin:0;font-family:var(--font-display);font-weight:500;font-size:18px;color:var(--stone)">لمّة جلاجل على بابك</p>
+    <p class="lead">تدفع <b>سعر المحل نفسه</b> بدون أي زيادة.</p>
+    <div class="fees">
+      <span><b>توصيل البيوت</b> <span id="feeTop"></span> ريال</span>
+      <span><b>توصيل الشاليهات والمنتزه</b> <span id="chaletTop"></span> ريال</span>
+    </div>
+    <div class="promo-banner hidden" id="promoBanner"></div>
+    <div class="status hidden" id="status" aria-live="polite"></div>
+    <button type="button" class="again hidden" id="again">🔁 اطلب نفس طلبك الماضي</button>
+  </header>
+
+  <form id="f" novalidate>
+    <div class="wrap" style="padding:0;gap:16px">
+
+    <section class="card">
+      <h2><span class="n">١</span>وين نوصّل؟</h2>
+      <div class="seg" role="radiogroup" aria-label="نوع التوصيل">
+        <label class="opt"><input type="radio" name="dest" id="dest-home" value="home" checked><span>البيت</span></label>
+        <label class="opt"><input type="radio" name="dest" id="dest-chalet" value="chalet"><span>شاليه أو المنتزه</span></label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2><span class="n">٢</span>وش تبي؟</h2>
+      <div id="shops" class="pack"></div>
+      <button type="button" class="ghost" id="addShop">+ طلب من محل ثاني</button>
+
+      <div id="chaletPack" class="hidden">
+        <h2 style="margin-top:6px">باقة الشاليه</h2>
+        <p class="hint">نجيبها من بقالات جلاجل وتوصل قبل وصولك أو معك.</p>
+        <div class="pack" id="packItems"></div>
+        <label class="f" for="packOther">أغراض ثانية للشاليه
+          <input type="text" id="packOther" placeholder="مثال: صحون وأكواب، ولاعة، مناديل">
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2><span class="n">٣</span>بياناتك</h2>
+      <div class="row">
+        <label class="f" for="name"><span id="nameLbl">الاسم</span><input type="text" id="name" autocomplete="name" placeholder="مثال: سعود سليمان الضويحي"></label>
+        <label class="f" for="phone">الجوال<input type="tel" id="phone" inputmode="tel" autocomplete="tel" placeholder="05xxxxxxxx أو +971…"></label>
+      </div>
+      <button type="button" class="locate" id="locate">📍 حدّد موقعي تلقائياً</button>
+      <p class="codemsg hidden" id="locMsg" aria-live="polite"></p>
+      <label class="f" for="map">موقعك على الخريطة (مطلوب)
+        <input type="url" id="map" inputmode="url" placeholder="اضغط الزر فوق، أو الصق رابط الموقع هنا">
+      </label>
+      <p class="hint">لو الزر ما اشتغل: افتح قوقل ماب، اضغط مطولاً على مكانك، اضغط مشاركة ثم انسخ الرابط والصقه فوق.</p>
+      <label class="f" for="place"><span id="placeLabel">علامة مميزة (اختياري)</span>
+        <input type="text" id="place" autocomplete="street-address" placeholder="مثال: باب أخضر جنب المسجد">
+      </label>
+      <label class="f" for="pay">طريقة الدفع
+        <select id="pay">
+          <option>كاش عند الاستلام</option>
+          <option>مدى عند الاستلام</option>
+          <option>تحويل بنكي</option>
+          <option id="payTasjeel" hidden disabled>تسجيل على حسابي عند البقالة</option>
+        </select>
+      </label>
+      <p class="hint hidden" id="tasjeelHint">رسوم التوصيل تدفعها للمندوب، وقيمة الطلب تنسجّل على حسابك عند البقالة (بشرط توافق البقالة).</p>
+      <label class="f" for="note">ملاحظة للمندوب (اختياري)
+        <input type="text" id="note" placeholder="مثال: اتصل لا توصل">
+      </label>
+    </section>
+
+    <section class="card">
+      <h2><span class="n">٤</span>عندك كود خصم؟</h2>
+      <div class="codebox">
+        <label class="f" for="code">الكود
+          <input type="text" id="code" autocomplete="off" autocapitalize="characters" placeholder="اكتب الكود هنا">
+        </label>
+        <button type="button" class="ghost" id="applyCode">تطبيق</button>
+      </div>
+      <p class="codemsg hidden" id="codeMsg" aria-live="polite"></p>
+    </section>
+
+    <section class="card summary" aria-live="polite">
+      <h2><span class="n">٥</span>راجع وأرسل</h2>
+      <div class="totals">
+        <div><span>رسوم التوصيل</span><span class="v" id="feeSum"></span></div>
+        <div><span>قيمة الطلب</span><span class="v">حسب فاتورة المحل</span></div>
+      </div>
+      <pre class="msg" id="msg"></pre>
+      <p class="err hidden" id="err"></p>
+      <div class="actions">
+        <a class="wa" id="send" href="#" target="_blank" rel="noopener">أرسل الطلب بالواتساب</a>
+      </div>
+      <p class="hint" id="waHint"></p>
+    </section>
+
+    </div>
+  </form>
+
+  <button type="button" class="share" id="share">💬 شارك توصيل جلاجل مع أهلك وجيرانك</button>
+  <p style="text-align:center;margin:0"><a href='/install' style='color:var(--accent);font-weight:600'>📲 كيف أثبّت الموقع كتطبيق على جوالي؟</a></p>
+  <footer>نسخة تجريبية. الأسعار والرسوم مبدئية وتتعدل قبل الإطلاق.</footer>
+</div>
+
+<script>
+/* ===== الإعدادات: عدّلها قبل ما تشغّل التجربة ===== */
+const CONFIG = {
+  serviceName: "توصيل جلاجل",
+  whatsapp2: "",                      // الرقم الثاني (اتركه فاضي الحين). بعد ما تضيفه الطلبات توزّع تلقائياً
+  split: "alternate",                 // "alternate" = بالتناوب بين الرقمين | "category" = البقالة للرقم الأول والباقي للثاني
+  whatsapp: "966582312869",          // رقم الواتساب بصيغة دولية بدون + مثل 9665XXXXXXXX. لو فاضي، الزر يفتح الواتساب وتختار المحادثة بنفسك
+  deliveryFee: 3,        // رسوم التوصيل للبيوت داخل جلاجل
+  chaletFee: 5,          // رسوم التوصيل للشاليهات والمنتزه
+  // كود الخصم: يخصم نسبة من رسوم التوصيل في يوم محدد فقط. حط code فاضي لو ما تبي أكواد
+  promo: {
+    code: "JALAJIL",         // الكود (الحروف الكبيرة والصغيرة سواء)
+    discount: 0.5,           // 0.5 = نصف رسوم التوصيل
+    validDate: "2026-11-20", // اليوم اللي يشتغل فيه الكود (سنة-شهر-يوم) بتوقيت الرياض. غيّره لليوم اللي تبيه
+    oncePerPhone: true       // مرة وحدة لكل رقم جوال، وانت تتأكد منها لما يوصلك الطلب
+  },
+  // أوقات استقبال الطلبات بتوقيت الرياض (24 ساعة). خلّها null لو ما تبي تظهر حالة مفتوح/مسكّر
+  // مثال: hours: { open: "16:00", close: "23:30" }   (لو الإغلاق بعد نص الليل اكتب مثلاً "01:00")
+  hours: null,
+  categories: ["بقالة","مطعم","كافيه","صيدلية","أخرى"],
+  shops: [],
+  chaletItems: ["فحم","ثلج (كيس)","ماء (كرتون)","قهوة عربية بالدلة","تمر","شاي"]
+};
+/* ================================================= */
+
+const $ = s => document.querySelector(s);
+const shopsEl = $("#shops");
+let shopCount = 0;
+const packQty = {};
+let promoApplied = false;
+
+function todayRiyadh(){
+  return new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Riyadh",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+}
+function dateLabel(iso){
+  try{ return new Intl.DateTimeFormat("ar-SA",{timeZone:"Asia/Riyadh",weekday:"long",day:"numeric",month:"long"}).format(new Date(iso+"T12:00:00+03:00")); }
+  catch(e){ return iso; }
+}
+const P = CONFIG.promo;
+const promoOn = !!(P && P.code);
+const promoToday = promoOn && todayRiyadh() === P.validDate;
+
+function shopBlock(){
+  shopCount++;
+  const id = "s" + shopCount;
+  const d = document.createElement("div");
+  d.className = "shop"; d.dataset.id = id;
+  const chips = CONFIG.categories.map((c,i)=>
+    `<label class="opt"><input type="radio" name="${id}-cat" id="${id}-cat-${i}" value="${c}" ${i===0?"checked":""}><span>${c}</span></label>`).join("");
+  d.innerHTML = `
+    <div class="shop-top"><span>محل رقم ${shopsEl.children.length+1}</span>
+      <button type="button" class="link" data-remove="${id}">حذف</button></div>
+    <div class="chips" role="radiogroup" aria-label="نوع المحل">${chips}</div>
+    <label class="f" for="${id}-name">اسم المحل
+      <input type="text" id="${id}-name" list="shopList" placeholder="اكتب اسم المحل">
+    </label>
+    <label class="f" for="${id}-items">الطلب
+      <textarea id="${id}-items" placeholder="مثال:&#10;برجر لحم ×٢&#10;بطاطس كبير ×١&#10;بدون بصل"></textarea>
+    </label>`;
+  shopsEl.appendChild(d);
+  refreshRemove();
+}
+function refreshRemove(){
+  const blocks = shopsEl.querySelectorAll(".shop");
+  blocks.forEach((b,i)=>{
+    b.querySelector(".shop-top span").textContent = "محل رقم " + (i+1);
+    b.querySelector("[data-remove]").classList.toggle("hidden", blocks.length===1);
+  });
+}
+shopsEl.addEventListener("click", e=>{
+  const id = e.target.dataset && e.target.dataset.remove;
+  if(!id) return;
+  const b = shopsEl.querySelector(`[data-id="${id}"]`);
+  if(b){ b.remove(); refreshRemove(); render(); }
+});
+$("#addShop").addEventListener("click", ()=>{ shopBlock(); render(); });
+
+function buildPack(){
+  const box = $("#packItems");
+  box.innerHTML = CONFIG.chaletItems.map((it,i)=>`
+    <div class="item"><span>${it}</span>
+      <div class="qty">
+        <button type="button" aria-label="أنقص ${it}" data-q="${i}" data-d="-1">−</button>
+        <output id="q${i}">0</output>
+        <button type="button" aria-label="زِد ${it}" data-q="${i}" data-d="1">+</button>
+      </div></div>`).join("");
+  CONFIG.chaletItems.forEach((_,i)=>packQty[i]=0);
+  box.addEventListener("click", e=>{
+    const q = e.target.dataset.q; if(q===undefined) return;
+    packQty[q] = Math.max(0, packQty[q] + Number(e.target.dataset.d));
+    $("#q"+q).textContent = packQty[q];
+    render();
+  });
+}
+
+function datalist(){
+  const dl = document.createElement("datalist"); dl.id = "shopList";
+  dl.innerHTML = CONFIG.shops.map(s=>`<option value="${s}"></option>`).join("");
+  document.body.appendChild(dl);
+}
+
+const orderNo = (()=>{
+  const d = new Date();
+  const hh = String(d.getHours()).padStart(2,"0"), mm = String(d.getMinutes()).padStart(2,"0");
+  return "JL-" + hh + mm + "-" + Math.floor(100 + Math.random()*900);
+})();
+
+function dest(){ return document.querySelector('input[name="dest"]:checked').value; }
+function baseFee(){ return dest()==="chalet" ? CONFIG.chaletFee : CONFIG.deliveryFee; }
+function fee(){ return promoApplied ? baseFee() * (1 - P.discount) : baseFee(); }
+function fmt(n){ return (Math.round(n*100)/100).toString().replace(/\.0+$/,""); }
+
+function checkCode(){
+  const typed = $("#code").value.trim();
+  const msg = $("#codeMsg");
+  msg.classList.remove("hidden","ok","bad");
+  if(!typed){ promoApplied = false; msg.classList.add("hidden"); return; }
+  if(!promoOn || typed.toUpperCase() !== P.code.toUpperCase()){
+    promoApplied = false; msg.classList.add("bad"); msg.textContent = "الكود غير صحيح"; return;
+  }
+  if(!promoToday){
+    promoApplied = false; msg.classList.add("bad");
+    msg.textContent = "الكود يشتغل فقط يوم " + dateLabel(P.validDate); return;
+  }
+  promoApplied = true; msg.classList.add("ok");
+  msg.textContent = "تم تطبيق الكود: خصم " + Math.round(P.discount*100) + "٪ من رسوم التوصيل";
+  if(P.oncePerPhone) msg.textContent += " (مرة وحدة لكل رقم جوال)";
+}
+$("#applyCode").addEventListener("click", ()=>{ checkCode(); render(); });
+$("#code").addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); checkCode(); render(); } });
+$("#code").addEventListener("input", ()=>{ if(promoApplied){ promoApplied=false; $("#codeMsg").classList.add("hidden"); render(); } });
+
+function collect(){
+  const shops = [...shopsEl.querySelectorAll(".shop")].map(b=>{
+    const id = b.dataset.id;
+    const cat = b.querySelector(`input[name="${id}-cat"]:checked`).value;
+    return { cat, name: $("#"+id+"-name").value.trim(), items: $("#"+id+"-items").value.trim() };
+  }).filter(s=>s.name || s.items);
+  const pack = CONFIG.chaletItems.map((it,i)=>packQty[i] ? `${it} ×${packQty[i]}` : null).filter(Boolean);
+  const other = $("#packOther").value.trim();
+  if(dest()==="chalet" && other) pack.push(other);
+  return { shops, pack: dest()==="chalet" ? pack : [] };
+}
+
+function message(){
+  const {shops, pack} = collect();
+  const L = [];
+  L.push(`*${CONFIG.serviceName} | طلب ${orderNo}*`);
+  L.push(`التوصيل إلى: ${dest()==="chalet" ? "شاليه / المنتزه" : "البيت"}`);
+  L.push("");
+  if(shops.length){
+    shops.forEach((s,i)=>{
+      L.push(`*${i+1}) ${s.cat}${s.name ? " | " + s.name : ""}*`);
+      L.push(s.items || "(اكتب الطلب)");
+      L.push("");
+    });
+  }
+  if(pack.length){
+    L.push("*باقة الشاليه*");
+    pack.forEach(p=>L.push("- " + p));
+    L.push("");
+  }
+  if(!shops.length && !pack.length){ L.push("(ما فيه طلب للحين)"); L.push(""); }
+  L.push(`الاسم: ${$("#name").value.trim() || "—"}`);
+  L.push(`الجوال: ${$("#phone").value.trim() || "—"}`);
+  L.push(`الموقع: ${$("#map").value.trim() || "—"}`);
+  const pl = $("#place").value.trim(); if(pl) L.push(`${dest()==="chalet" ? "الشاليه" : "علامة مميزة"}: ${pl}`);
+  L.push(`الدفع: ${$("#pay").value}`);
+  const note = $("#note").value.trim(); if(note) L.push(`ملاحظة: ${note}`);
+  L.push("");
+  if(promoApplied) L.push(`رسوم التوصيل: ${fmt(fee())} ريال (بدل ${baseFee()}، كود الخصم: ${P.code.toUpperCase()})`);
+  else L.push(`رسوم التوصيل: ${baseFee()} ريال`);
+  L.push("قيمة الطلب: حسب فاتورة المحل بدون زيادة");
+  return L.join("\n");
+}
+
+function phoneOk(v){
+  let s = v.replace(/[\s\-()]/g,"");
+  if(/^05\d{8}$/.test(s)) return true;          // سعودي محلي
+  if(/^\+?\d{8,15}$/.test(s) && /^(\+|00|9665|\d{10,15}$)/.test(s)) return true; // أي رقم دولي
+  return false;
+}
+function problems(){
+  const {shops, pack} = collect();
+  const p = [];
+  if(!shops.length && !pack.length) p.push("اكتب طلبك من محل واحد على الأقل");
+  if(!$("#name").value.trim()) p.push("الاسم");
+  else if($("#pay").value===$("#payTasjeel").value && $("#name").value.trim().split(/\s+/).filter(Boolean).length<2) p.push("الاسم الكامل مع اسم العائلة (للتسجيل عند البقالة)");
+  if(!phoneOk($("#phone").value)) p.push("رقم جوال صحيح (مثال: 05xxxxxxxx أو +971xxxxxxxxx)");
+  if(!/^https?:\/\/\S+$/i.test($("#map").value.trim())) p.push("رابط موقعك من قوقل ماب");
+  if($("#pay").value===$("#payTasjeel").value && shops.some(x=>x.cat==="بقالة" && !x.name)) p.push("اسم البقالة (للتسجيل على الحساب)");
+  return p;
+}
+
+function render(){
+  const isChalet = dest()==="chalet";
+  $("#chaletPack").classList.toggle("hidden", !isChalet);
+  $("#placeLabel").textContent = isChalet ? "اسم الشاليه أو القسم (اختياري)" : "علامة مميزة (اختياري)";
+  $("#place").placeholder = isChalet ? "مثال: شاليه موج، القسم الثاني" : "مثال: باب أخضر جنب المسجد";
+  const hasGrocery = [...shopsEl.querySelectorAll(".shop")].some(b=>{const r=b.querySelector('input[type=radio]:checked'); return r && r.value==="بقالة";});
+  const tj = $("#payTasjeel"); tj.hidden = !hasGrocery; tj.disabled = !hasGrocery;
+  if(!hasGrocery && $("#pay").value===tj.value) $("#pay").selectedIndex = 0;
+  $("#nameLbl").textContent = $("#pay").value===tj.value ? "الاسم الكامل (للتسجيل عند البقالة)" : "الاسم";
+  $("#tasjeelHint").classList.toggle("hidden", $("#pay").value!==tj.value);
+  $("#feeTop").textContent = CONFIG.deliveryFee;
+  $("#chaletTop").textContent = CONFIG.chaletFee;
+  const pb = $("#promoBanner");
+  if(promoOn && promoToday){
+    pb.classList.remove("hidden");
+    pb.innerHTML = "عرض اليوم: خصم <b>" + Math.round(P.discount*100) + "٪</b> من رسوم التوصيل بكود خاص، مرة وحدة لكل رقم. اكتب الكود بالخطوة ٤.";
+  } else pb.classList.add("hidden");
+  $("#feeSum").innerHTML = promoApplied
+    ? `<span class="old">${baseFee()}</span>${fmt(fee())} ريال`
+    : baseFee() + " ريال";
+  const text = message();
+  $("#msg").textContent = text;
+  const p = problems();
+  const err = $("#err");
+  if(p.length){ err.textContent = "باقي: " + p.join("، "); err.classList.remove("hidden"); }
+  else { err.classList.add("hidden"); }
+  const send = $("#send");
+  let num = CONFIG.whatsapp;
+  if(CONFIG.whatsapp2){
+    if(CONFIG.split==="category"){
+      const g = [...shopsEl.querySelectorAll(".shop")].some(b=>{const r=b.querySelector('input[type=radio]:checked'); return r && r.value==="بقالة";});
+      num = g ? CONFIG.whatsapp : CONFIG.whatsapp2;
+    } else {
+      let n=0; try{ n=+localStorage.getItem("waTurn")||0; }catch(e){}
+      num = n%2===0 ? CONFIG.whatsapp : CONFIG.whatsapp2;
+    }
+  }
+  const base = num ? `https://wa.me/${num}` : "https://wa.me/";
+  send.href = base + "?text=" + encodeURIComponent(text);
+  send.setAttribute("aria-disabled", p.length ? "true" : "false");
+  $("#waHint").textContent = CONFIG.whatsapp
+    ? "يفتح الواتساب والرسالة جاهزة، اضغط إرسال هناك."
+    : "رقم الخدمة ما انضاف للحين، فالزر يفتح الواتساب وتختار المحادثة بنفسك.";
+}
+
+$("#send").addEventListener("click", ()=>{
+  if(CONFIG.whatsapp2 && CONFIG.split!=="category" && $("#send").getAttribute("aria-disabled")!=="true"){
+    try{ localStorage.setItem("waTurn", String((+localStorage.getItem("waTurn")||0)+1)); }catch(e){}
+    setTimeout(render,300);
+  }
+});
+document.getElementById("f").addEventListener("input", render);
+document.getElementById("f").addEventListener("change", render);
+document.getElementById("f").addEventListener("submit", e=>e.preventDefault());
+
+/* تذكّر بيانات العميل على جهازه عشان ما يعيدها المرة الجاية */
+const SAVE_IDS = ["name","phone","place","map"];
+function loadSaved(){
+  try{
+    const s = JSON.parse(localStorage.getItem("jl-customer") || "{}");
+    SAVE_IDS.forEach(id=>{ if(s[id]) $("#"+id).value = s[id]; });
+    if(s.dest==='chalet') $("#dest-chalet").checked = true;
+  }catch(e){}
+}
+function saveNow(){
+  try{
+    const s = {dest: dest()};
+    SAVE_IDS.forEach(id=>{ s[id] = $("#"+id).value.trim(); });
+    localStorage.setItem("jl-customer", JSON.stringify(s));
+  }catch(e){}
+}
+document.getElementById("f").addEventListener("change", saveNow);
+
+/* ===== تحديد الموقع تلقائياً من الجوال ===== */
+$("#locate").addEventListener("click", ()=>{
+  const btn = $("#locate"), msg = $("#locMsg");
+  const say = (t, ok) => { msg.textContent = t; msg.classList.remove("hidden","ok","bad"); msg.classList.add(ok ? "ok" : "bad"); };
+  if(!("geolocation" in navigator)){ say("جوالك ما يدعم تحديد الموقع، الصق الرابط من قوقل ماب.", false); return; }
+  btn.disabled = true; btn.textContent = "⏳ جاري تحديد موقعك…";
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const {latitude:la, longitude:lo, accuracy:acc} = pos.coords;
+    $("#map").value = `https://maps.google.com/?q=${la.toFixed(6)},${lo.toFixed(6)}`;
+    say(acc > 100 ? "تم تحديد موقعك تقريبياً. لو بعيد، الصق الرابط من قوقل ماب." : "تم تحديد موقعك ✓", acc <= 100);
+    btn.disabled = false; btn.textContent = "📍 حدّد موقعي تلقائياً";
+    saveNow(); render();
+  }, err=>{
+    say(err.code === 1 ? "ما سمحت بالموقع. اسمح له من إعدادات المتصفح، أو الصق الرابط من قوقل ماب." : "ما قدرنا نحدد موقعك، الصق الرابط من قوقل ماب.", false);
+    btn.disabled = false; btn.textContent = "📍 حدّد موقعي تلقائياً";
+  }, {enableHighAccuracy:true, timeout:15000, maximumAge:60000});
+});
+
+/* ===== مفتوحين أو مسكّرين ===== */
+function showStatus(){
+  const H = CONFIG.hours, el = $("#status");
+  if(!H || !H.open || !H.close){ el.classList.add("hidden"); return; }
+  const now = new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Riyadh",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date());
+  const m = s => { const [h,mi] = s.split(":").map(Number); return h*60+mi; };
+  const n = m(now), o = m(H.open), c = m(H.close);
+  const open = o < c ? (n >= o && n < c) : (n >= o || n < c);
+  const t12 = s => { let [h,mi] = s.split(":").map(Number); const p = h < 12 ? "الصبح" : (h < 17 ? "العصر" : "الليل"); h = h%12 || 12; return h + (mi ? ":" + String(mi).padStart(2,"0") : "") + " " + p; };
+  el.classList.remove("hidden","open","closed");
+  el.classList.add(open ? "open" : "closed");
+  el.textContent = open ? `نستقبل الطلبات الحين، لين الساعة ${t12(H.close)}` : `مسكّرين الحين، نستقبل الطلبات من الساعة ${t12(H.open)}`;
+}
+showStatus(); setInterval(showStatus, 60000);
+
+/* ===== اطلب نفس طلبك الماضي ===== */
+function saveLast(){
+  try{ const {shops} = collect(); if(shops.length) localStorage.setItem("jl-last", JSON.stringify(shops)); }catch(e){}
+}
+function loadLast(){
+  let last = []; try{ last = JSON.parse(localStorage.getItem("jl-last") || "[]"); }catch(e){}
+  if(!last.length) return;
+  const btn = $("#again"); btn.classList.remove("hidden");
+  btn.addEventListener("click", ()=>{
+    shopsEl.innerHTML = ""; shopCount = 0;
+    last.forEach(s=>{
+      shopBlock();
+      const b = shopsEl.lastElementChild, id = b.dataset.id;
+      const r = b.querySelector(`input[name="${id}-cat"][value="${s.cat}"]`); if(r) r.checked = true;
+      $("#"+id+"-name").value = s.name || ""; $("#"+id+"-items").value = s.items || "";
+    });
+    btn.classList.add("hidden"); render();
+    shopsEl.scrollIntoView({behavior:"smooth", block:"center"});
+  });
+}
+$("#send").addEventListener("click", ()=>{ if($("#send").getAttribute("aria-disabled")!=="true") saveLast(); });
+
+/* ===== مشاركة الموقع ===== */
+$("#share").addEventListener("click", async ()=>{
+  const url = location.origin + "/";
+  const text = "توصيل جلاجل 🛵 اطلب من محلات جلاجل بسعر المحل نفسه، والتوصيل " + CONFIG.deliveryFee + " ريال للبيت:";
+  if(navigator.share){ try{ await navigator.share({title: CONFIG.serviceName, text, url}); return; }catch(e){ if(e.name === "AbortError") return; } }
+  window.open("https://wa.me/?text=" + encodeURIComponent(text + "\n" + url), "_blank", "noopener");
+});
+
+datalist(); shopBlock(); buildPack(); loadSaved(); loadLast(); render();
+if("serviceWorker" in navigator){ window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{})); }
+</script>
+</body>
+</html>

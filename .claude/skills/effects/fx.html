@@ -1,0 +1,168 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>@font-face{font-family:"Readex Pro";font-weight:160 900;src:url(readex.woff2) format("woff2");}
+html,body{margin:0;background:#000}canvas{display:block}</style></head>
+<body><canvas id="c"></canvas>
+<script src="work/meta.js"></script><script src="fx.js"></script><script src="kit.js"></script><script>
+// /effects compositor: talking video + 7 motion effects (glass-widgets, orbit, spotlight, todo, timeline, match-cut, apple-toggles).
+// Layers per frame: video frame -> effect "back" layer -> the person (cut out with the mask) -> effect "front" layer.
+// window.FX (fx.js) = [{ fx: 'orbit', from: 2.0, to: 4.0, opts: {...} }, ...]  times in seconds of the clip.
+const { W, H, U, x, COL, pr, E, lerp, clamp, text, pill, rrect, rnd } = K;
+const M = window.META, FPS = M.fps;
+window.DUR = M.n / FPS;
+const pc = document.createElement('canvas'); pc.width = W; pc.height = H; const px = pc.getContext('2d');
+const load = src => new Promise(r => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = src; });
+const pad = n => String(n).padStart(5, '0');
+let FR = null;                                            // current video frame (for frosted glass)
+const extra = {};                                         // images listed in opts.images
+async function img(src) { if (!(src in extra)) extra[src] = await load(src); return extra[src]; }
+
+// ---------- helpers ----------
+function glass(gx, gy, gw, gh, r, alpha = 1) {
+  x.save(); x.globalAlpha = alpha; rrect(gx, gy, gw, gh, r); x.clip();
+  x.filter = 'blur(22px)'; x.drawImage(FR, 0, 0, W, H); x.filter = 'none';
+  x.fillStyle = 'rgba(255,255,255,.16)'; x.fillRect(gx, gy, gw, gh);
+  const g = x.createLinearGradient(gx, gy, gx, gy + gh); g.addColorStop(0, 'rgba(255,255,255,.18)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = g; x.fillRect(gx, gy, gw, gh); x.restore();
+  x.save(); x.globalAlpha = alpha; rrect(gx, gy, gw, gh, r); x.strokeStyle = 'rgba(255,255,255,.45)'; x.lineWidth = 2 * U; x.stroke(); x.restore();
+}
+const inOut = (t, a, b, fi = .35, fo = .25) => Math.min(E.back(pr(t, a, a + fi)), 1 - E.in(pr(t, b - fo, b)));
+const navyCard = (cx, cy, w, h, a) => { x.save(); x.globalAlpha = a; rrect(cx, cy, w, h, 26 * U); x.fillStyle = 'rgba(8,24,38,.88)'; x.fill(); x.strokeStyle = 'rgba(212,168,87,.55)'; x.lineWidth = 2 * U; x.stroke(); x.restore(); };
+
+// ---------- effects: each returns {back(t), front(t)} drawing for the active window ----------
+const FXS = {
+  'glass-widgets'(t, f, w, o) {
+    const fx = f[0] + f[2] / 2, fy = f[1] + f[3] / 2, cards = [
+      [-1, -1.15, 330, 120, 'title'], [1, -.95, 300, 200, 'bars'], [-1, .55, 330, 150, 'export'], [1, .85, 300, 100, 'sig']];
+    return { front: () => cards.forEach(([sx, sy, cw, ch, kind], i) => {
+      const a = clamp(inOut(t, w.from + i * .12, w.to)); if (a <= 0) return;
+      const bob = Math.sin(t * 1.6 + i * 1.7) * 10 * U, cwU = cw * U, chU = ch * U;
+      let cx = fx + sx * (f[2] * .62 + 40 * U) - (sx < 0 ? cwU : 0), cy = fy + sy * f[3] * 1.05 + bob - chU / 2;
+      cx = clamp(cx, 24 * U, W - cwU - 24 * U); cy = clamp(cy, 60 * U, H - chU - 60 * U);
+      const s = .7 + .3 * a; x.save(); x.translate(cx + cwU / 2, cy + chU / 2); x.scale(s, s); x.translate(-cx - cwU / 2, -cy - chU / 2);
+      glass(cx, cy, cwU, chU, 28 * U, clamp(a));
+      const al = clamp(a), mx = cx + cwU / 2;
+      if (kind === 'title') text(o.title || '7 مؤثرات · فيديو واحد', mx, cy + chU / 2, 30, { alpha: al });
+      if (kind === 'bars') { const k = E.out(pr(t, w.from + .4, w.from + 1.2)); [.35, .6, .45, .8, 1].forEach((v, j) => { const bh = v * k * 120 * U; x.fillStyle = j === 4 ? COL.gold2 : 'rgba(255,255,255,.75)'; x.globalAlpha = al; rrect(cx + 36 * U + j * 50 * U, cy + chU - 30 * U - bh, 30 * U, bh, 8 * U); x.fill(); x.globalAlpha = 1; }); }
+      if (kind === 'export') { const k = pr(t, w.from + .3, w.to - .3), pct = Math.round((o.pct || 63) * k); text('جاري التصدير ' + pct + '%', mx, cy + 48 * U, 28, { alpha: al });
+        x.globalAlpha = al; rrect(cx + 30 * U, cy + 92 * U, cwU - 60 * U, 18 * U, 9 * U); x.fillStyle = 'rgba(255,255,255,.25)'; x.fill(); rrect(cx + 30 * U, cy + 92 * U, (cwU - 60 * U) * pct / 100, 18 * U, 9 * U); x.fillStyle = COL.gold2; x.fill(); x.globalAlpha = 1; }
+      if (kind === 'sig') text(o.sig || 'Edited by Claude', mx, cy + chU / 2, 28, { alpha: al, dir: 'ltr' });
+      x.restore();
+    }) };
+  },
+  orbit(t, f, w, o) {
+    const fx = f[0] + f[2] / 2, fy = f[1] + f[3] * .45, N = o.count || 8, a = clamp(inOut(t, w.from, w.to, .5, .3));
+    const rx = f[2] * 1.45 * (.6 + .4 * a), ry = f[3] * .32;
+    const items = [...Array(N).keys()].map(i => { const ang = i / N * Math.PI * 2 + t * (o.speed || 1.1); return [i, ang, Math.sin(ang)]; });
+    const draw = (layer) => items.filter(([, , d]) => layer === 'back' ? d < 0 : d >= 0).sort((p, q) => p[2] - q[2]).forEach(([i, ang, d]) => {
+      const cx = fx + Math.cos(ang) * rx, cy = fy + d * ry - Math.cos(ang) * 30 * U, s = (.72 + .28 * (d + 1) / 2) * a;
+      const cw = 150 * U * s, ch = 266 * U * s; x.save(); x.globalAlpha = clamp(a) * (.55 + .45 * (d + 1) / 2);
+      rrect(cx - cw / 2, cy - ch / 2, cw, ch, 18 * U * s); x.clip();
+      const im = o._imgs && o._imgs[i % o._imgs.length];
+      if (im) { const r = Math.max(cw / im.width, ch / im.height); x.drawImage(im, cx - im.width * r / 2, cy - im.height * r / 2, im.width * r, im.height * r); }
+      else { const g = x.createLinearGradient(0, cy - ch / 2, 0, cy + ch / 2); g.addColorStop(0, i % 2 ? '#1d3d5c' : '#3a2c12'); g.addColorStop(1, '#081826'); x.fillStyle = g; x.fillRect(cx - cw / 2, cy - ch / 2, cw, ch);
+        text(String(40 + i * 7), cx, cy, 54 * s, { color: COL.gold2 }); }
+      x.restore(); x.save(); x.globalAlpha = clamp(a); rrect(cx - cw / 2, cy - ch / 2, cw, ch, 18 * U * s); x.strokeStyle = 'rgba(240,208,136,.8)'; x.lineWidth = 2.5 * U; x.stroke(); x.restore();
+    });
+    return { back: () => draw('back'), front: () => draw('front') };
+  },
+  spotlight(t, f, w, o) {
+    const a = clamp(inOut(t, w.from, w.to, .45, .3)), fx = f[0] + f[2] / 2;
+    return {
+      back: () => {
+        x.fillStyle = `rgba(0,0,0,${.9 * a})`; x.fillRect(0, 0, W, H);
+        const g = x.createRadialGradient(fx, f[1], 0, fx, f[1] + f[3], W * .7); g.addColorStop(0, `rgba(240,208,136,${.22 * a})`); g.addColorStop(1, 'rgba(240,208,136,0)');
+        x.fillStyle = g; x.fillRect(0, 0, W, H);
+        const sz = (o.size || 420) * (.9 + .1 * a), wy = Math.max(f[1] + f[3] * .2, sz * U * .6);   // behind the head, peeking out both sides
+        x.save(); x.globalAlpha = a; x.font = `800 ${sz * U}px ${K.FONT}`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.direction = 'rtl';
+        const tg = x.createLinearGradient(0, wy - sz * U / 2, 0, wy + sz * U / 2); tg.addColorStop(0, COL.gold2); tg.addColorStop(1, '#a97c35');
+        x.shadowColor = 'rgba(240,208,136,.8)'; x.shadowBlur = 50 * U; x.fillStyle = tg; x.fillText(o.word || 'نادر', W / 2, wy); x.restore();
+      },
+      front: () => { x.save(); x.globalCompositeOperation = 'screen'; const g = x.createRadialGradient(fx, f[1] - f[3] * .3, 0, fx, f[1], f[3] * 1.6); g.addColorStop(0, `rgba(255,236,200,${.18 * a})`); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0, 0, W, H); x.restore(); }
+    };
+  },
+  todo(t, f, w, o) {
+    const items = o.items || [['لقى وجهك', .5], ['قصّك من الغرفة', .9], ['حط الكلام وراك', 1.3], ['لوّن الفيديو', 1.7], ['صدّره', 2.1]];
+    const a = clamp(inOut(t, w.from, w.to)), pw = 520 * U, ph = (130 + items.length * 78) * U, cx = (W - pw) / 2, cy = Math.min(f[1] + f[3] * 1.55, H - ph - 30 * U);
+    return { front: () => {
+      if (a <= 0) return; x.save(); x.translate(W / 2, cy); x.scale(.85 + .15 * a, .85 + .15 * a); x.translate(-W / 2, -cy);
+      glass(cx, cy, pw, ph, 30 * U, a); text(o.title || 'Claude يمنتج فيديوك', W / 2, cy + 56 * U, 32, { alpha: a, color: COL.gold2 });
+      items.forEach(([s, at], i) => {
+        const ry = cy + 120 * U + i * 78 * U, k = E.back(pr(t, w.from + at, w.from + at + .3)), ia = a * clamp(E.out(pr(t, w.from + .1 + i * .08, w.from + .4 + i * .08)));
+        const bx = cx + pw - 60 * U; x.globalAlpha = ia; x.strokeStyle = '#fff'; x.lineWidth = 3 * U; x.beginPath(); x.arc(bx, ry, 18 * U, 0, 7); x.stroke();
+        if (k > 0) { x.fillStyle = COL.gold; x.beginPath(); x.arc(bx, ry, 18 * U * clamp(k), 0, 7); x.fill(); x.strokeStyle = '#081826'; x.lineWidth = 4 * U; x.beginPath(); x.moveTo(bx - 8 * U, ry); x.lineTo(bx - 2 * U, ry + 7 * U); x.lineTo(bx + 9 * U, ry - 7 * U); x.stroke(); }
+        x.globalAlpha = 1; text(s, bx - 44 * U, ry, 30, { align: 'right', alpha: ia * (k > 0 ? .6 : 1) });
+        if (k > 0) { x.save(); x.font = `700 ${30 * U}px ${K.FONT}`; const tw = x.measureText(s).width; x.restore(); x.globalAlpha = ia; x.strokeStyle = 'rgba(255,255,255,.8)'; x.lineWidth = 3 * U; x.beginPath(); x.moveTo(bx - 44 * U, ry); x.lineTo(bx - 44 * U - tw * clamp(k), ry); x.stroke(); x.globalAlpha = 1; }
+      });
+      x.restore();
+    } };
+  },
+  timeline(t, f, w, o) {
+    const a = clamp(inOut(t, w.from, w.to)), k = pr(t, w.from + .2, w.to - .2), tw = W - 80 * U, th = 400 * U, tx = 40 * U, ty = H - th - 140 * U;
+    return { front: () => {
+      if (a <= 0) return; x.save(); x.translate(0, (1 - a) * 80 * U); x.globalAlpha = a;
+      rrect(tx, ty, tw, th, 28 * U); x.fillStyle = 'rgba(8,24,38,.92)'; x.fill(); x.strokeStyle = 'rgba(212,168,87,.5)'; x.lineWidth = 2 * U; x.stroke();
+      const tracks = ['V1', 'CAPTIONS', 'GRADE', 'AUDIO'], L = tx + 190 * U, R = tx + tw - 30 * U;
+      tracks.forEach((n, i) => { const y = ty + 80 * U + i * 72 * U; text(n, tx + 30 * U, y, 22, { align: 'left', dir: 'ltr', color: COL.soft });
+        for (let j = 0; j < 6; j++) { const c0 = L + (R - L) * (j / 6 + rnd(i * 9 + j) * .03), c1 = c0 + (R - L) * (.12 + rnd(j + i) * .03);
+          x.fillStyle = ['#2f5f8f', 'rgba(255,255,255,.8)', '#d4a857', '#3d7a5c'][i]; x.globalAlpha = a * .85; rrect(c0, y - 22 * U, c1 - c0, 44 * U, 8 * U); x.fill(); }
+        if (n === 'AUDIO') { x.strokeStyle = 'rgba(255,255,255,.5)'; x.lineWidth = 2 * U; for (let q = L; q < R; q += 7 * U) { const h = (8 + 16 * Math.abs(Math.sin(q * .05) * Math.cos(q * .013))) * U; x.beginPath(); x.moveTo(q, y - h); x.lineTo(q, y + h); x.stroke(); } }
+      }); x.globalAlpha = a;
+      const phx = lerp(L, R, k); x.shadowColor = COL.gold2; x.shadowBlur = 24 * U; x.fillStyle = COL.gold2; x.fillRect(phx - 2.5 * U, ty + 40 * U, 5 * U, th - 70 * U); x.beginPath(); x.moveTo(phx - 14 * U, ty + 30 * U); x.lineTo(phx + 14 * U, ty + 30 * U); x.lineTo(phx, ty + 50 * U); x.fill(); x.shadowBlur = 0;
+      const pct = Math.round(lerp(o.start || 65, 100, k)); text('Render ' + pct + '%', tx + tw - 30 * U, ty + 32 * U, 24, { align: 'right', dir: 'ltr', color: pct >= 100 ? COL.gold2 : '#fff' });
+      x.restore();
+    } };
+  },
+  'match-cut'(t, f, w, o) {
+    const word = o.word || 'Claude', step = o.step || .18, idx = Math.floor((t - w.from) / step), pages = o.pages || 12;
+    const bg = ['#f4efe6', '#081826', '#ffffff', '#12263a', '#efe6d2', '#0d1b2a'];
+    const heads = o.heads || ['الذكاء الاصطناعي يغيّر صناعة المحتوى', 'أدوات جديدة لصنّاع الفيديو', 'كيف تمنتج بدون مونتير؟', 'دليل نادر: المؤثرات', 'أسرع طريقة لريل احترافي', 'المونتاج صار أمر واحد'];
+    return { takeover: true, front: () => {
+      const i = idx % pages, b = bg[i % bg.length], dark = /^#[01]/.test(b);
+      x.fillStyle = b; x.fillRect(0, 0, W, H);
+      const ink = dark ? 'rgba(255,255,255,' : 'rgba(8,24,38,';
+      text('نادر', W - 70 * U, 120 * U, 44, { align: 'right', color: dark ? COL.gold2 : '#081826' });
+      x.fillStyle = ink + '.15)'; x.fillRect(60 * U, 170 * U, W - 120 * U, 3 * U);
+      text(heads[i % heads.length], W - 70 * U, 300 * U, 54, { align: 'right', color: ink + '1)' });
+      for (let l = 0; l < 7; l++) { x.fillStyle = ink + '.14)'; x.fillRect(70 * U + (l % 3) * 40 * U, 1300 * U + l * 54 * U, W - 140 * U - (l % 3) * 40 * U, 22 * U); }
+      x.fillStyle = ink + '.08)'; rrect(70 * U, 420 * U, W - 140 * U, 300 * U + rnd(i) * 200 * U, 20 * U); x.fill();
+      // the locked word: same box, same spot, every page
+      const bw = 420 * U, bh = 150 * U, bx = (W - bw) / 2, by = H * .5 - bh / 2;
+      rrect(bx, by, bw, bh, 18 * U); x.fillStyle = COL.gold; x.fill(); text(word, W / 2, H * .5, 92, { color: '#081826', dir: 'ltr' });
+      const fl = 1 - pr((t - w.from) % step, 0, .06); if (fl > 0) { x.fillStyle = `rgba(255,255,255,${.35 * fl})`; x.fillRect(0, 0, W, H); }
+    } };
+  },
+  'apple-toggles'(t, f, w, o) {
+    const rows = o.rows || [['إضاءة حلوة', .3], ['البطل', .8], ['Edited by Claude', 1.3]];
+    const a = clamp(inOut(t, w.from, w.to)), pw = 600 * U, rh = 96 * U, ph = rows.length * rh + 30 * U, cx = (W - pw) / 2, cy = Math.min(f[1] + f[3] * 1.7, H - ph - 160 * U);
+    return { front: () => {
+      if (a <= 0) return; x.save(); x.translate(0, (1 - a) * 60 * U);
+      glass(cx, cy, pw, ph, 34 * U, a);
+      rows.forEach(([s, at], i) => {
+        const ry = cy + 15 * U + rh * i + rh / 2, k = E.io(pr(t, w.from + at, w.from + at + .25));
+        if (i) { x.globalAlpha = a; x.fillStyle = 'rgba(255,255,255,.18)'; x.fillRect(cx + 30 * U, ry - rh / 2, pw - 60 * U, 1.5 * U); }
+        text(s, cx + pw - 40 * U, ry, 32, { align: 'right', alpha: a, dir: /[a-z]/i.test(s) ? 'ltr' : 'rtl' });
+        const sx = cx + 40 * U, sw = 104 * U, sh = 60 * U; x.globalAlpha = a;
+        rrect(sx, ry - sh / 2, sw, sh, sh / 2); x.fillStyle = k > .5 ? COL.gold : 'rgba(255,255,255,.28)'; x.fill();
+        x.fillStyle = '#fff'; x.shadowColor = 'rgba(0,0,0,.3)'; x.shadowBlur = 8 * U; x.beginPath(); x.arc(sx + sh / 2 + (sw - sh) * k, ry, sh / 2 - 5 * U, 0, 7); x.fill(); x.shadowBlur = 0; x.globalAlpha = 1;
+      });
+      x.restore();
+    } };
+  },
+};
+
+window.ready = async () => { for (const e of window.FX) if (e.opts && e.opts.images) e.opts._imgs = (await Promise.all(e.opts.images.map(img))).filter(Boolean); };
+window.frame = async t => {
+  const i = Math.min(M.n, Math.max(1, Math.round(t * FPS) + 1));
+  const [fr, mk] = await Promise.all([load('work/frames/' + pad(i) + '.jpg'), load('work/mask/' + pad(i) + '.png')]);
+  FR = fr; const face = M.faces[i - 1];
+  const act = window.FX.filter(e => t >= e.from && t < e.to).map(e => FXS[e.fx](t, face, e, e.opts || {}));
+  if (act.some(a => a.takeover)) { act.forEach(a => a.front && a.front()); return; }
+  x.drawImage(fr, 0, 0, W, H);
+  act.forEach(a => a.back && a.back());
+  if (act.some(a => a.back) && mk) {                       // person on top of the back layer
+    px.globalCompositeOperation = 'source-over'; px.clearRect(0, 0, W, H); px.drawImage(fr, 0, 0, W, H);
+    px.globalCompositeOperation = 'destination-in'; px.drawImage(mk, 0, 0, W, H); x.drawImage(pc, 0, 0);
+  }
+  act.forEach(a => a.front && a.front());
+};
+</script></body></html>
