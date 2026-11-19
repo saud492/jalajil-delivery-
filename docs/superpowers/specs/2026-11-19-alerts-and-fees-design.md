@@ -60,7 +60,7 @@ are not set (push simply hides itself).
   notification and open its link on tap.
 - **Auto-approve:** `orders.auto_approve` (SAR, optional); shown in the form,
   the WhatsApp message, the tracking page and the driver's card.
-- **Fees/promos:** settings `delivery_fee` (8) and `out_fee` (5); table
+- **Fees/promos:** settings `delivery_fee` (8) and `out_fee` (10); table
   `promos` (code, discount 0–1, from/to dates Riyadh, uses per phone, max uses,
   active), seeded with the current `JALAJIL` 50% on 2026-11-20. `/api/shops`
   returns the fees and whether a promo runs today (never the code);

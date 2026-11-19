@@ -3,7 +3,7 @@ import { HttpError, json, readJson, str } from "./util.js";
 import { snapshot, changed, reportAlert, subscribe } from "./alerts.js";
 
 /* ===== الإعدادات ===== */
-const DEFAULTS = { prepay_cap: "100", pay_info: "", support: "966582312869", driver_share: "100", delivery_fee: "8", out_fee: "5" };
+const DEFAULTS = { prepay_cap: "100", pay_info: "", support: "966582312869", driver_share: "100", delivery_fee: "8", out_fee: "10" };
 const toEn = v => String(v).replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/[٫,]/g, ".");
 
 export async function getSettings(db) {
@@ -14,7 +14,7 @@ export async function getSettings(db) {
   const feeOf = (v, d) => { const n = Number(v); return Number.isFinite(n) && n >= 0 ? n : d; };
   return { prepay_cap: Math.max(0, Number(s.prepay_cap) || 0), pay_info: s.pay_info, support: s.support,
     driver_share: Number.isFinite(share) ? Math.min(100, Math.max(0, share)) : 100,
-    delivery_fee: feeOf(s.delivery_fee, 8), out_fee: feeOf(s.out_fee, 5) };
+    delivery_fee: feeOf(s.delivery_fee, 8), out_fee: feeOf(s.out_fee, 10) };
 }
 
 export async function saveSettings(db, b) {
