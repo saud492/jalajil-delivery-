@@ -102,6 +102,22 @@ const R = [
   { t: 'الانتظار', a: ['ask', 'وينه؟'],      b: ['pin',   'تشوفه بالخريطة'] },
 ];
 const R0 = 2.2, RL = 2.8;
+// Sound cues: the ONE timeline both the picture (below) and ad4_audio.py read. [time of the visible hit, sound, gain]
+window.CUES = [
+  [0.0, 'hit', .55],                                   // hook headline punches in
+  [1.95, 'swoosh', .45],                               // split screen slides in
+  ...R.flatMap((_, i) => {
+    const u = R0 + i * RL;
+    return [[u + 1.1, 'boop', .5], [u + 1.5, 'ding', .55]].concat(i < R.length - 1 ? [[u + 2.65, 'swoosh', .28]] : []);
+  }),
+  [10.75, 'swoosh', .45],                              // green half takes over
+  [11.4, 'cash', .8],                                  // "8 riyal" pops
+  [13.45, 'swoosh', .25],                              // circle wipe to logo
+  [13.85, 'dart', .5],                                 // pin lands
+  [15.9, 'hit', .4],                                   // "order now" pops
+  [17.4, 'keys', .3],                                  // link appears
+  [18.3, 'button', .55],                               // shine runs across the WhatsApp button
+];
 R.forEach((r, i) => ['a', 'b'].forEach(side => {
   const top = side === 'a', [ic, big] = r[side], d = document.createElement('div');
   d.className = 'rd'; d.id = side + i;

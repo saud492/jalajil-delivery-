@@ -1,31 +1,56 @@
-# Sound for ad4 (no music): short sounds from sfx/ placed on what happens on screen, each peak-matched, no long booms.
+# Sound for ad4 (no music). Cue times come from window.CUES in ad4.html, the same timeline the picture uses.
+# Sounds are trimmed picks from the owner's library (sfx/lib). Each one is placed so its HIT lands on the cue
+# time, not its start (LEAD = seconds from clip start to the hit).
 # usage: node render-pw.js ad4.html ad4_silent.mp4 && python3 ad4_audio.py
-import subprocess, re
-PEAK = {}
-def peak(n):
-    if n not in PEAK:
-        o = subprocess.run(['ffmpeg', '-hide_banner', '-i', f'sfx/{n}.mp3', '-af', 'volumedetect', '-f', 'null', '-'], capture_output=True, text=True).stderr
-        PEAK[n] = float(re.search(r'max_volume: (-?[\d.]+)', o).group(1))
-    return PEAK[n]
-# lib/* = trimmed picks from the owner's sound library (Google Drive). LEAD = seconds from clip start to its hit,
-# so each cue is placed with its hit on the frame, not its start.
-LEAD = {'lib/hit': .05, 'lib/dart': .05, 'lib/keys': .08, 'lib/boop': .05, 'lib/cash': .1, 'lib/swoosh': .31,
-        'lib/button': .08, 'lib/click': .03, 'lib/ding': .08, 'scooter': 0}
-LEN = {'lib/cash': 1.9, 'lib/swoosh': 1.2, 'lib/keys': 1.3, 'lib/ding': 1.1, 'lib/boop': 1.3, 'scooter': 1.3}
-C = [(0.05, 'lib/hit', .7), (0.55, 'lib/click', .35), (1.9, 'lib/swoosh', .5), (2.05, 'lib/click', .4)]
-for i in range(3):
-    u = 2.2 + 2.8 * i
-    C += [(u + .15, 'lib/click', .25), (u + .5, 'lib/click', .3), (u + 1.1, 'lib/boop', .5), (u + 1.5, 'lib/ding', .6)]
-    if i == 1: C += [(u + .5, 'scooter', .22)]
-    if i < 2: C += [(u + 2.65, 'lib/swoosh', .3)]
-C += [(10.7, 'lib/swoosh', .45), (11.05, 'lib/click', .35), (11.45, 'lib/cash', .7), (12.25, 'lib/click', .25),
-      (13.4, 'lib/swoosh', .25), (13.85, 'lib/dart', .6), (15.8, 'lib/swoosh', .3), (15.95, 'lib/hit', .45),
-      (16.65, 'lib/click', .3), (17.45, 'lib/keys', .35), (18.3, 'lib/button', .7)]
-C = [(t - LEAD.get(n, 0), n, g) for t, n, g in C]
-args, fl = ['ffmpeg', '-y', '-loglevel', 'error', '-i', 'ad4_silent.mp4'], []
-for j, (t, n, g) in enumerate(C):
-    args += ['-i', f'sfx/{n}.mp3']; d = int(t * 1000); gain = min(3, g * 10 ** ((-3 - peak(n)) / 20)); ln = LEN.get(n, 0.9)
-    fl.append(f'[{j+1}:a]aformat=sample_rates=48000:channel_layouts=stereo,atrim=0:{ln},afade=t=out:st={ln-.2:.2f}:d=0.2,volume={gain:.3f},adelay={d}|{d}[a{j}]')
-fl.append(''.join(f'[a{j}]' for j in range(len(C))) + f'amix=inputs={len(C)}:normalize=0,alimiter=limit=0.8,apad,atrim=0:20[m]')
-args += ['-filter_complex', ';'.join(fl), '-map', '0:v', '-map', '[m]', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', 'ad4.mp4']
-subprocess.run(args, check=True); print(len(C), 'cues')
+import subprocess, re, json, wave
+import numpy as np
+
+LEAD = {'hit': .05, 'dart': .08, 'keys': .08, 'boop': .05, 'cash': .1, 'swoosh': .31, 'button': .08, 'ding': .08}
+LEN = {'cash': 1.9, 'swoosh': 1.2, 'keys': 1.3, 'ding': 1.1, 'boop': 1.3, 'hit': 1.1, 'dart': .9, 'button': .28}
+SR, DUR = 48000, 20.0
+
+cues = json.loads(subprocess.run(['node', '-e', '''
+const { chromium } = require('playwright'), path = require('path');
+(async () => { const b = await chromium.launch(); const p = await b.newPage();
+  await p.goto('file://' + path.resolve('ad4.html')); console.log(JSON.stringify(await p.evaluate(() => window.CUES))); await b.close(); })();
+'''], capture_output=True, text=True, check=True).stdout)
+
+def load(n):
+    raw = subprocess.run(['ffmpeg', '-v', 'error', '-i', f'sfx/lib/{n}.mp3', '-ac', '1', '-ar', str(SR), '-f', 'f32le', '-'], capture_output=True, check=True).stdout
+    x = np.frombuffer(raw, '<f4')[:int(LEN[n] * SR)].copy()
+    f = min(len(x), int(.12 * SR)); x[-f:] *= np.linspace(1, 0, f)
+    return x / (np.abs(x).max() + 1e-9) * 0.7   # every sound peak-matched, gain in CUES sets the balance
+
+X = {n: load(n) for n in LEAD}
+out = np.zeros(int(DUR * SR))
+for t, n, g in cues:
+    i = int(round((t - LEAD[n]) * SR)); s = X[n] * g
+    if i < 0: s = s[-i:]; i = 0
+    j = min(len(out), i + len(s)); out[i:j] += s[:j - i]
+
+ceil = 10 ** (-1.5 / 20)                      # -1.5 dBFS ceiling, survives AAC
+out = out * (ceil / np.abs(out).max())          # loudest hit sits at the ceiling
+with wave.open('ad4_sfx.wav', 'wb') as w:
+    w.setnchannels(2); w.setsampwidth(2); w.setframerate(SR)
+    w.writeframes((np.repeat(out[:, None], 2, 1) * 32767).astype('<i2').tobytes())
+subprocess.run(['ffmpeg', '-y', '-v', 'error', '-i', 'ad4_silent.mp4', '-i', 'ad4_sfx.wav', '-map', '0:v', '-map', '1:a',
+                '-c:v', 'copy', '-c:a', 'aac', '-b:a', '256k', 'ad4.mp4'], check=True)
+
+# --- measure, since nobody can listen from here ---
+# 1) sync: first onset within +-60 ms of each cue must sit within 20 ms of it
+env = np.abs(out); bad = 0
+for t, n, g in cues:
+    if n == 'swoosh':   # a swoosh swells: what must land on the cut is its peak
+        a, b = int((t - .15) * SR), int((t + .15) * SR); sm = np.convolve(env[a:b], np.ones(480) / 480, 'same'); on = (a + np.argmax(sm)) / SR
+    else:
+        a, b = int(max(0, t - .06) * SR), int((t + .06) * SR)
+        seg = env[a:b]; on = (a + np.argmax(seg > seg.max() * .5)) / SR
+    ok = abs(on - t) <= .02; bad += not ok
+    print(f"{'ok ' if ok else 'BAD'} {t:6.2f}s {n:7s} hit at {on:6.3f}s ({(on - t) * 1000:+.0f} ms)")
+# 2) levels per section
+for name, a, b in [('hook', 0, 2.2), ('rounds', 2.2, 10.6), ('price', 10.6, 13.3), ('logo', 13.3, 15.7), ('cta', 15.7, 20)]:
+    s = out[int(a * SR):int(b * SR)]
+    print(f"{name:7s} peak {20 * np.log10(np.abs(s).max() + 1e-9):6.1f} dBFS   rms {20 * np.log10(np.sqrt((s ** 2).mean()) + 1e-9):6.1f} dBFS")
+lu = subprocess.run(['ffmpeg', '-hide_banner', '-i', 'ad4.mp4', '-af', 'ebur128=peak=true', '-f', 'null', '-'], capture_output=True, text=True).stderr
+print('integrated', re.findall(r'I:\s+(-?[\d.]+) LUFS', lu)[-1], 'LUFS   true peak', re.findall(r'Peak:\s+(-?[\d.]+) dBFS', lu)[-1], 'dBFS')
+print(len(cues), 'cues,', bad, 'out of sync')
