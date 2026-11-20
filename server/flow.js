@@ -54,7 +54,8 @@ export function summarize(o, parts, settings) {
   const total = Math.round(live.reduce((s, p) => s + (Number(p.bill) || 0), 0) * 100) / 100;
   // موافق: الزبون وافق على نفس المبلغ، أو المبلغ تحت حد الموافقة التلقائية اللي كتبه في الطلب
   const manual = o.approved_total !== null && o.approved_total !== undefined && close(o.approved_total, total);
-  const auto = !manual && o.auto_approve !== null && o.auto_approve !== undefined && total <= Number(o.auto_approve) + 0.005;
+  // لو المحل كتب ملاحظة (صنف خلص أو بديل) الزبون لازم يشوفها ويوافق بنفسه
+  const auto = !manual && o.auto_approve !== null && o.auto_approve !== undefined && total <= Number(o.auto_approve) + 0.005 && !live.some(p => p.shop_note);
   const approved = billed && (manual || auto);
   const needsPrepay = settings.prepay_cap > 0 && total > settings.prepay_cap;
   const prepaid = o.prepay_status === "confirmed" && o.prepay_amount !== null && o.prepay_amount >= total - 0.005;
@@ -114,7 +115,7 @@ export async function track(db, request, token) {
   const sum = summarize(o, parts, settings);
   const driver = o.driver_id ? await db.prepare("SELECT name, phone FROM drivers WHERE id = ?").bind(o.driver_id).first() : null;
   const rating = await db.prepare("SELECT driver_stars, tags, comment FROM ratings WHERE order_id = ?").bind(o.id).first();
-  const { results: reports } = await db.prepare("SELECT kind, note, status, resolution, created_at FROM reports WHERE order_id = ? ORDER BY id").bind(o.id).all();
+  const { results: reports } = await db.prepare("SELECT kind, note, status, resolution, created_at FROM reports WHERE order_id = ? AND (source IS NULL OR source != 'driver') ORDER BY id").bind(o.id).all();
   return json({
     order: {
       order_no: o.order_no, created_at: o.created_at, dest: o.dest, place: o.place, pay: o.pay, fee: o.fee,
@@ -122,7 +123,7 @@ export async function track(db, request, token) {
       prepay_status: o.prepay_status, leave_at_door: !!o.leave_at_door, delivery_photo: o.delivery_photo,
       auto_approve: o.auto_approve,
     },
-    parts: parts.map(p => ({ id: p.id, shop_name: p.shop_name, category: p.category, items: p.items, status: p.status, bill: p.bill, receipt: p.bill_receipt, partner: !!p.shop_id, shop_stars: p.shop_stars })),
+    parts: parts.map(p => ({ id: p.id, shop_name: p.shop_name, category: p.category, items: p.items, status: p.status, bill: p.bill, receipt: p.bill_receipt, partner: !!p.shop_id, shop_stars: p.shop_stars, shop_note: p.shop_note })),
     driver: driver && { name: driver.name, phone: driver.phone },
     eta: eta(o, parts, sum.stage),
     rating: rating && { driver_stars: rating.driver_stars, tags: safeTags(rating.tags), comment: rating.comment },

@@ -1,5 +1,5 @@
 // الجزء العام: موقع الزباين يحفظ الطلب ويجيب قائمة المحلات الشريكة
-import { HttpError, json, readJson, str } from "./util.js";
+import { HttpError, json, readJson, str, shopOpen } from "./util.js";
 import { getSettings } from "./flow.js";
 import { baseFee, priceOrder, promoToday, phoneKey } from "./fees.js";
 import { newOrder } from "./alerts.js";
@@ -8,13 +8,13 @@ const DESTS = ["home", "chalet", "park"];
 
 export async function listShops(db) {
   const { results } = await db.prepare(
-    `SELECT s.id, s.name, s.category, s.is_open, AVG(p.shop_stars) AS rating, COUNT(p.shop_stars) AS rating_count
+    `SELECT s.id, s.name, s.category, s.is_open, s.closed_until, AVG(p.shop_stars) AS rating, COUNT(p.shop_stars) AS rating_count
      FROM shops s LEFT JOIN parts p ON p.shop_id = s.id WHERE s.active = 1 GROUP BY s.id ORDER BY s.name`
   ).all();
   const settings = await getSettings(db);
   const { prepay_cap } = settings;
   // التقييم يطلع للزبون بعد ٣ تقييمات على الأقل
-  return json({ shops: results.map(s => ({ id: s.id, name: s.name, category: s.category, open: !!s.is_open,
+  return json({ shops: results.map(s => ({ id: s.id, name: s.name, category: s.category, open: shopOpen(s),
     rating: s.rating_count >= 3 ? Math.round(s.rating * 10) / 10 : null })), prepay_cap,
     // الرسوم من الإعدادات، والعرض بدون الكود نفسه
     fees: { home: baseFee(settings, "home"), out: baseFee(settings, "chalet") }, promo: await promoToday(db) });

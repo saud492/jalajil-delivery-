@@ -44,6 +44,19 @@ export function riyadhRanges(nowMs) {
   return { weekStart, monthStart, dayStart: dayStartLocal - RIYADH };
 }
 
+// من تاريخ لين تاريخ (YYYY-MM-DD بتوقيت الرياض، شامل) → [بداية، نهاية) بالملي ثانية. أقصى سنة
+export function riyadhSpan(from, to) {
+  const ok = v => /^\d{4}-\d{2}-\d{2}$/.test(String(v || ""));
+  if (!ok(from) || !ok(to)) throw new HttpError(400, "اختر الفترة");
+  const a = Date.parse(from + "T00:00:00Z") - RIYADH, b = Date.parse(to + "T00:00:00Z") - RIYADH + D;
+  if (!Number.isFinite(a) || !Number.isFinite(b) || b <= a) throw new HttpError(400, "الفترة غير صحيحة");
+  if (b - a > 367 * D) throw new HttpError(400, "الفترة أطول من سنة");
+  return [a, b];
+}
+
+// المحل المسكّر مؤقتاً يرجع مفتوح لحاله لما يخلص الوقت
+export const shopOpen = (s, now = Date.now()) => !!s.is_open || (s.closed_until != null && s.closed_until <= now);
+
 // العمولة لطلب جاهز: صفر داخل فترة التجربة (لين تاريخ نهايتها ضمناً)
 export function commissionFor(shop, readyMs) {
   const amount = Number(shop.commission) || 0;

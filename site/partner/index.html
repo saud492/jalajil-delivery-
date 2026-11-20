@@ -92,6 +92,20 @@ h1,h2,h3{font-family:var(--font-display);margin:0}
 .timer{font-weight:700;font-variant-numeric:tabular-nums;color:var(--accent)}
 .timer.late{color:var(--bad)}
 .done-list .card{opacity:.85}
+.chips{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px}
+.chips small{width:100%;color:var(--muted);font-size:13px}
+.chips button{flex:1 0 calc(33% - 6px);border:1.5px solid var(--line);background:var(--surface2);border-radius:12px;padding:9px 4px;font-weight:700;font-size:15px}
+.chips button.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.snote{background:var(--new-soft);border-inline-start:4px solid var(--new);border-radius:10px;padding:8px 12px;font-size:15px;color:var(--ink)}
+.hist{background:var(--surface);border-radius:18px;padding:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px}
+.hist h2{font-size:17px}
+.hist select{font:inherit;font-size:16px;color:var(--ink);background:var(--surface2);border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;width:100%}
+.hrow{display:flex;justify-content:space-between;gap:10px;border-top:1px solid var(--line);padding-top:8px;font-size:14px}
+.hrow div{min-width:0}.hrow b{display:block;color:var(--ink)}.hrow span{color:var(--muted)}
+.htot{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+.htot div{background:var(--surface2);border-radius:12px;padding:8px 4px}
+.htot b{display:block;font-family:var(--font-display);font-size:20px;color:var(--accent)}
+.htot span{font-size:12px;color:var(--muted)}
 
 /* summary */
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -173,6 +187,15 @@ input.ltr{direction:ltr;text-align:right}
       <div class="stat"><small>هالأسبوع</small><b id="wCount">٠</b><span>طلب مكتمل</span><span>العمولة: <em id="wCom">٠</em> ريال</span></div>
       <div class="stat"><small>هالشهر</small><b id="mCount">٠</b><span>طلب مكتمل</span><span>العمولة: <em id="mCom">٠</em> ريال</span></div>
     </div>
+    <section class="hist">
+      <h2>🧾 السجل وكشف الحساب</h2>
+      <select id="hPeriod" aria-label="الفترة">
+        <option value="today">اليوم</option><option value="yesterday">أمس</option><option value="week" selected>هالأسبوع</option>
+        <option value="month">هالشهر</option><option value="lastmonth">الشهر الماضي</option>
+      </select>
+      <div class="htot" id="hTot"></div>
+      <div id="hList"></div>
+    </section>
     <div class="note" id="rateNote"></div>
     <div class="note" id="termsNote"></div>
     <p class="hint" style="color:var(--muted);font-size:13px;margin:0 4px">الطلب ينحسب مكتمل لما تضغط "جاهز للاستلام". الأسبوع يبدأ السبت.</p>
@@ -194,6 +217,20 @@ input.ltr{direction:ltr;text-align:right}
   </div>
 </div>
 
+<div id="closeSheet" class="sheet-bg hidden">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="closeT">
+    <h2 id="closeT">تسكّر المحل؟</h2>
+    <p style="margin:0;color:var(--muted);font-size:14px">الزباين بيشوفونه مسكّر وما يقدرون يطلبون منه.</p>
+    <div class="reasons" id="closeOpts">
+      <button data-m="30">⏳ زحمة: نص ساعة ويفتح لحاله</button>
+      <button data-m="60">⏳ ساعة ويفتح لحاله</button>
+      <button data-m="120">⏳ ساعتين ويفتح لحاله</button>
+      <button data-m="">🔒 مسكّر لين أفتحه بنفسي</button>
+    </div>
+    <button class="out" id="closeCancel">رجوع</button>
+  </div>
+</div>
+
 <div class="toast hidden" id="toast" aria-live="polite"></div>
 
 <script src="/push.js"></script>
@@ -203,6 +240,7 @@ const AR = "٠١٢٣٤٥٦٧٨٩";
 const toAr = n => String(n).replace(/\d/g, d => AR[d]);
 const money = n => toAr((Math.round((+n||0)*100)/100).toString());
 const DEST = { home:"البيت", chalet:"شاليه", park:"المنتزه" };
+const PREP = [5,10,15,20,30,45];
 const POLL = 15000, REMIND = 60000;
 
 let shop = null, orders = [], serverSkew = 0, timer = null, tickTimer = null;
@@ -265,8 +303,12 @@ function renderShop(){
   $("#shopName").textContent = shop.name;
   const b = $("#openBtn");
   b.classList.toggle("on", shop.open); b.setAttribute("aria-pressed", shop.open ? "true" : "false");
-  $("#openTxt").textContent = shop.open ? "مفتوح" : "مسكّر";
+  const until = !shop.open && shop.closed_until ? clock(shop.closed_until) : "";
+  $("#openTxt").textContent = shop.open ? "مفتوح" : until ? "لين " + until : "مسكّر";
   $("#closedBanner").classList.toggle("hidden", shop.open);
+  $("#closedBanner span").textContent = until
+    ? `محلك مسكّر مؤقتاً (زحمة)، ويفتح لحاله الساعة ${until}. تقدر تفتحه قبل من الزر فوق.`
+    : "محلك مسكّر الحين، والزباين ما يقدرون يختارونه. افتحه من الزر فوق.";
 }
 
 $("#loginForm").addEventListener("submit", async e=>{
@@ -288,19 +330,30 @@ $("#logoutBtn").addEventListener("click", async ()=>{
   showLogin();
 });
 
-$("#openBtn").addEventListener("click", async ()=>{
-  const want = !shop.open;
-  if(!want && !confirm("تبي تسكّر المحل؟ الزباين بيشوفونه مسكّر وما يقدرون يطلبون منه.")) return;
-  try{ const d = await api("status", {open: want}); shop.open = d.open; renderShop(); toast(shop.open ? "المحل مفتوح للطلبات ✓" : "المحل مسكّر"); }
+function clock(ms){ try{ return new Intl.DateTimeFormat("ar-SA-u-nu-arab",{hour:"numeric",minute:"2-digit",timeZone:"Asia/Riyadh"}).format(new Date(ms)); }catch(e){ return ""; } }
+async function setStatus(body){
+  try{ const d = await api("status", body); shop.open = d.open; shop.closed_until = d.closed_until; renderShop();
+    toast(shop.open ? "المحل مفتوح للطلبات ✓" : shop.closed_until ? "مسكّر، ويفتح لحاله الساعة " + clock(shop.closed_until) : "المحل مسكّر"); }
   catch(err){ toast(err.message); }
+}
+$("#openBtn").addEventListener("click", ()=>{
+  if(!shop.open){ setStatus({open: true}); return; }
+  $("#closeSheet").classList.remove("hidden");
 });
+$("#closeOpts").addEventListener("click", e=>{
+  const b = e.target.closest("[data-m]"); if(!b) return;
+  $("#closeSheet").classList.add("hidden");
+  setStatus(b.dataset.m ? {open: false, minutes: Number(b.dataset.m)} : {open: false});
+});
+$("#closeCancel").addEventListener("click", ()=>$("#closeSheet").classList.add("hidden"));
+$("#closeSheet").addEventListener("click", e=>{ if(e.target.id === "closeSheet") $("#closeSheet").classList.add("hidden"); });
 
 document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click", ()=>{
   document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on", x===b));
   const t = b.dataset.tab;
   $("#ordersTab").classList.toggle("hidden", t!=="orders");
   $("#summaryTab").classList.toggle("hidden", t!=="summary");
-  if(t==="summary") loadSummary();
+  if(t==="summary"){ loadSummary(); loadHistory(); }
 }));
 
 /* ===== الطلبات ===== */
@@ -355,6 +408,7 @@ function card(o){
   line("الدفع", o.pay);
   line("ملاحظة", o.note);
   if(o.bill != null) line("مبلغ الفاتورة", money(o.bill) + " ريال");
+  if(o.shop_note){ const n = el("div", "snote", "📝 " + o.shop_note); meta.append(n); }
   if(o.status === "rejected") line("سبب الرفض", o.reject_reason);
   c.append(meta);
 
@@ -365,16 +419,31 @@ function card(o){
     const inp = el("input", "ltr"); inp.inputMode = "decimal"; inp.placeholder = "مثال: 45"; inp.setAttribute("aria-label", "مبلغ الفاتورة بالريال");
     inp.value = drafts[o.id] || ""; inp.dataset.id = o.id; inp.oninput = () => { drafts[o.id] = inp.value; };
     lb.append(inp); acts.append(lb);
-    const toEn = s => String(s).replace(/[٠-٩]/g, d => AR.indexOf(d)).replace(/[٫,]/g, ".");
-    [10,20,30].forEach(m=>{
-      const b = el("button", "btn"); b.innerHTML = "قبول<small></small>"; b.querySelector("small").textContent = toAr(m) + " دقيقة";
-      b.onclick = () => {
-        const bill = Number(toEn(inp.value.trim()));
-        if(!inp.value.trim() || !(bill > 0)){ inp.focus(); toast("اكتب مبلغ الفاتورة أول"); return; }
-        act(o.id, {action:"accept", minutes:m, bill}, "تم القبول ✓");
-      };
-      acts.append(b);
+    // صنف خلص أو بديل: ينكتب الحين مع الفاتورة، وبعد القبول الفاتورة تنقفل
+    const nl = el("label", "f"); nl.style.gridColumn = "1/-1";
+    nl.append("صنف خلص أو بديل؟ (اختياري، الزبون يشوفها ويوافق)");
+    const note = el("input"); note.placeholder = "مثال: البيبسي خلص، حطينا سفن"; note.maxLength = 200;
+    note.value = (drafts["n" + o.id]) || ""; note.dataset.id = o.id; note.oninput = () => { drafts["n" + o.id] = note.value; };
+    nl.append(note); acts.append(nl);
+    const chips = el("div", "chips"); chips.append(el("small", "", "وقت التجهيز"));
+    PREP.forEach(m=>{
+      const c = el("button", drafts["m" + o.id] === m ? "on" : "", toAr(m) + " د"); c.type = "button";
+      c.onclick = () => { drafts["m" + o.id] = m; chips.querySelectorAll("button").forEach(x=>x.classList.toggle("on", x === c)); };
+      chips.append(c);
     });
+    acts.append(chips);
+    const toEn = s => String(s).replace(/[٠-٩]/g, d => AR.indexOf(d)).replace(/[٫,]/g, ".");
+    const ok = el("button", "btn big", "✅ قبول الطلب");
+    ok.onclick = () => {
+      const bill = Number(toEn(inp.value.trim()));
+      if(!inp.value.trim() || !(bill > 0)){ inp.focus(); toast("اكتب مبلغ الفاتورة أول"); return; }
+      const m = drafts["m" + o.id];
+      if(!m){ toast("اختر وقت التجهيز"); chips.scrollIntoView({block:"center"}); return; }
+      const n = note.value.trim();
+      if(!confirm(`تأكد: الفاتورة ${money(bill)} ريال${n ? "\nالملاحظة: " + n : ""}\nبعد القبول ما تقدر تعدّل الفاتورة.`)) return;
+      act(o.id, {action:"accept", minutes:m, bill, note:n}, "تم القبول ✓");
+    };
+    acts.append(ok);
     const r = el("button", "btn line", "رفض الطلب"); r.onclick = () => openReject(o.id); acts.append(r);
   } else if(o.status === "accepted"){
     const t = el("div", "timer"); t.dataset.due = o.accepted_at + o.prep_minutes*60000; t.style.gridColumn = "1/-1"; acts.append(t);
@@ -445,6 +514,39 @@ async function loadSummary(){
     else n.textContent = per;
   }catch(err){ toast(err.message); }
 }
+
+/* السجل: فترة بتواريخ الرياض */
+function period(v){
+  const d = new Date(now() + 3*3600000), iso = x => x.toISOString().slice(0,10);
+  const day = n => { const x = new Date(d); x.setUTCDate(x.getUTCDate() + n); return iso(x); };
+  if(v === "today") return [iso(d), iso(d)];
+  if(v === "yesterday") return [day(-1), day(-1)];
+  if(v === "week") return [day(-((d.getUTCDay() + 1) % 7)), iso(d)]; // الأسبوع يبدأ السبت
+  const y = d.getUTCFullYear(), m = d.getUTCMonth();
+  if(v === "month") return [iso(new Date(Date.UTC(y, m, 1))), iso(d)];
+  return [iso(new Date(Date.UTC(y, m - 1, 1))), iso(new Date(Date.UTC(y, m, 0)))];
+}
+async function loadHistory(){
+  const [from, to] = period($("#hPeriod").value);
+  const list = $("#hList"), tot = $("#hTot");
+  list.textContent = "جاري التحميل…";
+  try{
+    const d = await api(`history?from=${from}&to=${to}`);
+    const t = d.totals; tot.innerHTML = "";
+    [[toAr(t.count), "طلب مكتمل"], [money(t.bills), "مجموع الفواتير"], [money(t.commission), "العمولة (ريال)"]].forEach(([b, sp])=>{ const x = el("div"); x.append(el("b", "", b), el("span", "", sp)); tot.append(x); });
+    list.innerHTML = "";
+    if(t.rejected) list.append(el("p", "", `ورفضت ${toAr(t.rejected)} طلب في هالفترة.`));
+    if(!d.orders.length){ list.append(el("p", "", "ما فيه طلبات مكتملة في هالفترة.")); return; }
+    d.orders.forEach(o=>{
+      const r = el("div", "hrow"), a = el("div");
+      a.append(el("b", "", "طلب " + o.order_no), el("span", "", (o.items || "").split("\n")[0].slice(0, 60)));
+      const b = el("div"); b.style.textAlign = "end";
+      b.append(el("b", "", money(o.bill) + " ر"), el("span", "", new Intl.DateTimeFormat("ar-SA-u-ca-gregory-nu-arab",{day:"numeric",month:"short",hour:"numeric",minute:"2-digit",timeZone:"Asia/Riyadh"}).format(new Date(o.ready_at))));
+      r.append(a, b); list.append(r);
+    });
+  }catch(err){ list.textContent = err.message; }
+}
+$("#hPeriod").addEventListener("change", loadHistory);
 
 /* البداية */
 (async ()=>{

@@ -1,9 +1,12 @@
 // تطبيق المندوب: يشوف الطلبات اللي ما لها مندوب ويأخذ منها، ويشوف تفاصيل الزبون بس للطلبات اللي معه
 // ما يقدر يشتري قبل موافقة الزبون على المبلغ (والدفع المسبق لو لازم)، وما يقدر يسكّر الطلب بدون رمز الاستلام
-import { HttpError, json, readJson, str, riyadhRanges, cleanCode } from "./util.js";
+import { HttpError, json, readJson, str, riyadhRanges, riyadhSpan, cleanCode } from "./util.js";
 import { checkLock, recordFail, clearFails, createSession, sessionCookie, requireSession, endSession, verifyPin } from "./auth.js";
 import { getSettings, summarize, loadOrder, parseImage, saveImage, sendImage } from "./flow.js";
-import { snapshot, changed, subscribe } from "./alerts.js";
+import { snapshot, changed, subscribe, notify } from "./alerts.js";
+
+// بلاغات المندوب وهو شغّال على الطلب
+export const DRIVER_ISSUES = ["الزبون ما يرد", "المحل مسكّر", "غرض ناقص عند المحل", "العنوان غلط أو ناقص", "شي ثاني"];
 
 export async function push(db, request) {
   const s = await requireSession(db, request, "driver");
@@ -18,7 +21,7 @@ const toEn = s => String(s).replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".inde
 const LIVE = `(o.rejected_at IS NULL AND EXISTS (SELECT 1 FROM parts x WHERE x.order_id = o.id AND x.status NOT IN ('cancelled','rejected')))`;
 
 function driverInfo(d) {
-  return { name: d.name, code: d.code, phone: d.phone };
+  return { name: d.name, code: d.code, phone: d.phone, on_duty: d.on_duty === undefined || d.on_duty === null ? true : !!d.on_duty };
 }
 
 export async function login(db, request) {
@@ -51,8 +54,9 @@ export async function me(db, request) {
 async function partsFor(db, ids) {
   const by = new Map(ids.map(id => [id, []]));
   if (!ids.length) return by;
-  const { results } = await db.prepare(`SELECT id, order_id, shop_id, shop_name, category, items, status, prep_minutes, accepted_at, ready_at, bill, bill_receipt
-    FROM parts WHERE order_id IN (${ids.map(() => "?").join(",")}) ORDER BY id`).bind(...ids).all();
+  // موقع المحل الشريك يطلع للمندوب عشان يروح له على طول
+  const { results } = await db.prepare(`SELECT p.id, p.order_id, p.shop_id, p.shop_name, p.category, p.items, p.status, p.prep_minutes, p.accepted_at, p.ready_at, p.bill, p.bill_receipt, p.shop_note, s.map_url AS shop_map
+    FROM parts p LEFT JOIN shops s ON s.id = p.shop_id WHERE p.order_id IN (${ids.map(() => "?").join(",")}) ORDER BY p.id`).bind(...ids).all();
   for (const p of results) by.get(p.order_id).push(p);
   return by;
 }
@@ -75,7 +79,8 @@ export async function orders(db, request) {
     ORDER BY o.created_at DESC LIMIT 100`).bind(s.driver.id, now - 24 * H, now - 24 * H).all();
   const pa = await partsFor(db, avail.map(o => o.id));
   const pm = await partsFor(db, mine.map(o => o.id));
-  const brief = p => ({ shop_name: p.shop_name, category: p.category, status: p.status, prep_minutes: p.prep_minutes, accepted_at: p.accepted_at, ready_at: p.ready_at, partner: !!p.shop_id });
+  const brief = p => ({ shop_name: p.shop_name, category: p.category, status: p.status, prep_minutes: p.prep_minutes, accepted_at: p.accepted_at, ready_at: p.ready_at, partner: !!p.shop_id,
+    shop_map: /^https?:\/\//i.test(p.shop_map || "") ? p.shop_map : null });
   return json({
     driver: driverInfo(s.driver), now,
     available: avail.map(o => ({ ...o, parts: pa.get(o.id).map(brief) })),
@@ -86,7 +91,7 @@ export async function orders(db, request) {
         customer_name: o.customer_name, customer_phone: o.customer_phone, map_url: o.map_url, pay: o.pay, note: o.note,
         pack: safeParse(o.pack), driver_status: o.driver_status, assigned_at: o.assigned_at, picked_at: o.picked_at, delivered_at: o.delivered_at,
         prepay_status: o.prepay_status, leave_at_door: !!o.leave_at_door, auto_approve: o.auto_approve,
-        parts: parts.map(p => ({ ...brief(p), id: p.id, items: p.items, bill: p.bill, receipt: p.bill_receipt })),
+        parts: parts.map(p => ({ ...brief(p), id: p.id, items: p.items, bill: p.bill, receipt: p.bill_receipt, shop_note: p.shop_note })),
         ...summarize(o, parts, settings),
       };
     }),
@@ -102,6 +107,7 @@ async function myOrder(db, s, orderId) {
 export async function act(db, request, orderId, e = {}) {
   const s = await requireSession(db, request, "driver");
   const b = await readJson(request);
+  if (b.action === "issue") return issue(db, s, orderId, b, e);
   const before = await snapshot(db, orderId);
   const now = Date.now(), me = s.driver.id;
   let stmt;
@@ -152,6 +158,38 @@ export async function act(db, request, orderId, e = {}) {
   }
   await changed(e, db, before);
   return json({ ok: true });
+}
+
+// المندوب يبلّغ عن مشكلة في طلب معه، ويوصل صاحب الخدمة إشعار على طول
+async function issue(db, s, orderId, b, e) {
+  const { o } = await myOrder(db, s, orderId);
+  const kind = str(b.kind, 40);
+  if (!DRIVER_ISSUES.includes(kind)) throw new HttpError(400, "اختر نوع المشكلة");
+  const n = await db.prepare("SELECT COUNT(*) AS n FROM reports WHERE order_id = ? AND source = 'driver'").bind(o.id).first();
+  if (n.n >= 5) throw new HttpError(429, "وصلت بلاغاتك، صاحب الخدمة بيتواصل معك");
+  const note = str(b.note, 300);
+  await db.prepare("INSERT INTO reports (order_id, driver_id, kind, note, source, created_at) VALUES (?,?,?,?, 'driver', ?)").bind(o.id, s.driver.id, kind, note, Date.now()).run();
+  notify(e, db, [["admin", null]], { title: "🚩 " + s.driver.name + ": " + kind, body: `طلب ${o.order_no}` + (note ? " · " + note : ""), url: "/admin/", tag: "i" + o.id });
+  return json({ ok: true });
+}
+
+// شغّال / مو شغّال: المندوب اللي مو شغّال ما توصله تنبيهات الطلبات الجديدة
+export async function duty(db, request) {
+  const s = await requireSession(db, request, "driver");
+  const b = await readJson(request);
+  await db.prepare("UPDATE drivers SET on_duty = ? WHERE id = ?").bind(b.on ? 1 : 0, s.driver.id).run();
+  return json({ ok: true, on_duty: !!b.on });
+}
+
+// سجل التوصيلات وأرباحها لأي فترة
+export async function history(db, request) {
+  const s = await requireSession(db, request, "driver");
+  const u = new URL(request.url);
+  const [a, b] = riyadhSpan(u.searchParams.get("from"), u.searchParams.get("to"));
+  const { results } = await db.prepare(`SELECT id, order_no, dest, place, fee, COALESCE(driver_share, fee) AS earned, delivered_at
+    FROM orders WHERE driver_id = ? AND driver_status = 'delivered' AND delivered_at >= ? AND delivered_at < ? ORDER BY delivered_at DESC LIMIT 500`).bind(s.driver.id, a, b).all();
+  const r2 = v => Math.round(v * 100) / 100;
+  return json({ orders: results, totals: { count: results.length, fees: r2(results.reduce((t, o) => t + (Number(o.fee) || 0), 0)), earned: r2(results.reduce((t, o) => t + (Number(o.earned) || 0), 0)) } });
 }
 
 // المندوب يكتب مبلغ فاتورة محل مو شريك (أو التجهيزات) ويرفع صورتها

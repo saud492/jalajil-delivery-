@@ -195,7 +195,7 @@ export async function drivers(db, request) {
   await requireSession(db, request, "admin");
   const { weekStart, monthStart } = riyadhRanges(Date.now());
   const { results } = await db.prepare(`
-    SELECT d.id, d.code, d.name, d.phone, d.active, d.created_at,
+    SELECT d.id, d.code, d.name, d.phone, d.active, d.on_duty, d.created_at,
       SUM(CASE WHEN o.driver_status='delivered' AND o.delivered_at >= ?1 THEN 1 ELSE 0 END) AS week_count,
       SUM(CASE WHEN o.driver_status='delivered' AND o.delivered_at >= ?1 THEN COALESCE(o.fee,0) ELSE 0 END) AS week_fees,
       SUM(CASE WHEN o.driver_status='delivered' AND o.delivered_at >= ?2 THEN 1 ELSE 0 END) AS month_count,
@@ -208,7 +208,7 @@ export async function drivers(db, request) {
   for (const r of results) {
     r.rating = await driverRating(db, r.id);
     r.wallet = await walletFor(db, r.id);
-    const rp = await db.prepare("SELECT COUNT(*) AS n, SUM(CASE WHEN status='open' THEN 1 ELSE 0 END) AS open FROM reports WHERE driver_id = ?").bind(r.id).first();
+    const rp = await db.prepare("SELECT COUNT(*) AS n, SUM(CASE WHEN status='open' THEN 1 ELSE 0 END) AS open FROM reports WHERE driver_id = ? AND (source IS NULL OR source != 'driver')").bind(r.id).first();
     r.reports = { count: rp.n || 0, open: rp.open || 0 };
   }
   return json({ drivers: results.map(r => ({ ...r, active: !!r.active,
@@ -328,7 +328,7 @@ export async function reports(db, request) {
   const status = new URL(request.url).searchParams.get("status");
   const where = status === "open" ? "WHERE r.status = 'open'" : "";
   const { results } = await db.prepare(`
-    SELECT r.id, r.order_id, r.kind, r.note, r.image_id, r.status, r.resolution, r.created_at, r.resolved_at,
+    SELECT r.id, r.order_id, r.kind, r.note, r.image_id, r.status, r.resolution, r.created_at, r.resolved_at, r.source,
            o.order_no, o.customer_name, o.customer_phone, o.track_token, d.name AS driver_name
     FROM reports r JOIN orders o ON o.id = r.order_id LEFT JOIN drivers d ON d.id = r.driver_id
     ${where} ORDER BY (r.status = 'open') DESC, r.id DESC LIMIT 200`).all();

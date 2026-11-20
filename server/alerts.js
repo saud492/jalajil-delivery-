@@ -41,7 +41,9 @@ export function notify(e, db, targets, msg) {
     for (const [kind, ref] of targets) {
       if (!KINDS.includes(kind)) continue;
       const q = ref === null || ref === undefined
-        ? db.prepare("SELECT * FROM push_subs WHERE kind = ?").bind(kind)
+        ? (kind === "driver"
+          ? db.prepare("SELECT ps.* FROM push_subs ps JOIN drivers d ON d.id = ps.ref_id WHERE ps.kind = 'driver' AND d.active = 1 AND d.on_duty = 1")
+          : db.prepare("SELECT * FROM push_subs WHERE kind = ?").bind(kind))
         : db.prepare("SELECT * FROM push_subs WHERE kind = ? AND ref_id = ?").bind(kind, ref);
       for (const s of (await q.all()).results) if (!seen.has(s.endpoint)) { seen.add(s.endpoint); subs.push(s); }
     }
@@ -92,7 +94,7 @@ export async function changed(e, db, before) {
   const admin = (title, body) => notify(e, db, [["admin", null]], { title, body, url: "/admin/", tag: "a" + o.id });
 
   if (st !== was) {
-    if (st === "approve") customer("💰 فاتورة طلبك جاهزة", `المبلغ ${money(sum.total)} ريال. افتح ووافق عشان المندوب يشتري`);
+    if (st === "approve") customer("💰 فاتورة طلبك جاهزة", `المبلغ ${money(sum.total)} ريال` + (parts.some(p => p.shop_note) ? "، وفيه ملاحظة من المحل" : "") + ". افتح ووافق عشان المندوب يشتري");
     if (st === "prepay") customer("💳 حوّل مبلغ طلبك", `المبلغ ${money(sum.total)} ريال يحتاج تحويل قبل الشراء`);
     if (st === "prepay_check") admin("🧾 إيصال تحويل ينتظر تأكيدك", `طلب ${no} · ${money(sum.total)} ريال`);
     if (st === "buying") driver("✅ تقدر تشتري الحين", `طلب ${no}: ${money(sum.total)} ريال` + (o.approved_at ? "، الزبون وافق" : "، تحت حد الموافقة التلقائية"));
@@ -131,6 +133,8 @@ export async function sweep(e, db, force = false) {
       ON CONFLICT(key) DO UPDATE SET value = excluded.value WHERE CAST(settings.value AS INTEGER) < ?`).bind(String(now), now - 30_000).run();
     if (!r.meta.changes) return 0;
   }
+  // المحلات المسكّرة مؤقتاً ترجع مفتوحة لما يخلص وقتها
+  await db.prepare("UPDATE shops SET is_open = 1, closed_until = NULL WHERE is_open = 0 AND closed_until IS NOT NULL AND closed_until <= ?").bind(now).run();
   if (!pushEnabled(e)) return 0;
   const settings = await getSettings(db);
   let n = 0;

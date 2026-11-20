@@ -29,6 +29,9 @@ const routes = [
   ["POST", /^\/api\/partner\/parts\/(\d+)$/, (db, r, e, m) => partner.act(db, r, Number(m[1]), e)],
   ["POST", /^\/api\/partner\/status$/, (db, r) => partner.setOpen(db, r)],
   ["GET", /^\/api\/partner\/summary$/, (db, r) => partner.summary(db, r)],
+  ["GET", /^\/api\/partner\/history$/, (db, r) => partner.history(db, r)],
+  ["GET", /^\/api\/driver\/history$/, (db, r) => driver.history(db, r)],
+  ["POST", /^\/api\/driver\/duty$/, (db, r) => driver.duty(db, r)],
 
   ["POST", /^\/api\/admin\/login$/, (db, r, e) => admin.login(db, r, e)],
   ["POST", /^\/api\/admin\/logout$/, (db, r) => admin.logout(db, r)],

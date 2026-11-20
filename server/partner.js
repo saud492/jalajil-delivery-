@@ -1,12 +1,13 @@
 // تطبيق الشريك: كل استعلام مربوط برقم المحل من الجلسة، فما يقدر محل يشوف طلبات غيره
-import { HttpError, json, readJson, str, commissionFor, riyadhRanges, cleanCode } from "./util.js";
+import { HttpError, json, readJson, str, commissionFor, riyadhRanges, riyadhSpan, cleanCode, shopOpen } from "./util.js";
 import { snapshot, changed, subscribe } from "./alerts.js";
 import { checkLock, recordFail, clearFails, createSession, sessionCookie, requireSession, endSession, verifyPin } from "./auth.js";
 
 const ip = r => r.headers.get("cf-connecting-ip") || "local";
 
 function shopInfo(s) {
-  return { name: s.name, category: s.category, open: !!s.is_open, code: s.code, trial_end: s.trial_end, commission: s.commission };
+  const open = shopOpen(s);
+  return { name: s.name, category: s.category, open, closed_until: !open && s.closed_until ? s.closed_until : null, code: s.code, trial_end: s.trial_end, commission: s.commission };
 }
 
 export async function login(db, request) {
@@ -41,7 +42,7 @@ export async function orders(db, request) {
   const s = await requireSession(db, request, "shop");
   const since = Date.now() - 24 * 3600_000;
   const { results } = await db.prepare(`
-    SELECT p.id, p.items, p.status, p.prep_minutes, p.reject_reason, p.accepted_at, p.ready_at, p.updated_at, p.bill,
+    SELECT p.id, p.items, p.status, p.prep_minutes, p.reject_reason, p.accepted_at, p.ready_at, p.updated_at, p.bill, p.shop_note,
            o.order_no, o.created_at, o.dest, o.customer_name, o.customer_phone, o.place, o.pay, o.note
     FROM parts p JOIN orders o ON o.id = p.order_id
     WHERE p.shop_id = ? AND (p.status IN ('new','accepted') OR p.updated_at > ?)
@@ -50,6 +51,7 @@ export async function orders(db, request) {
 }
 
 const FROM = { accept: ["new"], ready: ["new", "accepted"], reject: ["new", "accepted"] };
+export const PREP = [5, 10, 15, 20, 30, 45];
 
 export async function push(db, request) {
   const s = await requireSession(db, request, "shop");
@@ -71,12 +73,15 @@ export async function act(db, request, partId, e = {}) {
   let stmt;
   if (action === "accept") {
     const m = Number(b.minutes);
-    if (![10, 20, 30].includes(m)) throw new HttpError(400, "اختر وقت التجهيز");
+    if (!PREP.includes(m)) throw new HttpError(400, "اختر وقت التجهيز");
     if (bill === null) throw new HttpError(400, "اكتب مبلغ الفاتورة");
-    stmt = db.prepare(`UPDATE parts SET status='accepted', prep_minutes=?, accepted_at=?, bill=?, updated_at=? WHERE id=? AND shop_id=? AND status IN (${allowed})`)
-      .bind(m, now, Math.round(bill * 100) / 100, now, partId, s.shop.id);
+    // «خلص كذا، والبديل كذا»: تنكتب مع الفاتورة بس، وبعد القبول الفاتورة تنقفل
+    const note = str(b.note, 200) || null;
+    stmt = db.prepare(`UPDATE parts SET status='accepted', prep_minutes=?, accepted_at=?, bill=?, shop_note=?, updated_at=? WHERE id=? AND shop_id=? AND status IN (${allowed})`)
+      .bind(m, now, Math.round(bill * 100) / 100, note, now, partId, s.shop.id);
   } else if (action === "ready") {
-    stmt = db.prepare(`UPDATE parts SET status='ready', ready_at=?, commission=?, bill=COALESCE(?, bill), updated_at=? WHERE id=? AND shop_id=? AND status IN (${allowed}) AND COALESCE(?, bill) IS NOT NULL`)
+    // الفاتورة ما تتغيّر بعد القبول: «جاهز» يكتب الفاتورة بس لو المحل ما كتبها من قبل (طلب ضغط عليه جاهز على طول)
+    stmt = db.prepare(`UPDATE parts SET status='ready', ready_at=?, commission=?, bill=COALESCE(bill, ?), updated_at=? WHERE id=? AND shop_id=? AND status IN (${allowed}) AND COALESCE(bill, ?) IS NOT NULL`)
       .bind(now, commissionFor(s.shop, now), bill, now, partId, s.shop.id, bill);
   } else {
     const reason = str(b.reason, 120);
@@ -98,9 +103,16 @@ export async function act(db, request, partId, e = {}) {
 export async function setOpen(db, request) {
   const s = await requireSession(db, request, "shop");
   const b = await readJson(request);
-  const open = b.open ? 1 : 0;
-  await db.prepare("UPDATE shops SET is_open = ? WHERE id = ?").bind(open, s.shop.id).run();
-  return json({ ok: true, open: !!open });
+  if (b.open) {
+    await db.prepare("UPDATE shops SET is_open = 1, closed_until = NULL WHERE id = ?").bind(s.shop.id).run();
+    return json({ ok: true, open: true, closed_until: null });
+  }
+  // زحمة: مسكّر نص ساعة أو ساعة أو ساعتين، ويفتح لحاله. بدون مدة = لين يفتحه بنفسه
+  const m = b.minutes === undefined || b.minutes === null ? null : Number(b.minutes);
+  if (m !== null && ![30, 60, 120].includes(m)) throw new HttpError(400, "اختر مدة الإغلاق");
+  const until = m ? Date.now() + m * 60_000 : null;
+  await db.prepare("UPDATE shops SET is_open = 0, closed_until = ? WHERE id = ?").bind(until, s.shop.id).run();
+  return json({ ok: true, open: false, closed_until: until });
 }
 
 export async function summary(db, request) {
@@ -113,6 +125,22 @@ export async function summary(db, request) {
     rating: await shopRating(db, s.shop.id),
     week: { count: w.results[0].n, commission: w.results[0].c },
     month: { count: m.results[0].n, commission: m.results[0].c },
+  });
+}
+
+// السجل وكشف الحساب لأي فترة: الطلبات اللي جهّزها المحل، مع الفاتورة والعمولة
+export async function history(db, request) {
+  const s = await requireSession(db, request, "shop");
+  const u = new URL(request.url);
+  const [a, b] = riyadhSpan(u.searchParams.get("from"), u.searchParams.get("to"));
+  const { results } = await db.prepare(`SELECT p.id, p.items, p.bill, p.commission, p.ready_at, p.shop_stars, p.shop_note, o.order_no
+    FROM parts p JOIN orders o ON o.id = p.order_id
+    WHERE p.shop_id = ? AND p.status = 'ready' AND p.ready_at >= ? AND p.ready_at < ? ORDER BY p.ready_at DESC LIMIT 500`).bind(s.shop.id, a, b).all();
+  const rej = await db.prepare("SELECT COUNT(*) AS n FROM parts WHERE shop_id = ? AND status = 'rejected' AND updated_at >= ? AND updated_at < ?").bind(s.shop.id, a, b).first();
+  const r2 = v => Math.round(v * 100) / 100;
+  return json({
+    orders: results,
+    totals: { count: results.length, bills: r2(results.reduce((t, p) => t + (Number(p.bill) || 0), 0)), commission: r2(results.reduce((t, p) => t + (Number(p.commission) || 0), 0)), rejected: rej.n },
   });
 }
 

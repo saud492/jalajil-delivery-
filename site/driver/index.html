@@ -140,6 +140,18 @@ input.ltr{direction:ltr;text-align:right}
 .gate.wait{background:var(--new-soft);color:var(--ink);border:1.5px solid var(--new)}
 .gate.ok{background:var(--accent-soft);color:var(--accent)}
 .gate.bad{background:var(--bad-soft);color:var(--bad)}
+.maplink{display:inline-flex;align-items:center;gap:4px;text-decoration:none;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:2px 10px;font-size:13px}
+.snote{background:var(--new-soft);border-inline-start:4px solid var(--new);border-radius:10px;padding:6px 10px;font-size:14px;color:var(--ink);margin-top:4px}
+.dhist{background:var(--surface);border-radius:18px;padding:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px}
+.dhist h2{font-size:17px}
+.dhist select{font:inherit;font-size:16px;color:var(--ink);background:var(--surface2);border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;width:100%}
+.drow{display:flex;justify-content:space-between;gap:10px;border-top:1px solid var(--line);padding-top:8px;font-size:14px}
+.drow b{display:block;color:var(--ink)}.drow span{color:var(--muted)}
+.dtot{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+.dtot div{background:var(--surface2);border-radius:12px;padding:8px 4px}
+.dtot b{display:block;font-family:var(--font-display);font-size:20px;color:var(--accent)}
+.dtot span{font-size:12px;color:var(--muted)}
+.issue{border:none;background:none;color:var(--muted);font-weight:600;font-size:14px;text-decoration:underline;padding:4px;justify-self:center;grid-column:1/-1}
 .billrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px}
 .billrow .fee{font-size:15px;flex:1}
 .muted2{color:var(--muted);font-size:14px;flex:1}
@@ -182,6 +194,7 @@ input.ltr{direction:ltr;text-align:right}
     <div class="top-in">
       <div class="top-row">
         <h1><small>مناديب توصيل جلاجل</small><span id="drvName"></span></h1>
+        <button class="switch on" id="dutyBtn" aria-pressed="true"><span id="dutyTxt">شغّال</span><i></i></button>
       </div>
       <nav class="tabs">
         <button class="on" data-tab="avail">متاحة<b id="availCount" class="hidden"></b></button>
@@ -194,6 +207,7 @@ input.ltr{direction:ltr;text-align:right}
   <main class="wrap" id="availTab">
     <button class="banner" id="soundBanner">🔔 <span>اضغط هنا عشان يشتغل صوت التنبيه للطلبات الجديدة</span></button>
     <div class="banner err hidden" id="netBanner">⚠️ <span>ما فيه اتصال بالإنترنت. نحاول مرة ثانية…</span></div>
+    <div class="banner err hidden" id="offBanner">😴 <span>أنت «مو شغّال»: ما يرن عندك ولا توصلك تنبيهات الطلبات الجديدة. اضغط الزر فوق لما تبدأ.</span></div>
     <div id="pushBox"></div>
     <div id="availList" style="display:flex;flex-direction:column;gap:12px"></div>
   </main>
@@ -209,6 +223,15 @@ input.ltr{direction:ltr;text-align:right}
       <div class="stat"><small>هالأسبوع</small><b id="wCount">٠</b><span>توصيلة</span><span>ربحك <em id="wFees">٠</em> ر</span></div>
       <div class="stat"><small>هالشهر</small><b id="mCount">٠</b><span>توصيلة</span><span>ربحك <em id="mFees">٠</em> ر</span></div>
     </div>
+    <section class="dhist">
+      <h2>🧾 سجل توصيلاتك</h2>
+      <select id="hPeriod" aria-label="الفترة">
+        <option value="today" selected>اليوم</option><option value="yesterday">أمس</option><option value="week">هالأسبوع</option>
+        <option value="month">هالشهر</option><option value="lastmonth">الشهر الماضي</option>
+      </select>
+      <div class="dtot" id="hTot"></div>
+      <div id="hList"></div>
+    </section>
     <div class="note" id="rateBox"></div>
     <div class="note" id="histBox"></div>
     <p class="hint" style="color:var(--muted);font-size:13px;margin:0 4px">التوصيلة تنحسب لما تسلّم الطلب. ربحك هو نصيبك من رسوم التوصيل. الأسبوع يبدأ السبت.</p>
@@ -239,6 +262,16 @@ input.ltr{direction:ltr;text-align:right}
     <p class="msg" id="codeMsg" aria-live="polite"></p>
     <button class="btn big" id="codeSave" type="button">تأكيد التسليم</button>
     <button class="out" id="codeCancel" type="button">رجوع</button>
+  </div>
+</div>
+
+<div id="issueSheet" class="sheet-bg hidden">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="issueT">
+    <h2 id="issueT">وش المشكلة؟</h2>
+    <p style="margin:0;color:var(--muted);font-size:14px">يوصل صاحب الخدمة تنبيه على طول، والزبون ما يشوفه.</p>
+    <div class="reasons" id="issueKinds"></div>
+    <input id="issueNote" placeholder="تفاصيل (اختياري)" maxlength="300">
+    <button class="out" id="issueCancel" type="button">رجوع</button>
   </div>
 </div>
 
@@ -304,7 +337,7 @@ function showLogin(){
 }
 function showApp(){
   $("#loginView").classList.add("hidden"); $("#appView").classList.remove("hidden");
-  $("#drvName").textContent = me.name; firstLoad = true; startPolling();
+  $("#drvName").textContent = me.name; renderDuty(); firstLoad = true; startPolling();
   if(window.JLPush) JLPush.mount($("#pushBox"), { sw: "/driver/sw.js", scope: "/driver/", api: "/api/driver/push", who: "الطلبات الجديدة وموافقة الزبون" });
 }
 $("#loginForm").addEventListener("submit", async e=>{
@@ -321,10 +354,71 @@ $("#logoutBtn").addEventListener("click", async ()=>{
   try{ await api("logout", {}); }catch(e){}
   showLogin();
 });
+/* شغّال / مو شغّال */
+function renderDuty(){
+  const on = !me || me.on_duty !== false, b = $("#dutyBtn");
+  b.classList.toggle("on", on); b.setAttribute("aria-pressed", on ? "true" : "false");
+  $("#dutyTxt").textContent = on ? "شغّال" : "مو شغّال";
+  $("#offBanner").classList.toggle("hidden", on);
+}
+$("#dutyBtn").addEventListener("click", async ()=>{
+  const want = me.on_duty === false;
+  if(!want && !confirm("توقف استقبال الطلبات؟ ما راح يرن عندك ولا توصلك تنبيهات الطلبات الجديدة (طلباتك الحالية تظل معك).")) return;
+  try{ const d = await api("duty", {on: want}); me.on_duty = d.on_duty; renderDuty(); toast(want ? "تمام، أنت شغّال ✓" : "وقفت استقبال الطلبات الجديدة"); }
+  catch(err){ toast(err.message); }
+});
+
+/* بلاغ المندوب */
+const ISSUES = ["الزبون ما يرد", "المحل مسكّر", "غرض ناقص عند المحل", "العنوان غلط أو ناقص", "شي ثاني"];
+let issueFor = null;
+ISSUES.forEach(k=>{ const b = el("button", "", k); b.type = "button"; b.dataset.k = k; $("#issueKinds").append(b); });
+function openIssue(o){ issueFor = o; $("#issueT").textContent = "وش المشكلة في طلب " + o.order_no + "؟"; $("#issueNote").value = ""; $("#issueSheet").classList.remove("hidden"); }
+function closeIssue(){ issueFor = null; $("#issueSheet").classList.add("hidden"); }
+$("#issueKinds").addEventListener("click", async e=>{
+  const b = e.target.closest("[data-k]"); if(!b || !issueFor) return;
+  const o = issueFor, note = $("#issueNote").value.trim(); closeIssue();
+  try{ await api("orders/" + o.id, {action:"issue", kind:b.dataset.k, note}); toast("وصل بلاغك لصاحب الخدمة ✓"); }
+  catch(err){ toast(err.message); }
+});
+$("#issueCancel").addEventListener("click", closeIssue);
+$("#issueSheet").addEventListener("click", e=>{ if(e.target.id === "issueSheet") closeIssue(); });
+
+/* سجل التوصيلات: فترة بتواريخ الرياض */
+function period(v){
+  const d = new Date(now() + 3*3600000), iso = x => x.toISOString().slice(0,10);
+  const day = n => { const x = new Date(d); x.setUTCDate(x.getUTCDate() + n); return iso(x); };
+  if(v === "today") return [iso(d), iso(d)];
+  if(v === "yesterday") return [day(-1), day(-1)];
+  if(v === "week") return [day(-((d.getUTCDay() + 1) % 7)), iso(d)]; // الأسبوع يبدأ السبت
+  const y = d.getUTCFullYear(), m = d.getUTCMonth();
+  if(v === "month") return [iso(new Date(Date.UTC(y, m, 1))), iso(d)];
+  return [iso(new Date(Date.UTC(y, m - 1, 1))), iso(new Date(Date.UTC(y, m, 0)))];
+}
+async function loadHistory(){
+  const [from, to] = period($("#hPeriod").value);
+  const list = $("#hList"), tot = $("#hTot");
+  list.textContent = "جاري التحميل…";
+  try{
+    const d = await api(`history?from=${from}&to=${to}`);
+    const t = d.totals; tot.innerHTML = "";
+    [[toAr(t.count), "توصيلة"], [money(t.fees), "رسوم التوصيل"], [money(t.earned), "ربحك (ريال)"]].forEach(([b, sp])=>{ const x = el("div"); x.append(el("b", "", b), el("span", "", sp)); tot.append(x); });
+    list.innerHTML = "";
+    if(!d.orders.length){ list.append(el("p", "", "ما فيه توصيلات في هالفترة.")); return; }
+    d.orders.forEach(o=>{
+      const r = el("div", "drow"), a = el("div");
+      a.append(el("b", "", "طلب " + o.order_no), el("span", "", (DEST[o.dest] || o.dest || "") + (o.place ? " · " + o.place : "")));
+      const b = el("div"); b.style.textAlign = "end";
+      b.append(el("b", "", money(o.earned) + " ر"), el("span", "", new Intl.DateTimeFormat("ar-SA-u-ca-gregory-nu-arab",{day:"numeric",month:"short",hour:"numeric",minute:"2-digit",timeZone:"Asia/Riyadh"}).format(new Date(o.delivered_at))));
+      r.append(a, b); list.append(r);
+    });
+  }catch(err){ list.textContent = err.message; }
+}
+$("#hPeriod").addEventListener("change", loadHistory);
+
 function setTab(t){
   document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on", x.dataset.tab===t));
   ["avail","mine","summary"].forEach(x=>$("#"+x+"Tab").classList.toggle("hidden", x!==t));
-  if(t==="summary") loadSummary();
+  if(t==="summary"){ loadSummary(); loadHistory(); }
 }
 document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click", ()=>setTab(b.dataset.tab)));
 
@@ -339,13 +433,13 @@ async function refresh(){
     const d = await api("orders");
     $("#netBanner").classList.add("hidden");
     me = d.driver; serverSkew = d.now - Date.now(); avail = d.available || []; mine = d.mine || [];
-    $("#drvName").textContent = me.name;
+    $("#drvName").textContent = me.name; renderDuty();
     // طلب جديد متاح، أو صاحب الخدمة عيّن لي طلب
     const newAvail = avail.some(o=>!seenAvail.has(o.id));
     const newMine = mine.some(o=>!seenMine.has(o.id) && o.driver_status === "assigned");
     avail.forEach(o=>seenAvail.add(o.id)); mine.forEach(o=>seenMine.add(o.id));
     if(!firstLoad && newMine){ chime(); lastChime = Date.now(); toast("🛵 عندك طلب جديد في \"طلباتي\""); }
-    else if((!firstLoad && newAvail) || (avail.length && Date.now() - lastChime > REMIND)){ chime(); lastChime = Date.now(); }
+    else if(me.on_duty !== false && ((!firstLoad && newAvail) || (avail.length && Date.now() - lastChime > REMIND))){ chime(); lastChime = Date.now(); }
     firstLoad = false;
     render();
   }catch(err){
@@ -373,6 +467,12 @@ function partStatus(p){
   if(p.status === "cancelled") return ["cancelled", "ملغي"];
   return ["", p.status];
 }
+// زر يفتح موقع المحل الشريك في الخريطة
+function mapLink(p){
+  if(!p.shop_map) return [];
+  const a = el("a", "maplink", "📍 موقع المحل"); a.href = p.shop_map; a.target = "_blank"; a.rel = "noopener";
+  return [a];
+}
 function partsBox(parts, withItems){
   const box = el("div", "parts");
   if(!parts.length){ box.append(el("div", "pt", "طلب تجهيزات بس، بدون محل")); return box; }
@@ -380,6 +480,7 @@ function partsBox(parts, withItems){
     const b = el("div", "pt"); const h = el("div", "pt-h");
     h.append(el("b", "", (p.category ? p.category + " · " : "") + (p.shop_name || "محل")));
     const [cls, txt] = partStatus(p); h.append(el("span", "pill " + cls, txt));
+    h.append(...mapLink(p));
     b.append(h);
     if(withItems && p.items) b.append(el("div", "it", p.items));
     box.append(b);
@@ -445,6 +546,9 @@ function mineCard(o){
       const b = el("button", "btn big", "✅ سلّمت الطلب (اكتب رمز الزبون)"); b.onclick = () => openCode(o); a.append(b);
     }
   }
+  if(["assigned","picked"].includes(o.driver_status)){
+    const x = el("button", "issue", "⚠️ فيه مشكلة؟ بلّغ صاحب الخدمة"); x.type = "button"; x.onclick = () => openIssue(o); a.append(x);
+  }
   if(a.children.length) c.append(a);
   return c;
 }
@@ -473,8 +577,10 @@ function billBox(o){
     const b = el("div", "pt"); const h = el("div", "pt-h");
     h.append(el("b", "", (p.category && p.category !== p.shop_name ? p.category + " · " : "") + (p.shop_name || "محل")));
     const [cls, txt] = partStatus(p); h.append(el("span", "pill " + cls, txt));
+    h.append(...mapLink(p));
     b.append(h);
     if(p.items) b.append(el("div", "it", p.items));
+    if(p.shop_note) b.append(el("div", "snote", "📝 من المحل: " + p.shop_note));
     const dead = ["cancelled","rejected"].includes(p.status);
     if(!dead){
       const row = el("div", "billrow");

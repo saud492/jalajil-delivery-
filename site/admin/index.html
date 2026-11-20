@@ -52,6 +52,7 @@ h1,h2,h3{font-family:var(--font-display);margin:0}
 .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .grow{flex:1;min-width:0}
 .muted{color:var(--muted);font-size:14px}
+.snote{background:var(--new-soft);border-inline-start:4px solid var(--new);border-radius:10px;padding:6px 10px;font-size:14px;color:var(--ink);margin-top:4px}
 .pill{display:inline-flex;align-items:center;border-radius:999px;padding:1px 10px;font-size:13px;font-weight:700;white-space:nowrap}
 .pill.new{background:var(--new);color:#fff}
 .pill.accepted{background:var(--accent-soft);color:var(--accent)}
@@ -322,7 +323,9 @@ function renderDrivers(){
   DRIVERS.forEach(d=>{
     const c = el("div", "card");
     const r = el("div", "row"); r.append(el("h3", "grow", d.name));
-    r.append(el("span", "pill " + (d.active ? "open" : "off"), d.active ? "فعّال" : "موقوف")); c.append(r);
+    r.append(el("span", "pill " + (d.active ? "open" : "off"), d.active ? "فعّال" : "موقوف"));
+    if(d.active) r.append(el("span", "pill " + (d.on_duty === 0 ? "none" : "open"), d.on_duty === 0 ? "😴 مو شغّال" : "🟢 شغّال"));
+    c.append(r);
     const m = el("div", "row cust muted"); m.append("الرمز: " + d.code);
     const ph = (d.phone||"").replace(/[^\d+]/g, "");
     if(ph){ const a = el("a", "", "📞 " + d.phone); a.href = "tel:" + ph; m.append(a); }
@@ -417,7 +420,7 @@ async function loadReports(){
     if(!d.reports.length){ box.append(el("div", "card empty", $("#repFilter").value ? "ما فيه بلاغات مفتوحة ✓" : "ما فيه بلاغات")); return; }
     d.reports.forEach(r=>{
       const c = el("div", "card");
-      const h = el("div", "row"); h.append(el("h3", "grow", r.kind), el("span", "pill " + (r.status === "open" ? "off" : "open"), r.status === "open" ? "مفتوح" : "محلول")); c.append(h);
+      const h = el("div", "row"); h.append(el("h3", "grow", (r.source === "driver" ? "🛵 من المندوب: " : "") + r.kind), el("span", "pill " + (r.status === "open" ? "off" : "open"), r.status === "open" ? "مفتوح" : "محلول")); c.append(h);
       c.append(el("div", "muted", `طلب ${r.order_no} · ${when(r.created_at)}` + (r.driver_name ? ` · المندوب: ${r.driver_name}` : "")));
       const cu = el("div", "row cust"); cu.append(el("b", "", r.customer_name || "زبون"));
       const ph = (r.customer_phone || "").replace(/[^\d+]/g, "");
@@ -661,6 +664,7 @@ function renderOrders(list){
       if(p.shop_id || p.status === "cancelled") r.append(el("span", "pill " + p.status, STATUS[p.status] || p.status));
       d.append(r);
       if(p.items) d.append(el("div", "items", p.items));
+      if(p.shop_note) d.append(el("div", "snote", "📝 ملاحظة المحل: " + p.shop_note));
       const extra = [];
       if(p.prep_minutes) extra.push("وقت التجهيز " + toAr(p.prep_minutes) + " د");
       if(p.ready_at) extra.push("جاهز " + when(p.ready_at));
