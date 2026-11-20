@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>انضم كشريك · توصيل جلاجل</title>
+<meta name="description" content="خلّ محلك يوصّل لكل بيت في جلاجل بدون ما توظف مندوب. بدون رسوم شهرية، وفترة تجربة مجانية.">
+<meta property="og:title" content="انضم لشركاء توصيل جلاجل">
+<meta property="og:description" content="طلبات أكثر لمحلك بدون مناديب ولا رسوم شهرية. فترة تجربة مجانية.">
+<meta property="og:image" content="https://jalajil-delivery.pages.dev/og-image.png">
+<meta name="theme-color" content="#0f6a66">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@500;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f3f1ec;--surface:#fffdf9;--surface2:#f7f5f0;--ink:#1f2a2b;--muted:#5f6b6b;--line:#e2ded5;
+  --accent:#0f6a66;--accent-2:#0a4f4c;--accent-ink:#ffffff;--accent-soft:#e1efed;--stone:#a4652f;--sand:#ecd5b3;
+  --bad:#b3261e;--shadow:0 1px 2px rgba(31,42,43,.05),0 6px 20px rgba(31,42,43,.06);
+  --font-display:"Readex Pro","IBM Plex Sans Arabic",system-ui,sans-serif;
+  --font-body:"IBM Plex Sans Arabic",system-ui,"Segoe UI",Tahoma,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121818;--surface:#1a2222;--surface2:#151c1c;--ink:#e9eeec;--muted:#a3b0ae;--line:#2b3636;
+    --accent:#4fb8b0;--accent-2:#0f6a66;--accent-ink:#0b1414;--accent-soft:#1d3332;--stone:#d39a63;--sand:#e4c99f;
+    --bad:#ff8a80;--shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25);color-scheme:dark;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:17px;line-height:1.7;-webkit-tap-highlight-color:transparent}
+h1,h2,h3{font-family:var(--font-display);margin:0;line-height:1.3}
+a{color:inherit}
+.hidden{display:none !important}
+.hero{color:#fff;background:radial-gradient(120% 140% at 85% 0%,#17847e 0%,#0f6a66 45%,#0a4f4c 100%);padding:calc(28px + env(safe-area-inset-top)) 16px 48px;text-align:center}
+.hero-in{max-width:720px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:14px}
+.hero img{width:72px;height:72px;border-radius:20px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.hero small{color:var(--sand);font-weight:600;letter-spacing:.3px}
+.hero h1{font-size:clamp(28px,7vw,42px);font-weight:800}
+.hero p{margin:0;max-width:560px;color:rgba(255,255,255,.9);font-size:18px}
+.cta{display:inline-flex;align-items:center;gap:8px;border:none;border-radius:16px;padding:14px 26px;font-weight:700;font-size:18px;background:var(--sand);color:#2a1d0e;font-family:var(--font-display);text-decoration:none;cursor:pointer}
+.proof{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:4px}
+.proof span{background:rgba(255,255,255,.14);border-radius:999px;padding:4px 14px;font-size:14px;font-weight:600}
+main{max-width:720px;margin:-24px auto 0;padding:0 16px calc(48px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:18px}
+section{background:var(--surface);border-radius:22px;padding:22px 18px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:14px}
+section > h2{font-size:22px}
+.perks{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.perk{background:var(--surface2);border-radius:16px;padding:14px;display:flex;gap:12px;align-items:flex-start}
+.perk i{font-style:normal;font-size:26px;line-height:1;flex:none;width:44px;height:44px;display:grid;place-items:center;background:var(--accent-soft);border-radius:12px}
+.perk b{display:block;font-family:var(--font-display);font-size:16px}
+.perk span{color:var(--muted);font-size:15px}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;counter-reset:s}
+.steps li{display:flex;gap:12px;align-items:flex-start;counter-increment:s}
+.steps li::before{content:counter(s,arabic-indic);flex:none;width:32px;height:32px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:700;font-family:var(--font-display)}
+.price{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.price div{background:var(--accent-soft);border-radius:16px;padding:16px;text-align:center}
+.price b{display:block;font-family:var(--font-display);font-size:30px;color:var(--accent);line-height:1.2}
+.price span{color:var(--muted);font-size:14px}
+.note{color:var(--muted);font-size:15px;margin:0}
+details{border-top:1px solid var(--line);padding-top:10px}
+details:first-of-type{border-top:none;padding-top:0}
+summary{cursor:pointer;font-weight:700}
+details p{margin:6px 0 0;color:var(--muted)}
+form{display:flex;flex-direction:column;gap:12px}
+label{display:flex;flex-direction:column;gap:5px;font-size:15px;color:var(--muted);font-weight:500}
+input,select,textarea{font:inherit;font-size:17px;color:var(--ink);background:var(--surface2);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;width:100%}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);background:var(--surface)}
+input.ltr{direction:ltr;text-align:right}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:480px){.grid2,.price{grid-template-columns:1fr}}
+.btn{border:none;border-radius:14px;padding:15px;font-weight:700;font-size:18px;background:var(--accent);color:var(--accent-ink);font-family:var(--font-display);cursor:pointer}
+.btn[disabled]{opacity:.6}
+.msg{margin:0;color:var(--bad);font-size:15px;min-height:1.3em}
+.done{text-align:center;padding:10px 0}
+.done b{display:block;font-family:var(--font-display);font-size:22px;margin-bottom:6px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+footer{text-align:center;color:var(--muted);font-size:14px;padding:6px 0 0}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="hero-in">
+    <img src="/icon-192.png" alt="">
+    <small>شركاء توصيل جلاجل</small>
+    <h1>خلّ محلك يوصّل لكل بيت في جلاجل</h1>
+    <p>طلبات أكثر بدون ما توظف مندوب، وبدون رسوم شهرية. الطلب يوصلك في تطبيقك، وإحنا نوصّله للزبون.</p>
+    <a class="cta" href="#form">🤝 سجّل محلك الحين</a>
+    <div class="proof" id="proof"></div>
+  </div>
+</header>
+
+<main>
+  <section>
+    <h2>وش تستفيد</h2>
+    <div class="perks">
+      <div class="perk"><i>🛵</i><div><b>أسطول توصيل جاهز</b><span>مناديبنا يوصّلون طلبات محلك لباب الزبون، وأنت ما توظف ولا مندوب.</span></div></div>
+      <div class="perk"><i>🔔</i><div><b>الطلب يجيك في تطبيقك</b><span>تنبيه وصوت حتى والجوال مقفل. بدون مكالمات ولا رسائل ولا أخطاء نقل.</span></div></div>
+      <div class="perk"><i>✅</i><div><b>ما تخسر طلب</b><span>الزبون يوافق على الفاتورة قبل الشراء، والفواتير الكبيرة تتحوّل قبل. ما فيه طلب يرجع لك.</span></div></div>
+      <div class="perk"><i>⭐</i><div><b>تطلع أول للزبائن</b><span>المحل الشريك يطلع في أول القائمة بشارة «شريك ✓» وتقييمه، والمميز يطلع في أعلى الصفحة.</span></div></div>
+      <div class="perk"><i>🎁</i><div><b>عروضك أنت</b><span>سوّ عرض مثل «توصيل مجاني فوق ٥٠ ريال» ويطلع شارة على اسم محلك يجذب الطلبات.</span></div></div>
+      <div class="perk"><i>📊</i><div><b>تقرير شهري</b><span>كم طلب جاك، وكم زبون جديد ورجع لك، وأوقات الذروة، والتزامك بالوقت. بالأرقام.</span></div></div>
+      <div class="perk"><i>🧾</i><div><b>ملصق QR للكاشير</b><span>ملصق باسم محلك: الزبون يصوّره ويطلب منك توصيل على طول، والطلب يتسجّل لك.</span></div></div>
+      <div class="perk"><i>📣</i><div><b>تسويق مجاني</b><span>محلك يدخل في إعلانات ومنشورات توصيل جلاجل، بدون ما تدفع ريال.</span></div></div>
+      <div class="perk"><i>⏱️</i><div><b>أنت تتحكم</b><span>تحدد وقت التجهيز، وتسكّر مؤقتاً وقت الزحمة، وعندك كشف حساب لأي فترة.</span></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>كيف تشتغل</h2>
+    <ol class="steps">
+      <li><div><b>الزبون يطلب من محلك</b> في صفحة توصيل جلاجل.</div></li>
+      <li><div><b>يرن تطبيقك:</b> تكتب مبلغ الفاتورة ووقت التجهيز وتقبل.</div></li>
+      <li><div><b>الزبون يوافق على المبلغ</b> قبل ما المندوب يدفع لك.</div></li>
+      <li><div><b>المندوب يستلم ويدفع لك</b> ويوصّل للزبون. وأنت تضغط «جاهز».</div></li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>التكلفة</h2>
+    <div class="price">
+      <div><b id="trial">٣٠ يوم</b><span>تجربة مجانية بدون أي عمولة</span></div>
+      <div><b id="com">٢ ريال</b><span>بعدها، على الطلب المكتمل بس</span></div>
+    </div>
+    <p class="note">بدون رسوم اشتراك ولا رسوم شهرية ولا عقد. إذا ما جاك طلب، ما تدفع شي. وتقدر توقف متى ما بغيت.</p>
+  </section>
+
+  <section>
+    <h2>أسئلة</h2>
+    <details><summary>أحتاج جهاز أو برنامج خاص؟</summary><p>لا، أي جوال. التطبيق يفتح من المتصفح وتضيفه للشاشة الرئيسية مثل أي تطبيق.</p></details>
+    <details><summary>مين يدفع لي قيمة الطلب؟</summary><p>المندوب يدفع لك قيمة الفاتورة كاملة وقت الاستلام، مثل أي زبون.</p></details>
+    <details><summary>لو كنت مزحوم؟</summary><p>تسكّر المحل نص ساعة أو ساعة من التطبيق، ويرجع يفتح لحاله.</p></details>
+    <details><summary>لو صنف خلص؟</summary><p>تكتب «خلص كذا، والبديل كذا» مع الفاتورة، والزبون يوافق قبل الشراء.</p></details>
+    <details><summary>كيف أدفع العمولة؟</summary><p>تشوف المستحق عليك في تطبيقك، وتسدّده آخر الشهر.</p></details>
+  </section>
+
+  <section id="form">
+    <h2>سجّل محلك</h2>
+    <p class="note">نتواصل معك خلال يوم، ونسلّمك رمز الدخول لتطبيق محلك.</p>
+    <form id="joinForm" novalidate>
+      <label>اسم المحل<input id="jName" maxlength="60" autocomplete="organization" placeholder="مثال: مطعم الريف"></label>
+      <label>نوع المحل<select id="jCat"><option>مطعم</option><option>كافيه</option><option>بقالة</option><option>صيدلية</option><option>أخرى</option></select></label>
+      <div class="grid2">
+        <label>اسمك<input id="jOwner" maxlength="60" autocomplete="name" placeholder="مثال: أبو سالم"></label>
+        <label>جوالك<input id="jPhone" class="ltr" inputmode="tel" autocomplete="tel" placeholder="05XXXXXXXX"></label>
+      </div>
+      <label>موقع المحل (رابط قوقل ماب، اختياري)<input id="jMap" class="ltr" inputmode="url" placeholder="https://maps.app.goo.gl/..."></label>
+      <label>ملاحظة (اختياري)<textarea id="jNote" rows="3" maxlength="500" placeholder="مثال: أوقات دوامنا من ٤ العصر لين ١٢ الليل"></textarea></label>
+      <p class="msg" id="jMsg" aria-live="polite"></p>
+      <button class="btn" id="jSend">إرسال الطلب</button>
+    </form>
+    <div class="done hidden" id="jDone"><b>وصلنا طلبك 🎉</b>بنتواصل معك على الجوال قريب.</div>
+  </section>
+  <footer><a href="/">توصيل جلاجل</a> · <a id="wa" href="#" target="_blank" rel="noopener">تواصل معنا واتساب</a></footer>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+const AR = "٠١٢٣٤٥٦٧٨٩", toAr = n => String(n).replace(/\d/g, d => AR[d]);
+(async () => {
+  try{
+    const d = await (await fetch("/api/join")).json();
+    $("#trial").textContent = d.trial_days ? toAr(d.trial_days) + " يوم" : "بدون";
+    $("#com").textContent = toAr(d.commission) + " ريال";
+    const p = $("#proof");
+    if(d.shops) p.append(Object.assign(document.createElement("span"), { textContent: `🏪 ${toAr(d.shops)} محل شريك` }));
+    if(d.delivered) p.append(Object.assign(document.createElement("span"), { textContent: `🛵 ${toAr(d.delivered)} طلب وصل` }));
+    if(d.support) $("#wa").href = "https://wa.me/" + d.support + "?text=" + encodeURIComponent("هلا، أبي أسجّل محلي في توصيل جلاجل");
+  }catch(e){}
+})();
+$("#joinForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const body = { name: $("#jName").value.trim(), category: $("#jCat").value, owner: $("#jOwner").value.trim(), phone: $("#jPhone").value.trim(), map_url: $("#jMap").value.trim(), note: $("#jNote").value.trim() };
+  if(!body.name){ $("#jMsg").textContent = "اكتب اسم المحل"; $("#jName").focus(); return; }
+  if(!body.owner){ $("#jMsg").textContent = "اكتب اسمك"; $("#jOwner").focus(); return; }
+  if(!body.phone){ $("#jMsg").textContent = "اكتب جوالك"; $("#jPhone").focus(); return; }
+  $("#jSend").disabled = true; $("#jMsg").textContent = "";
+  try{
+    const r = await fetch("/api/join", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    const d = await r.json();
+    if(!r.ok) throw new Error(d.error || "صار خطأ، جرّب مرة ثانية");
+    $("#joinForm").classList.add("hidden"); $("#jDone").classList.remove("hidden");
+  }catch(err){ $("#jMsg").textContent = err.message; }
+  $("#jSend").disabled = false;
+});
+</script>
+</body>
+</html>

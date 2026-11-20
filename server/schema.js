@@ -131,6 +131,21 @@ const STATEMENTS = [
     active INTEGER NOT NULL DEFAULT 1,
     created_at INTEGER NOT NULL
   )`,
+  // ملاحظات صاحب الخدمة على الزبون، والحظر (رقم يسوي طلبات وهمية)
+  `CREATE TABLE IF NOT EXISTS customers (
+    phone_key TEXT PRIMARY KEY,
+    blocked INTEGER NOT NULL DEFAULT 0,
+    reason TEXT,
+    note TEXT,
+    updated_at INTEGER
+  )`,
+  // طلبات انضمام المحلات من صفحة «انضم كشريك»
+  `CREATE TABLE IF NOT EXISTS shop_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL, category TEXT, owner TEXT, phone TEXT, map_url TEXT, note TEXT,
+    status TEXT NOT NULL DEFAULT 'new',   -- new، done، rejected
+    created_at INTEGER NOT NULL
+  )`,
   // الكود اللي كان مكتوب في صفحة الزبون ينتقل هنا أول مرة
   `INSERT OR IGNORE INTO promos (code, discount, date_from, date_to, per_phone, created_at) VALUES ('JALAJIL', 0.5, '2026-11-20', '2026-11-20', 1, 0)`,
 ];
@@ -155,7 +170,10 @@ const COLUMNS = {
     ["delivery_photo", "INTEGER"],
     ["driver_share", "REAL"],        // نصيب المندوب من رسوم التوصيل، ينحفظ لحظة التسليم
     ["fee_full", "REAL"],
-    ["auto_approve", "REAL"],        // الزبون يوافق مسبقاً على أي فاتورة لين هالمبلغ
+    ["auto_approve", "REAL"],
+    ["billed_at", "INTEGER"],        // متى اكتملت الفاتورة (لحساب وقت انتظار موافقة الزبون)
+    ["blocked", "INTEGER"],          // طلب من رقم محظور: ما يطلع للمحلات ولا للمناديب
+    ["ref_shop", "INTEGER"],         // الزبون جا من ملصق QR حق هالمحل        // الزبون يوافق مسبقاً على أي فاتورة لين هالمبلغ
     ["phone_key", "TEXT"],           // جوال الزبون بصيغة موحدة (لحساب استخدام أكواد الخصم)
     ["nudge_driver_at", "INTEGER"],  // الحارس نبّه إن الطلب بدون مندوب
     ["nudge_approve_at", "INTEGER"], // الحارس نبّه إن الزبون ما وافق            // رسوم التوصيل قبل كود الخصم: نصيب المندوب ينحسب منها، والخصم على صاحب الخدمة
@@ -165,11 +183,17 @@ const COLUMNS = {
     ["bill_receipt", "INTEGER"],     // صورة الفاتورة (للمحلات غير الشريكة)
     ["shop_stars", "INTEGER"],
     ["nudged_at", "INTEGER"],        // الحارس نبّه إن المحل ما رد
-    ["shop_note", "TEXT"],           // المحل كتبها وقت القبول: «خلص كذا، والبديل كذا»       // تقييم الزبون للمحل الشريك
+    ["shop_note", "TEXT"],
+    ["offer_min", "REAL"],           // عرض المحل وقت الطلب: توصيل مجاني لو فاتورته فوق هالمبلغ
+    ["offer_charge", "REAL"],        // رسوم التوصيل اللي تحمّلها المحل بسبب عرضه (تنحسب عليه مع العمولة)           // المحل كتبها وقت القبول: «خلص كذا، والبديل كذا»       // تقييم الزبون للمحل الشريك
   ],
   shops: [
     ["map_url", "TEXT"],             // موقع المحل
-    ["closed_until", "INTEGER"],     // مسكّر مؤقتاً (زحمة) ويفتح لحاله بعد هالوقت
+    ["closed_until", "INTEGER"],
+    ["offer_min", "REAL"],           // عرض المحل: توصيل مجاني فوق هالمبلغ، على حساب المحل
+    ["offer_text", "TEXT"],
+    ["featured", "INTEGER"],         // محل مميز: يطلع أول في صفحة الطلب (تسويق مجاني للشريك)
+    ["phone", "TEXT"],               // جوال المحل (لصاحب الخدمة يتصل عليه من لوحة العمليات)     // مسكّر مؤقتاً (زحمة) ويفتح لحاله بعد هالوقت
   ],
   drivers: [
     ["on_duty", "INTEGER NOT NULL DEFAULT 1"], // شغّال الحين؟ لو لا: ما توصله تنبيهات الطلبات الجديدة

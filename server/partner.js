@@ -7,7 +7,8 @@ const ip = r => r.headers.get("cf-connecting-ip") || "local";
 
 function shopInfo(s) {
   const open = shopOpen(s);
-  return { name: s.name, category: s.category, open, closed_until: !open && s.closed_until ? s.closed_until : null, code: s.code, trial_end: s.trial_end, commission: s.commission };
+  return { id: s.id, name: s.name, category: s.category, open, closed_until: !open && s.closed_until ? s.closed_until : null, code: s.code, trial_end: s.trial_end, commission: s.commission,
+    offer: s.offer_min ? { min: s.offer_min, text: s.offer_text || "" } : null, featured: !!s.featured };
 }
 
 export async function login(db, request) {
@@ -45,7 +46,7 @@ export async function orders(db, request) {
     SELECT p.id, p.items, p.status, p.prep_minutes, p.reject_reason, p.accepted_at, p.ready_at, p.updated_at, p.bill, p.shop_note,
            o.order_no, o.created_at, o.dest, o.customer_name, o.customer_phone, o.place, o.pay, o.note
     FROM parts p JOIN orders o ON o.id = p.order_id
-    WHERE p.shop_id = ? AND (p.status IN ('new','accepted') OR p.updated_at > ?)
+    WHERE p.shop_id = ? AND o.blocked IS NULL AND (p.status IN ('new','accepted') OR p.updated_at > ?)
     ORDER BY o.created_at DESC LIMIT 200`).bind(s.shop.id, since).all();
   return json({ shop: shopInfo(s.shop), orders: results, now: Date.now() });
 }
@@ -133,14 +134,15 @@ export async function history(db, request) {
   const s = await requireSession(db, request, "shop");
   const u = new URL(request.url);
   const [a, b] = riyadhSpan(u.searchParams.get("from"), u.searchParams.get("to"));
-  const { results } = await db.prepare(`SELECT p.id, p.items, p.bill, p.commission, p.ready_at, p.shop_stars, p.shop_note, o.order_no
+  const { results } = await db.prepare(`SELECT p.id, p.items, p.bill, p.commission, p.offer_charge, p.ready_at, p.shop_stars, p.shop_note, o.order_no
     FROM parts p JOIN orders o ON o.id = p.order_id
     WHERE p.shop_id = ? AND p.status = 'ready' AND p.ready_at >= ? AND p.ready_at < ? ORDER BY p.ready_at DESC LIMIT 500`).bind(s.shop.id, a, b).all();
   const rej = await db.prepare("SELECT COUNT(*) AS n FROM parts WHERE shop_id = ? AND status = 'rejected' AND updated_at >= ? AND updated_at < ?").bind(s.shop.id, a, b).first();
   const r2 = v => Math.round(v * 100) / 100;
   return json({
     orders: results,
-    totals: { count: results.length, bills: r2(results.reduce((t, p) => t + (Number(p.bill) || 0), 0)), commission: r2(results.reduce((t, p) => t + (Number(p.commission) || 0), 0)), rejected: rej.n },
+    totals: { count: results.length, bills: r2(results.reduce((t, p) => t + (Number(p.bill) || 0), 0)), commission: r2(results.reduce((t, p) => t + (Number(p.commission) || 0), 0)), rejected: rej.n,
+      offer_charges: r2(results.reduce((t, p) => t + (Number(p.offer_charge) || 0), 0)) },
   });
 }
 

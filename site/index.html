@@ -216,6 +216,17 @@ footer{font-size:13px;color:var(--muted);text-align:center}
 /* حماية الطلب + بعد الإرسال */
 .safe{list-style:none;margin:6px 0 0;padding:10px 12px;background:var(--accent-soft);border-radius:12px;display:flex;flex-direction:column;gap:4px;font-size:14px}
 .rt{color:#c98a10;font-weight:700;margin-inline-start:6px;font-size:13px}
+.pick .opt .ok{color:var(--accent);font-weight:700;margin-inline-start:4px;font-size:13px}
+.pick .opt .of{display:block;font-size:12px;font-weight:700;color:var(--stone)}
+.feat{display:flex;flex-direction:column;gap:8px}
+.feat > small{font-size:14px;font-weight:700;color:var(--muted)}
+.feat-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}
+.feat-row button{flex:none;display:flex;flex-direction:column;align-items:flex-start;gap:1px;border:1.5px solid var(--line);background:var(--surface);border-radius:16px;padding:9px 14px;box-shadow:var(--shadow);text-align:start;font:inherit;color:var(--ink);cursor:pointer;min-width:150px}
+.feat-row button b{font-family:var(--font-display);font-size:15px}
+.feat-row button span{font-size:12.5px;color:var(--muted)}
+.feat-row button em{font-style:normal;font-size:12.5px;font-weight:700;color:var(--stone)}
+.feat-row button[disabled]{opacity:.55;cursor:not-allowed}
+.offer-hint{font-size:13px;font-weight:600;color:var(--stone);margin:0}
 .track-last{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--ink);background:var(--surface);border:1.5px solid var(--accent);border-radius:14px;padding:12px 14px;font-weight:700}
 .track-last span{flex:1}
 .track-last b{font-family:var(--font-display);color:var(--accent);letter-spacing:2px;direction:ltr}
@@ -252,6 +263,7 @@ footer{font-size:13px;color:var(--muted);text-align:center}
     <div class="ticket"><small>🏡 الشاليهات والمنتزه</small><b><span id="chaletTop"></span> <span>ريال</span></b></div>
   </div>
   <div class="promo-banner hidden" id="promoBanner"></div>
+  <div class="feat hidden" id="featured"><small>⭐ محلات مميزة في جلاجل</small><div class="feat-row" id="featRow"></div></div>
   <a class="track-last hidden" id="trackLast" href="#">📦 <span>تابع طلبك الأخير</span><b id="trackLastCode"></b></a>
   <button type="button" class="again hidden" id="again">🔁 اطلب نفس طلبك الماضي</button>
 
@@ -459,7 +471,8 @@ function partnerById(id){ return PARTNERS.find(p => String(p.id) === String(id))
 function refreshPick(b){
   const id = b.dataset.id, cat = b.querySelector(`input[name="${id}-cat"]:checked`).value;
   const pick = $("#"+id+"-pick"), wrap = $("#"+id+"-namewrap"), nameEl = $("#"+id+"-name");
-  const list = PARTNERS.filter(p => p.category === cat);
+  const list = PARTNERS.filter(p => p.category === cat).sort((a, b) =>
+    (b.open - a.open) || (b.featured - a.featured) || (!!b.offer - !!a.offer) || ((b.rating || 0) - (a.rating || 0)));
   if(!list.length){
     // ما فيه شركاء بهالنوع: نفس الخانة القديمة
     if(b.dataset.shop && partnerById(b.dataset.shop)) nameEl.value = "";
@@ -476,8 +489,8 @@ function refreshPick(b){
     if(m){ sel = String(m.id); b.dataset.shop = sel; }
     else if(typed) b.dataset.other = "1";
   }
-  pick.innerHTML = `<small>اختر المحل</small><div class="chips" role="radiogroup" aria-label="المحل">` +
-    list.map(p => `<label class="opt${p.open ? "" : " closed"}"><input type="radio" name="${id}-shop" value="${p.id}" ${String(p.id)===sel ? "checked" : ""} ${p.open || String(p.id)===sel ? "" : "disabled"}><span>${esc(p.name)}${p.rating ? `<small class="rt">★ ${toAr(p.rating)}</small>` : ""}${p.open ? "" : "<em>مسكّر</em>"}</span></label>`).join("") +
+  pick.innerHTML = `<small>اختر المحل (✓ = شريك، يوصله طلبك على طول)</small><div class="chips" role="radiogroup" aria-label="المحل">` +
+    list.map(p => `<label class="opt${p.open ? "" : " closed"}"><input type="radio" name="${id}-shop" value="${p.id}" ${String(p.id)===sel ? "checked" : ""} ${p.open || String(p.id)===sel ? "" : "disabled"}><span>${esc(p.name)}<small class="ok" title="شريك توصيل جلاجل">✓</small>${p.rating ? `<small class="rt">★ ${toAr(p.rating)}</small>` : ""}${p.open ? "" : "<em>مسكّر</em>"}${p.offer ? `<small class="of">🎁 توصيل مجاني فوق ${toAr(p.offer.min)} ر</small>` : ""}</span></label>`).join("") +
     `<label class="opt other"><input type="radio" name="${id}-shop" value="other" ${!sel && b.dataset.other ? "checked" : ""}><span>محل ثاني</span></label></div>`;
   pick.classList.remove("hidden");
   wrap.classList.toggle("hidden", !(!sel && b.dataset.other));
@@ -494,6 +507,28 @@ function pickShop(b, value){
   refreshPick(b);
   if(value === "other") nameEl.focus();
 }
+// يختار محل شريك في أول خانة (من المميزين أو من ملصق QR)
+function choosePartner(id){
+  const p = partnerById(id); if(!p) return false;
+  const b = shopsEl.querySelector(".shop"); if(!b) return false;
+  const r = b.querySelector(`input[name="${b.dataset.id}-cat"][value="${p.category}"]`);
+  if(r && !r.checked){ r.checked = true; refreshQuick(b); }
+  refreshPick(b); pickShop(b, String(p.id)); render();
+  return true;
+}
+function renderFeatured(){
+  const list = PARTNERS.filter(p => p.featured), row = $("#featRow");
+  $("#featured").classList.toggle("hidden", !list.length);
+  row.innerHTML = "";
+  list.sort((a, b) => b.open - a.open).forEach(p => {
+    const btn = document.createElement("button"); btn.type = "button"; btn.disabled = !p.open;
+    btn.innerHTML = `<b>${esc(p.name)} ✓</b><span>${(CONFIG.icons||{})[p.category]||""} ${esc(p.category)}${p.rating ? " · ★" + toAr(p.rating) : ""}${p.open ? "" : " · مسكّر"}</span>` + (p.offer ? `<em>🎁 توصيل مجاني فوق ${toAr(p.offer.min)} ر</em>` : "");
+    btn.onclick = () => { if(choosePartner(p.id)){ const sec = $("#sec-order"); if(sec) sec.scrollIntoView({behavior:"smooth", block:"start"}); setTimeout(()=>{ const t = shopsEl.querySelector("textarea"); if(t) t.focus({preventScroll:true}); }, 500); } };
+    row.append(btn);
+  });
+}
+const REF = (()=>{ const v = Number(new URLSearchParams(location.search).get("shop")); return Number.isInteger(v) && v > 0 ? v : null; })();
+let refDone = false;
 async function loadPartners(){
   try{
     const r = await fetch("/api/shops", {cache:"no-store"});
@@ -505,6 +540,8 @@ async function loadPartners(){
     promoToday = d.promo || null;
     if(d.prepay_cap > 0){ const n = $("#capNote"); n.textContent = `💳 لو الفاتورة فوق ${toAr(d.prepay_cap)} ريال، تحوّل قيمتها قبل ما المندوب يشتري.`; n.classList.remove("hidden"); }
     shopsEl.querySelectorAll(".shop").forEach(refreshPick);
+    renderFeatured();
+    if(REF && !refDone){ refDone = true; choosePartner(REF); }
     render();
   }catch(e){}
 }
@@ -659,6 +696,7 @@ function message(withTrack = true){
   L.push("");
   if(promoApplied) L.push(`رسوم التوصيل: ${fmt(fee())} ريال (بدل ${baseFee()}، كود الخصم: ${P.code})`);
   else L.push(`رسوم التوصيل: ${baseFee()} ريال`);
+  shops.forEach(sh => { const pp = sh.shopId && partnerById(sh.shopId); if(pp && pp.offer) L.push(`🎁 عرض ${pp.name}: التوصيل مجاني لو فاتورته ${fmt(pp.offer.min)} ريال أو أكثر`); });
   L.push("قيمة الطلب: حسب فاتورة المحل بدون زيادة");
   if(withTrack){ L.push(""); L.push("تابع طلبك ووافق على الفاتورة من هنا:"); L.push(trackUrl()); }
   return L.join("\n");
@@ -777,7 +815,7 @@ function saveOrder(){
       order_no: orderNo, dest: dest(),
       name: $("#name").value.trim(), phone: $("#phone").value.trim(), map: $("#map").value.trim(),
       place: $("#place").value.trim(), pay: $("#pay").value, note: $("#note").value.trim(),
-      fee: fee(), fee_full: baseFee(), promo: promoApplied && P ? P.code : "", auto_approve: autoOk(),
+      fee: fee(), fee_full: baseFee(), promo: promoApplied && P ? P.code : "", auto_approve: autoOk(), ref: REF,
       pack, parts: shops.map(s => ({ shop_id: s.shopId, cat: s.cat, name: s.name, items: s.items }))
     });
     fetch("/api/orders", {method:"POST", keepalive:true, headers:{"content-type":"application/json"}, body}).catch(()=>{});

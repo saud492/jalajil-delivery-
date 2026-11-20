@@ -18,7 +18,7 @@ const H = 3600_000;
 const toEn = s => String(s).replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d));
 
 // الطلب "حي" لو فيه جزء واحد على الأقل ما انلغى ولا انرفض
-const LIVE = `(o.rejected_at IS NULL AND EXISTS (SELECT 1 FROM parts x WHERE x.order_id = o.id AND x.status NOT IN ('cancelled','rejected')))`;
+const LIVE = `(o.rejected_at IS NULL AND o.blocked IS NULL AND EXISTS (SELECT 1 FROM parts x WHERE x.order_id = o.id AND x.status NOT IN ('cancelled','rejected')))`;
 
 function driverInfo(d) {
   return { name: d.name, code: d.code, phone: d.phone, on_duty: d.on_duty === undefined || d.on_duty === null ? true : !!d.on_duty };
@@ -55,7 +55,7 @@ async function partsFor(db, ids) {
   const by = new Map(ids.map(id => [id, []]));
   if (!ids.length) return by;
   // موقع المحل الشريك يطلع للمندوب عشان يروح له على طول
-  const { results } = await db.prepare(`SELECT p.id, p.order_id, p.shop_id, p.shop_name, p.category, p.items, p.status, p.prep_minutes, p.accepted_at, p.ready_at, p.bill, p.bill_receipt, p.shop_note, s.map_url AS shop_map
+  const { results } = await db.prepare(`SELECT p.id, p.order_id, p.shop_id, p.shop_name, p.category, p.items, p.status, p.prep_minutes, p.accepted_at, p.ready_at, p.bill, p.bill_receipt, p.shop_note, p.offer_min, s.map_url AS shop_map
     FROM parts p LEFT JOIN shops s ON s.id = p.shop_id WHERE p.order_id IN (${ids.map(() => "?").join(",")}) ORDER BY p.id`).bind(...ids).all();
   for (const p of results) by.get(p.order_id).push(p);
   return by;
@@ -90,7 +90,7 @@ export async function orders(db, request) {
         id: o.id, order_no: o.order_no, created_at: o.created_at, dest: o.dest, place: o.place, fee: o.fee,
         customer_name: o.customer_name, customer_phone: o.customer_phone, map_url: o.map_url, pay: o.pay, note: o.note,
         pack: safeParse(o.pack), driver_status: o.driver_status, assigned_at: o.assigned_at, picked_at: o.picked_at, delivered_at: o.delivered_at,
-        prepay_status: o.prepay_status, leave_at_door: !!o.leave_at_door, auto_approve: o.auto_approve,
+        prepay_status: o.prepay_status, leave_at_door: !!o.leave_at_door, auto_approve: o.auto_approve, fee: o.fee,
         parts: parts.map(p => ({ ...brief(p), id: p.id, items: p.items, bill: p.bill, receipt: p.bill_receipt, shop_note: p.shop_note })),
         ...summarize(o, parts, settings),
       };
@@ -150,6 +150,15 @@ export async function act(db, request, orderId, e = {}) {
     const share = Math.round((Number(o.fee_full ?? o.fee) || 0) * driver_share) / 100;
     stmt = db.prepare("UPDATE orders SET driver_status='delivered', delivered_at=?, delivery_photo=?, driver_share=? WHERE id=? AND driver_id=? AND driver_status='picked'")
       .bind(now, photo, share, orderId, me);
+    // عرض المحل: الزبون ما دفع التوصيل، فالمحل يتحمّله ويطلع عليه مع العمولة
+    const x = await loadOrder(db, "id", orderId), sumNow = summarize(x.o, x.parts, await getSettings(db));
+    if (sumNow.fee_waived) {
+      const r0 = await stmt.run();
+      if (!r0.meta.changes) throw new HttpError(409, "حالة الطلب تغيّرت، حدّث الصفحة");
+      await db.prepare("UPDATE parts SET offer_charge = ? WHERE id = ?").bind(Number(o.fee) || 0, sumNow.waived_part).run();
+      await changed(e, db, before);
+      return json({ ok: true });
+    }
   } else throw new HttpError(400, "إجراء غير معروف");
   const r = await stmt.run();
   if (!r.meta.changes) {
@@ -243,10 +252,12 @@ export async function walletFor(db, id) {
   const o = await db.prepare(`SELECT COUNT(*) AS n,
       COALESCE(SUM(COALESCE(fee,0)),0) AS fees,
       COALESCE(SUM(COALESCE(driver_share, fee, 0)),0) AS earned,
-      COALESCE(SUM(CASE WHEN prepay_status='confirmed' THEN COALESCE(prepay_amount,0) ELSE 0 END),0) AS prepaid
+      COALESCE(SUM(CASE WHEN prepay_status='confirmed' THEN COALESCE(prepay_amount,0) ELSE 0 END),0) AS prepaid,
+      COALESCE(SUM((SELECT SUM(COALESCE(p.offer_charge,0)) FROM parts p WHERE p.order_id = orders.id)),0) AS waived
     FROM orders WHERE driver_id = ? AND driver_status = 'delivered'`).bind(id).first();
   const st = await db.prepare("SELECT COALESCE(SUM(amount),0) AS s FROM settlements WHERE driver_id = ?").bind(id).first();
-  const owed = (o.fees - o.earned) - o.prepaid;
+  // التوصيل اللي على المحل (عرضه) ما حصّله المندوب من الزبون
+  const owed = (o.fees - o.waived - o.earned) - o.prepaid;
   const r2 = v => Math.round(v * 100) / 100;
   return { deliveries: o.n, fees: r2(o.fees), earned: r2(o.earned), prepaid: r2(o.prepaid), settled: r2(st.s), balance: r2(owed - st.s) };
 }

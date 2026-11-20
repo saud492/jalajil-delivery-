@@ -14,7 +14,9 @@ export async function login(db, request, env) {
   const b = await readJson(request);
   const keys = [`admin:${ip(request)}`, "admin"];
   await checkLock(db, keys);
-  const ok = safeEqual(await sha256(str(b.password, 200)), await sha256(env.ADMIN_PASSWORD));
+  // كيبورد الجوال العربي يكتب الأرقام ٠١٢٣ (أو ۰۱۲۳ الفارسية)، وأحياناً يضيف مسافة: نوحّدها قبل المقارنة
+  const norm = v => String(v ?? "").replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d)).trim();
+  const ok = safeEqual(await sha256(norm(str(b.password, 200))), await sha256(norm(env.ADMIN_PASSWORD)));
   if (!ok) { await recordFail(db, keys, [5, 30]); throw new HttpError(401, "كلمة السر غلط"); }
   await clearFails(db, keys);
   const token = await createSession(db, "admin");
@@ -63,6 +65,11 @@ function cleanShop(b, creating) {
     out.map_url = str(b.map_url, 500);
     if (out.map_url && !/^https?:\/\/\S+$/i.test(out.map_url)) throw new HttpError(400, "رابط موقع المحل لازم يبدأ بـ https://");
   }
+  if (b.phone !== undefined) {
+    out.phone = str(b.phone, 20).replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/[^\d+]/g, "") || null;
+    if (out.phone && !/^\+?\d{8,15}$/.test(out.phone)) throw new HttpError(400, "جوال المحل غير صحيح");
+  }
+  if (b.featured !== undefined) out.featured = b.featured ? 1 : 0;
   if (b.active !== undefined) out.active = b.active ? 1 : 0;
   if (b.is_open !== undefined) out.is_open = b.is_open ? 1 : 0;
   return out;
@@ -74,8 +81,8 @@ export async function createShop(db, request) {
   const dup = await db.prepare("SELECT id FROM shops WHERE code = ?").bind(s.code).first();
   if (dup) throw new HttpError(409, "رمز المحل مستخدم، اختر رمز ثاني");
   const { hash, salt } = await hashPin(s.pin);
-  const r = await db.prepare(`INSERT INTO shops (code, name, category, pin_hash, pin_salt, commission, trial_end, map_url, created_at)
-    VALUES (?,?,?,?,?,?,?,?,?) RETURNING id`).bind(s.code, s.name, s.category, hash, salt, s.commission, s.trial_end, s.map_url || null, Date.now()).first();
+  const r = await db.prepare(`INSERT INTO shops (code, name, category, pin_hash, pin_salt, commission, trial_end, map_url, phone, created_at)
+    VALUES (?,?,?,?,?,?,?,?,?,?) RETURNING id`).bind(s.code, s.name, s.category, hash, salt, s.commission, s.trial_end, s.map_url || null, s.phone || null, Date.now()).first();
   return json({ ok: true, id: r.id });
 }
 
@@ -89,7 +96,7 @@ export async function updateShop(db, request, id) {
     if (dup) throw new HttpError(409, "رمز المحل مستخدم، اختر رمز ثاني");
   }
   const sets = [], vals = [];
-  for (const k of ["code", "name", "category", "commission", "trial_end", "active", "is_open", "map_url"]) {
+  for (const k of ["code", "name", "category", "commission", "trial_end", "active", "is_open", "map_url", "phone", "featured"]) {
     if (k in s) { sets.push(`${k} = ?`); vals.push(s[k]); }
   }
   const stmts = [];
@@ -110,20 +117,20 @@ export async function shops(db, request) {
   await requireSession(db, request, "admin");
   const { weekStart, monthStart } = riyadhRanges(Date.now());
   const { results } = await db.prepare(`
-    SELECT s.id, s.code, s.name, s.category, s.commission, s.trial_end, s.is_open, s.active, s.created_at, s.map_url,
+    SELECT s.id, s.code, s.name, s.category, s.commission, s.trial_end, s.is_open, s.active, s.created_at, s.map_url, s.phone, s.featured, s.offer_min, s.offer_text,
       AVG(p.shop_stars) AS rating, COUNT(p.shop_stars) AS rating_count,
       SUM(CASE WHEN p.status='ready' AND p.ready_at >= ?1 THEN 1 ELSE 0 END) AS week_count,
-      SUM(CASE WHEN p.status='ready' AND p.ready_at >= ?1 THEN p.commission ELSE 0 END) AS week_commission,
+      SUM(CASE WHEN p.status='ready' AND p.ready_at >= ?1 THEN p.commission + COALESCE(p.offer_charge,0) ELSE 0 END) AS week_commission,
       SUM(CASE WHEN p.status='ready' AND p.ready_at >= ?2 THEN 1 ELSE 0 END) AS month_count,
-      SUM(CASE WHEN p.status='ready' AND p.ready_at >= ?2 THEN p.commission ELSE 0 END) AS month_commission,
+      SUM(CASE WHEN p.status='ready' AND p.ready_at >= ?2 THEN p.commission + COALESCE(p.offer_charge,0) ELSE 0 END) AS month_commission,
       SUM(CASE WHEN p.status='ready' THEN 1 ELSE 0 END) AS all_count,
-      SUM(CASE WHEN p.status='ready' THEN p.commission ELSE 0 END) AS all_commission,
+      SUM(CASE WHEN p.status='ready' THEN p.commission + COALESCE(p.offer_charge,0) ELSE 0 END) AS all_commission,
       SUM(CASE WHEN p.status IN ('new','accepted') THEN 1 ELSE 0 END) AS open_count
     FROM shops s LEFT JOIN parts p ON p.shop_id = s.id
     GROUP BY s.id ORDER BY s.active DESC, s.name`).bind(weekStart, monthStart).all();
   const n = v => v || 0;
   return json({
-    shops: results.map(r => ({ ...r, is_open: !!r.is_open, active: !!r.active,
+    shops: results.map(r => ({ ...r, is_open: !!r.is_open, active: !!r.active, featured: !!r.featured,
       week_count: n(r.week_count), week_commission: n(r.week_commission), month_count: n(r.month_count),
       month_commission: n(r.month_commission), all_count: n(r.all_count), all_commission: n(r.all_commission), open_count: n(r.open_count) })),
   });

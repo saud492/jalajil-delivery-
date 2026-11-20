@@ -104,33 +104,110 @@ tfoot td{font-weight:700;border-bottom:none}
 .sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:40;display:flex;align-items:flex-end;justify-content:center;overflow:auto}
 .sheet{background:var(--surface);width:100%;max-width:560px;border-radius:22px 22px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:12px;margin-top:auto}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* ===== شكل أرتب ===== */
+.lgn{min-height:100vh;min-height:100dvh;display:grid;place-items:center;padding:calc(24px + env(safe-area-inset-top)) 16px 24px;
+  background:radial-gradient(120% 90% at 85% 0%,#17847e 0%,#0f6a66 40%,#0a4f4c 100%)}
+.lgn.hidden{display:none !important}
+.lgn-card{width:100%;max-width:400px;background:var(--surface);border-radius:26px;padding:28px 22px 22px;box-shadow:0 20px 60px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:12px;text-align:center}
+.lgn-logo{width:72px;height:72px;border-radius:20px;margin:-64px auto 0;box-shadow:0 10px 30px rgba(0,0,0,.25);background:var(--surface)}
+.lgn h1{font-size:22px}
+.lgn-sub{margin:0;color:var(--muted);font-size:14px}
+.lgn form{display:flex;flex-direction:column;gap:8px;text-align:start;margin-top:6px}
+.pwrow{display:flex;gap:6px}
+.pwrow input{flex:1;font-size:18px;letter-spacing:1px;text-align:left}
+.pwrow button{flex:none;width:52px;border:1.5px solid var(--line);background:var(--surface2);border-radius:12px;font-size:20px}
+.lgn-btn{padding:14px;font-size:17px}
+.lgn-foot{margin:0;color:var(--muted);font-size:13px}
+.lgn-foot a{color:var(--accent);font-weight:700}
+.top-logo{width:34px;height:34px;border-radius:10px;flex:none;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.top h1 small{display:block;font-size:12px;color:var(--sand);font-family:var(--font-body);font-weight:500;line-height:1.2}
+.top h1{line-height:1.25}
+.ti{font-style:normal;margin-inline-end:4px}
+/* الجوال: التبويبات تصير شريط سفلي مثل التطبيقات */
+@media (max-width:700px){
+  .top{padding-bottom:12px}
+  .tabs{position:fixed;bottom:0;left:0;right:0;z-index:30;margin:0;background:var(--surface);border-top:1px solid var(--line);
+    box-shadow:0 -6px 20px rgba(0,0,0,.08);padding:4px 6px calc(4px + env(safe-area-inset-bottom));gap:0;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tabs button{flex:0 0 auto;min-width:68px;display:flex;flex-direction:column;align-items:center;gap:0;color:var(--muted);font-size:11.5px;padding:6px 4px 4px;border-bottom:none;border-top:3px solid transparent;position:relative}
+  .tabs button.on{color:var(--accent);border-color:var(--accent)}
+  .tabs .ti{font-size:20px;margin:0;line-height:1.3}
+  .tabs .cnt{position:absolute;top:2px;inset-inline-end:8px;margin:0}
+  .wrap{padding-bottom:calc(96px + env(safe-area-inset-bottom))}
+}
 </style>
 </head>
 <body>
 
-<div id="loginView" class="login hidden">
-  <h1>لوحة توصيل جلاجل</h1>
-  <form id="loginForm" style="display:flex;flex-direction:column;gap:12px">
-    <label class="f">كلمة السر<input id="pw" type="password" autocomplete="current-password"></label>
-    <p class="msg" id="loginMsg"></p>
-    <button class="btn" id="loginBtn">دخول</button>
-  </form>
+<div id="loginView" class="lgn hidden">
+  <div class="lgn-card">
+    <img src="/icon-192.png" alt="" class="lgn-logo">
+    <h1>لوحة توصيل جلاجل</h1>
+    <p class="lgn-sub">لوحة صاحب الخدمة: الطلبات الحية، المحلات، المناديب، والحسابات</p>
+    <form id="loginForm" novalidate>
+      <label class="f" for="pw">كلمة السر</label>
+      <div class="pwrow">
+        <input id="pw" type="password" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false" dir="ltr" placeholder="••••••••">
+        <button type="button" id="pwEye" aria-label="أظهر كلمة السر" title="أظهر كلمة السر">👁</button>
+      </div>
+      <p class="msg" id="loginMsg" aria-live="polite"></p>
+      <button class="btn lgn-btn" id="loginBtn">دخول</button>
+    </form>
+    <p class="lgn-foot">الأرقام العربية (١٢٣) تنقبل. <a href="/">صفحة الطلب</a></p>
+  </div>
 </div>
 
 <div id="appView" class="hidden">
   <header class="top"><div class="top-in">
-    <div class="top-row"><h1>لوحة توصيل جلاجل</h1><button class="lo" id="logout">خروج</button></div>
+    <div class="top-row"><img src="/icon-192.png" alt="" class="top-logo"><h1>لوحة توصيل جلاجل<small id="topSub">صاحب الخدمة</small></h1><button class="lo" id="logout">خروج</button></div>
     <nav class="tabs">
-      <button class="on" data-tab="orders">الطلبات</button>
-      <button data-tab="reports">البلاغات<b id="repCount" class="cnt hidden"></b></button>
-      <button data-tab="shops">المحلات</button>
-      <button data-tab="drivers">المناديب</button>
-      <button data-tab="money">الحسابات</button>
+      <button class="on" data-tab="live"><i class="ti">🟢</i>مباشر</button>
+      <button data-tab="orders"><i class="ti">📋</i>الطلبات</button>
+      <button data-tab="reports"><i class="ti">🚩</i>البلاغات<b id="repCount" class="cnt hidden"></b></button>
+      <button data-tab="shops"><i class="ti">🏪</i>المحلات<b id="reqCount" class="cnt hidden"></b></button>
+      <button data-tab="drivers"><i class="ti">🛵</i>المناديب</button>
+      <button data-tab="stats"><i class="ti">📊</i>التحليلات</button>
+      <button data-tab="customers"><i class="ti">👥</i>الزبائن</button>
+      <button data-tab="money"><i class="ti">⚙️</i>الحسابات</button>
     </nav>
   </div></header>
 
-  <main class="wrap" id="ordersTab">
+  <main class="wrap wide" id="liveTab">
     <div id="pushBox"></div>
+    <div class="lsum" id="liveSum"></div>
+    <div class="drvstrip" id="liveDrivers"></div>
+    <div class="board" id="liveBoard"><p class="muted">جاري التحميل…</p></div>
+  </main>
+
+  <main class="wrap hidden" id="statsTab">
+    <div class="row">
+      <label class="f grow">الفترة<select id="stPeriod">
+        <option value="today">اليوم</option><option value="yesterday">أمس</option><option value="d7" selected>آخر ٧ أيام</option>
+        <option value="d30">آخر ٣٠ يوم</option><option value="month">هالشهر</option><option value="lastmonth">الشهر الماضي</option>
+      </select></label>
+    </div>
+    <div class="exp"><span class="muted">تصدير Excel للفترة:</span>
+      <button class="btn sm line" type="button" data-exp="orders">الطلبات</button>
+      <button class="btn sm line" type="button" data-exp="shops">عمولات المحلات</button>
+      <button class="btn sm line" type="button" data-exp="drivers">حسابات المناديب</button>
+    </div>
+    <div id="statsBody" style="display:flex;flex-direction:column;gap:12px"></div>
+  </main>
+
+  <main class="wrap hidden" id="customersTab">
+    <input id="custQ" type="search" placeholder="ابحث بالاسم أو الجوال" aria-label="بحث في الزبائن">
+    <div class="segs" id="custSegs"></div>
+    <details class="card hidden" id="winback">
+      <summary style="cursor:pointer;font-weight:700;color:var(--accent)">💌 رجّع المنقطعين: رسالة لكل واحد على الواتساب</summary>
+      <p class="muted" style="margin:0">اكتب الرسالة، وحط فيها كود خصم من قائمة الأكواد (الحسابات). {الاسم} يتبدّل باسم الزبون. كل رسالة تفتح الواتساب جاهزة وأنت ترسلها.</p>
+      <textarea id="wbMsg" rows="3" style="font:inherit;font-size:16px;color:var(--ink);background:var(--surface2);border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;width:100%">هلا {الاسم} 👋 وحشتنا في توصيل جلاجل! اطلب اليوم وخذ خصم على التوصيل بالكود: </textarea>
+      <button class="btn sm" type="button" id="wbBuild">جهّز الرسائل</button>
+      <div id="wbList" style="display:flex;flex-direction:column;gap:6px"></div>
+    </details>
+    <div class="card" id="custList"></div>
+  </main>
+
+  <main class="wrap hidden" id="ordersTab">
     <div class="filters">
       <label class="f">الفترة<select id="fDays"><option value="1">اليوم وأمس</option><option value="7" selected>آخر ٧ أيام</option><option value="30">آخر ٣٠ يوم</option><option value="90">آخر ٩٠ يوم</option></select></label>
       <label class="f">الحالة<select id="fStatus"><option value="">الكل</option><option value="new">جديد</option><option value="accepted">قيد التجهيز</option><option value="ready">جاهز</option><option value="rejected">مرفوض</option><option value="cancelled">ملغي</option></select></label>
@@ -145,7 +222,9 @@ tfoot td{font-weight:700;border-bottom:none}
   </main>
 
   <main class="wrap hidden" id="shopsTab">
-    <button class="btn" id="addShop">+ إضافة محل</button>
+    <div class="card hidden" id="reqBox"></div>
+    <div class="row"><button class="btn grow" id="addShop">+ إضافة محل</button>
+      <a class="btn line" href="/join/" target="_blank" rel="noopener" style="text-decoration:none">🔗 صفحة «انضم كشريك»</a></div>
     <div id="shops"></div>
   </main>
 
@@ -156,6 +235,7 @@ tfoot td{font-weight:700;border-bottom:none}
   </main>
 
   <main class="wrap hidden" id="moneyTab">
+    <div id="pushManage"></div>
     <form class="card" id="setForm" novalidate>
       <h2 style="font-size:17px">💳 الرسوم والدفع المسبق والشكاوى</h2>
       <div class="row" style="align-items:flex-end">
@@ -165,6 +245,10 @@ tfoot td{font-weight:700;border-bottom:none}
       <label class="f">حد الدفع المسبق (ريال): لو الفاتورة فوقه الزبون يحوّل قبل ما المندوب يشتري. صفر = بدون<input id="setCap" class="ltr" inputmode="decimal" placeholder="100"></label>
       <label class="f">بيانات التحويل اللي تطلع للزبون (اسم البنك، الآيبان، أو رقم STC Pay)<textarea id="setPay" rows="3" style="font:inherit;font-size:16px;color:var(--ink);background:var(--surface2);border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;width:100%;resize:vertical" placeholder="مثال: الراجحي · SA00 0000 0000 0000 0000 0000 · باسم ..."></textarea></label>
       <label class="f">رقم واتساب الشكاوى (يطلع للزبون في صفحة المتابعة)<input id="setSupport" class="ltr" inputmode="tel" placeholder="9665XXXXXXXX"></label>
+      <div class="row" style="align-items:flex-end">
+        <label class="f" style="flex:1 1 140px">أيام التجربة المجانية للمحل الجديد (تطلع في صفحة الانضمام)<input id="setTrial" class="ltr" inputmode="numeric" placeholder="30"></label>
+        <label class="f" style="flex:1 1 140px">عمولة الطلب بعد التجربة (ريال)<input id="setPCom" class="ltr" inputmode="decimal" placeholder="2"></label>
+      </div>
       <label class="f">نصيب المندوب من رسوم التوصيل (٪). ١٠٠ = الرسوم كلها له، والباقي لك ويطلع عليه في محفظته<input id="setShare" class="ltr" inputmode="decimal" placeholder="100"></label>
       <p class="msg" id="setMsg"></p>
       <button class="btn" id="setSave">حفظ</button>
@@ -194,8 +278,8 @@ tfoot td{font-weight:700;border-bottom:none}
       </details>
     </div>
     <div class="card">
-      <h2 style="font-size:17px">العمولات المستحقة</h2>
-      <p class="muted" style="margin:0">الطلب ينحسب لما المحل يضغط "جاهز للاستلام". الطلبات داخل فترة التجربة عمولتها صفر. الأسبوع يبدأ السبت.</p>
+      <h2 style="font-size:17px">المستحق على المحلات</h2>
+      <p class="muted" style="margin:0">الطلب ينحسب لما المحل يضغط "جاهز للاستلام". الطلبات داخل فترة التجربة عمولتها صفر. المبلغ = العمولة + رسوم توصيل عروض المحل. الأسبوع يبدأ السبت.</p>
       <div class="scroll"><table>
         <thead><tr><th>المحل</th><th>الأسبوع</th><th>الشهر</th><th>من البداية</th></tr></thead>
         <tbody id="moneyBody"></tbody><tfoot id="moneyFoot"></tfoot>
@@ -221,11 +305,13 @@ tfoot td{font-weight:700;border-bottom:none}
       <label class="f">رمز المحل (للدخول، عربي أو إنجليزي)<input id="sCode" autocapitalize="none" spellcheck="false" placeholder="مثال: الريف"></label>
       <label class="f"><span id="pinLbl">الرقم السري (٤ إلى ٨ أرقام)</span><input id="sPin" class="ltr" inputmode="numeric" autocomplete="off" placeholder="مثال: 4821"></label>
       <label class="f">العمولة لكل طلب (ريال)<input id="sCom" class="ltr" inputmode="decimal" placeholder="2"></label>
+      <label class="f">جوال المحل (اختياري، تتصل عليه من «مباشر»)<input id="sPhone" class="ltr" inputmode="tel" placeholder="05XXXXXXXX"></label>
       <label class="f">موقع المحل (رابط قوقل ماب، اختياري)<input id="sMap" class="ltr" inputmode="url" placeholder="https://maps.app.goo.gl/..."></label>
       <div class="f" role="group" aria-labelledby="trialLbl"><span id="trialLbl">نهاية فترة التجربة</span>
         <div class="date3"><select id="tD" aria-label="اليوم"></select><select id="tM" aria-label="الشهر"></select><select id="tY" aria-label="السنة"></select></div>
       </div>
     </div>
+    <label class="row" style="gap:10px;font-weight:600"><input type="checkbox" id="sFeat" style="width:auto"> ⭐ مميز: يطلع في أعلى صفحة الطلب (تسويق مجاني للشريك)</label>
     <label class="row hidden" id="activeRow" style="gap:10px;font-weight:600"><input type="checkbox" id="sActive" style="width:auto"> المحل فعّال (لو شلت الصح يختفي من موقع الطلب وما يقدر يدخل)</label>
     <p class="msg" id="formMsg"></p>
     <button class="btn" id="saveShop">حفظ</button>
@@ -272,7 +358,7 @@ const toAr = n => String(n).replace(/\d/g, d => AR[d]);
 const money = n => toAr((Math.round((+n||0)*100)/100).toString());
 const DEST = { home:"البيت", chalet:"شاليه", park:"المنتزه" };
 const STATUS = { new:"جديد", accepted:"قيد التجهيز", ready:"جاهز", rejected:"مرفوض", cancelled:"ملغي" };
-let SHOPS = [], editing = null, timer = null, tab = "orders";
+let SHOPS = [], editing = null, timer = null, tab = "live";
 
 async function api(path, method, body){
   const opt = method ? {method, headers:{"content-type":"application/json"}, body:JSON.stringify(body||{})} : {cache:"no-store"};
@@ -288,10 +374,12 @@ function when(ms){ try{ return new Intl.DateTimeFormat("ar-SA-u-ca-gregory-nu-ar
 function dateAr(iso){ try{ return new Intl.DateTimeFormat("ar-SA-u-ca-gregory-nu-arab",{day:"numeric",month:"short",year:"numeric",timeZone:"UTC"}).format(new Date(iso+"T00:00:00Z")); }catch(e){ return iso; } }
 
 function showLogin(){ clearInterval(timer); $("#appView").classList.add("hidden"); $("#loginView").classList.remove("hidden"); }
+$("#pwEye").addEventListener("click", ()=>{ const i = $("#pw"), show = i.type === "password"; i.type = show ? "text" : "password"; $("#pwEye").textContent = show ? "🙈" : "👁"; i.focus(); });
 async function showApp(){
   $("#loginView").classList.add("hidden"); $("#appView").classList.remove("hidden");
   if(window.JLPush) JLPush.mount($("#pushBox"), { sw: "/admin/sw.js", scope: "/admin/", api: "/api/admin/push", who: "الطلبات الجديدة والطلبات الواقفة والبلاغات" });
-  await Promise.all([loadShops(), loadDrivers()]); loadOrders(); loadReports();
+  await Promise.all([loadShops(), loadDrivers()]); loadOrders(); loadReports(); loadRequests();
+  if(window.OPS) OPS.show(tab);
   clearInterval(timer); timer = setInterval(()=>{ if(document.visibilityState==="visible"){ if(tab==="orders") loadOrders(); else { loadShops(); loadDrivers(); } loadReports(); } }, 30000);
 }
 $("#loginForm").addEventListener("submit", async e=>{
@@ -305,10 +393,12 @@ $("#logout").addEventListener("click", async ()=>{ try{ await api("logout", "POS
 document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click", ()=>{
   tab = b.dataset.tab;
   document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on", x===b));
-  ["orders","reports","shops","drivers","money"].forEach(t=>$("#"+t+"Tab").classList.toggle("hidden", t!==tab));
+  ["live","orders","stats","customers","reports","shops","drivers","money"].forEach(t=>$("#"+t+"Tab").classList.toggle("hidden", t!==tab));
+  if(window.OPS) OPS.show(tab);
   if(tab==="reports") loadReports();
   if(tab==="orders") loadOrders(); else { loadShops(); loadDrivers(); }
-  if(tab==="money") loadSettings();
+  if(tab==="money"){ loadSettings();
+    if(window.JLPush) JLPush.mount($("#pushManage"), { sw: "/admin/sw.js", scope: "/admin/", api: "/api/admin/push", who: "الطلبات الجديدة والطلبات الواقفة والبلاغات", manage: true }); }
 }));
 
 /* ===== المناديب ===== */
@@ -460,13 +550,13 @@ $("#stForm").addEventListener("submit", async e=>{
 
 /* الإعدادات */
 async function loadSettings(){
-  try{ const d = await api("settings"); const s = d.settings; $("#setFeeHome").value = s.delivery_fee; $("#setFeeOut").value = s.out_fee; $("#setCap").value = s.prepay_cap; $("#setPay").value = s.pay_info || ""; $("#setSupport").value = s.support || ""; $("#setShare").value = s.driver_share; }
+  try{ const d = await api("settings"); const s = d.settings; $("#setFeeHome").value = s.delivery_fee; $("#setFeeOut").value = s.out_fee; $("#setCap").value = s.prepay_cap; $("#setPay").value = s.pay_info || ""; $("#setSupport").value = s.support || ""; $("#setShare").value = s.driver_share; $("#setTrial").value = s.partner_trial_days; $("#setPCom").value = s.partner_commission; }
   catch(err){ toast(err.message); }
   loadPromos();
 }
 $("#setForm").addEventListener("submit", async e=>{
   e.preventDefault(); $("#setSave").disabled = true; $("#setMsg").textContent = "";
-  try{ await api("settings", "PUT", { delivery_fee: $("#setFeeHome").value.trim(), out_fee: $("#setFeeOut").value.trim(), prepay_cap: $("#setCap").value.trim() || "0", pay_info: $("#setPay").value, support: $("#setSupport").value.trim(), driver_share: $("#setShare").value.trim() || "100" }); toast("انحفظت الإعدادات ✓"); }
+  try{ await api("settings", "PUT", { delivery_fee: $("#setFeeHome").value.trim(), out_fee: $("#setFeeOut").value.trim(), prepay_cap: $("#setCap").value.trim() || "0", pay_info: $("#setPay").value, support: $("#setSupport").value.trim(), driver_share: $("#setShare").value.trim() || "100", partner_trial_days: $("#setTrial").value.trim() || "0", partner_commission: $("#setPCom").value.trim() || "0" }); toast("انحفظت الإعدادات ✓"); }
   catch(err){ $("#setMsg").textContent = err.message; }
   $("#setSave").disabled = false;
 });
@@ -555,7 +645,12 @@ function renderShops(){
     const sr = el("div", "row muted");
     sr.append(s.rating ? el("span", "stars", `★ ${toAr(Math.round(s.rating*10)/10)} (${toAr(s.rating_count)} تقييم)`) : el("span", "", "ما فيه تقييمات"));
     if(s.map_url){ const a = el("a", "", "📍 الموقع"); a.href = s.map_url; a.target = "_blank"; a.rel = "noopener"; a.style.color = "var(--accent)"; a.style.fontWeight = "700"; sr.append(a); }
+    { const a = el("a", "", "🧾 ملصق الكاشير"); a.href = "/poster/?s=" + s.id; a.target = "_blank"; a.rel = "noopener"; a.style.color = "var(--accent)"; a.style.fontWeight = "700"; sr.append(a); }
     c.append(sr);
+    const bd = el("div", "row");
+    if(s.featured) bd.append(el("span", "pill open", "⭐ مميز"));
+    if(s.offer_min) bd.append(el("span", "pill assigned", `🎁 توصيل مجاني فوق ${money(s.offer_min)} ر`));
+    if(bd.children.length) c.append(bd);
     const b = el("div", "row");
     const e = el("button", "btn sm line", "تعديل"); e.onclick = () => openForm(s); b.append(e);
     c.append(b);
@@ -581,9 +676,10 @@ function openForm(s){
   $("#sName").value = s ? s.name : ""; $("#sCat").value = s ? s.category : "مطعم";
   $("#sCode").value = s ? s.code : ""; $("#sPin").value = "";
   $("#pinLbl").textContent = s ? "رقم سري جديد (اتركه فاضي لو ما تبي تغيّره)" : "الرقم السري (٤ إلى ٨ أرقام)";
-  $("#sCom").value = s ? s.commission : ""; $("#sMap").value = s ? (s.map_url || "") : "";
+  $("#sCom").value = s ? s.commission : ""; $("#sMap").value = s ? (s.map_url || "") : ""; $("#sPhone").value = s ? (s.phone || "") : "";
   setTrial(s ? s.trial_end : "");
   $("#activeRow").classList.toggle("hidden", !s); $("#sActive").checked = s ? s.active : true;
+  $("#sFeat").checked = s ? !!s.featured : false;
   $("#formMsg").textContent = "";
   $("#sheet").classList.remove("hidden"); $("#sName").focus();
 }
@@ -609,20 +705,47 @@ function getTrial(){
   return isNaN(t) || t.toISOString().slice(0,10) !== iso ? false : iso;
 }
 
-$("#addShop").addEventListener("click", ()=>openForm(null));
+$("#addShop").addEventListener("click", ()=>{ fromReq = null; openForm(null); });
+let fromReq = null;
+async function loadRequests(){
+  try{
+    const d = await api("requests"), box = $("#reqBox"), cnt = $("#reqCount");
+    cnt.textContent = toAr(d.open); cnt.classList.toggle("hidden", !d.open);
+    const open = d.requests.filter(r => r.status === "new");
+    box.classList.toggle("hidden", !open.length); box.innerHTML = "";
+    if(!open.length) return;
+    box.append(el("h2", "", `🏪 طلبات انضمام (${toAr(open.length)})`));
+    open.forEach(r => {
+      const w = el("div", "part");
+      w.append(el("b", "", `${r.name} · ${r.category}`), el("div", "muted", `${r.owner} · ${r.phone} · ${when(r.created_at)}`));
+      if(r.note) w.append(el("div", "snote", r.note));
+      const a = el("div", "row");
+      const call = el("a", "btn sm line", "📞 اتصال"); call.href = "tel:" + r.phone; call.style.textDecoration = "none";
+      const wa = el("a", "btn sm line", "💬 واتساب"); wa.href = "https://wa.me/" + r.phone.replace(/\D/g, "").replace(/^0(5\d{8})$/, "966$1") + "?text=" + encodeURIComponent(`هلا ${r.owner}، معك توصيل جلاجل بخصوص تسجيل ${r.name} 🤝`); wa.target = "_blank"; wa.rel = "noopener"; wa.style.textDecoration = "none";
+      const mk = el("button", "btn sm", "✅ أنشئ المحل"); mk.type = "button";
+      mk.onclick = () => { fromReq = r.id; openForm(null); $("#sName").value = r.name; $("#sCat").value = r.category; $("#sPhone").value = r.phone; $("#sMap").value = r.map_url || ""; };
+      const no = el("button", "btn sm bad", "رفض"); no.type = "button";
+      no.onclick = async () => { if(!confirm("ترفض طلب " + r.name + "؟")) return; try{ await api("requests/" + r.id, "POST", { status: "rejected" }); loadRequests(); }catch(err){ toast(err.message); } };
+      if(r.map_url){ const m = el("a", "btn sm line", "📍"); m.href = r.map_url; m.target = "_blank"; m.rel = "noopener"; m.style.textDecoration = "none"; a.append(m); }
+      a.prepend(call, wa); a.append(mk, no); w.append(a); box.append(w);
+    });
+  }catch(err){}
+}
 $("#closeForm").addEventListener("click", ()=>$("#sheet").classList.add("hidden"));
 $("#sheet").addEventListener("click", e=>{ if(e.target.id==="sheet") $("#sheet").classList.add("hidden"); });
 $("#shopForm").addEventListener("submit", async e=>{
   e.preventDefault();
   const toEn = s => String(s).replace(/[٠-٩]/g, d => AR.indexOf(d));
   const body = { name: $("#sName").value, category: $("#sCat").value, code: $("#sCode").value,
-    pin: toEn($("#sPin").value.trim()), commission: toEn($("#sCom").value.trim() || "0"), trial_end: getTrial(), map_url: $("#sMap").value.trim() };
+    pin: toEn($("#sPin").value.trim()), commission: toEn($("#sCom").value.trim() || "0"), trial_end: getTrial(), map_url: $("#sMap").value.trim(), phone: $("#sPhone").value.trim(), featured: $("#sFeat").checked };
   if(body.trial_end === null){ $("#formMsg").textContent = "كمّل تاريخ نهاية التجربة (اليوم والشهر والسنة)، أو خلّه كله فاضي"; return; }
   if(body.trial_end === false){ $("#formMsg").textContent = "تاريخ نهاية التجربة غلط، هالشهر ما فيه هاليوم"; return; }
   if(editing) body.active = $("#sActive").checked;
   $("#saveShop").disabled = true; $("#formMsg").textContent = "";
   try{
-    if(editing) await api("shops/" + editing, "PUT", body); else await api("shops", "POST", body);
+    if(editing) await api("shops/" + editing, "PUT", body);
+    else { const r = await api("shops", "POST", body); if(body.featured) await api("shops/" + r.id, "PUT", { featured: true }); }
+    if(!editing && fromReq){ await api("requests/" + fromReq, "POST", { status: "done" }).catch(()=>{}); fromReq = null; loadRequests(); }
     $("#sheet").classList.add("hidden");
     toast(editing ? "تم الحفظ ✓" : `تم إضافة المحل ✓ أرسل له الرمز والرقم السري`);
     loadShops();
@@ -698,5 +821,6 @@ function renderOrders(list){
 
 (async ()=>{ try{ await api("me"); showApp(); }catch(e){ showLogin(); } })();
 </script>
+<script src="/admin/ops.js"></script>
 </body>
 </html>

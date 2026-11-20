@@ -235,6 +235,7 @@ input.ltr{direction:ltr;text-align:right}
     <div class="note" id="rateBox"></div>
     <div class="note" id="histBox"></div>
     <p class="hint" style="color:var(--muted);font-size:13px;margin:0 4px">التوصيلة تنحسب لما تسلّم الطلب. ربحك هو نصيبك من رسوم التوصيل. الأسبوع يبدأ السبت.</p>
+    <div id="pushManage"></div>
     <button class="out" id="logoutBtn">تسجيل خروج</button>
   </main>
 </div>
@@ -418,7 +419,8 @@ $("#hPeriod").addEventListener("change", loadHistory);
 function setTab(t){
   document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on", x.dataset.tab===t));
   ["avail","mine","summary"].forEach(x=>$("#"+x+"Tab").classList.toggle("hidden", x!==t));
-  if(t==="summary"){ loadSummary(); loadHistory(); }
+  if(t==="summary"){ loadSummary(); loadHistory();
+    if(window.JLPush) JLPush.mount($("#pushManage"), { sw: "/driver/sw.js", scope: "/driver/", api: "/api/driver/push", who: "الطلبات الجديدة وموافقة الزبون", manage: true }); }
 }
 document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click", ()=>setTab(b.dataset.tab)));
 
@@ -537,7 +539,7 @@ function mineCard(o){
     b.onclick = () => act(o.id, "picked", "تمام، بالتوفيق في الطريق 🛵"); a.append(b);
     const r = el("button", "btn line", "ما أقدر، رجّعه للمناديب"); r.onclick = () => { if(confirm("ترجّع الطلب؟ بيطلع لباقي المناديب.")) act(o.id, "release", "رجّعت الطلب"); }; a.append(r);
   } else if(o.driver_status === "picked"){
-    c.append(el("div", "gate ok", `💵 حصّل من الزبون: ${money(o.collect)} ريال` + (o.prepaid ? " (المشتريات محوّلة مسبقاً، التوصيل بس)" : "")));
+    c.append(el("div", "gate ok", `💵 حصّل من الزبون: ${money(o.collect)} ريال` + (o.prepaid ? " (المشتريات محوّلة مسبقاً، التوصيل بس)" : "") + (o.fee_waived ? " · 🎁 التوصيل على المحل (عرضه)، لا تاخذه من الزبون، ونصيبك محفوظ" : "")));
     if(o.leave_at_door){
       c.append(el("div", "gate wait", "🚪 الزبون طلب تتركه عند الباب. حطه عند الباب وصوّره، والصورة توصل للزبون."));
       const p = el("button", "btn big", "📷 صوّر الطلب عند الباب وسلّم"); p.onclick = () => doorPhoto(o); a.append(p);

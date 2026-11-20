@@ -106,6 +106,28 @@ h1,h2,h3{font-family:var(--font-display);margin:0}
 .htot div{background:var(--surface2);border-radius:12px;padding:8px 4px}
 .htot b{display:block;font-family:var(--font-display);font-size:20px;color:var(--accent)}
 .htot span{font-size:12px;color:var(--muted)}
+.perk{background:var(--surface);border-radius:18px;padding:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px}
+.perk h2{font-size:17px}
+.perk p{margin:0;color:var(--muted);font-size:14px}
+.perk .row2{display:flex;gap:8px;flex-wrap:wrap}
+.perk .row2 > *{flex:1 1 140px}
+.perk .sbtn{border:none;border-radius:12px;padding:11px;font-weight:700;background:var(--accent);color:var(--accent-ink);font-family:var(--font-display);font-size:15px;text-decoration:none;text-align:center}
+.perk .sbtn.l{background:none;color:var(--accent);border:1.5px solid var(--accent)}
+.perk .on{background:var(--accent-soft);border-radius:12px;padding:10px 12px;font-weight:700;color:var(--ink)}
+.perk select{font:inherit;font-size:16px;color:var(--ink);background:var(--surface2);border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;width:100%}
+.rgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.rgrid div{background:var(--surface2);border-radius:12px;padding:10px}
+.rgrid b{display:block;font-family:var(--font-display);font-size:22px;color:var(--accent);line-height:1.2}
+.rgrid span{font-size:12.5px;color:var(--muted)}
+.rgrid em{font-style:normal;font-size:12px;font-weight:700}
+.rgrid em.up{color:#2e7d4f}.rgrid em.down{color:var(--bad)}
+.featnote{background:var(--accent-soft);border-radius:14px;padding:10px 14px;font-weight:600;font-size:15px}
+@media print{
+  body.printing *{visibility:hidden}
+  body.printing #reportCard, body.printing #reportCard *{visibility:visible}
+  body.printing #reportCard{position:absolute;inset:0 auto auto 0;width:100%;box-shadow:none}
+  body.printing #reportCard select, body.printing #reportCard .row2{display:none}
+}
 
 /* summary */
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -183,6 +205,28 @@ input.ltr{direction:ltr;text-align:right}
   </main>
 
   <main class="wrap hidden" id="summaryTab">
+    <div class="featnote hidden" id="featNote">⭐ محلك «مميز»: يطلع في أعلى صفحة الطلب لكل زبائن جلاجل.</div>
+    <section class="perk" id="reportCard">
+      <h2>📊 تقرير الشهر</h2>
+      <select id="rMonth" aria-label="الشهر"></select>
+      <div id="rBody"><p>جاري التحميل…</p></div>
+      <div class="row2"><button class="sbtn l" type="button" id="rPrint">🖨️ اطبع التقرير</button></div>
+    </section>
+    <section class="perk" id="offerCard">
+      <h2>🎁 عرض محلك</h2>
+      <p>توصيل مجاني للزبون لو فاتورته من محلك وصلت مبلغ تحدده. رسوم التوصيل تنحسب عليك مع العمولة، والعرض يطلع شارة على اسم محلك ويجذب الطلبات.</p>
+      <div id="offerNow"></div>
+      <div class="row2">
+        <input id="offerMin" class="ltr" inputmode="decimal" placeholder="الحد الأدنى بالريال، مثال: 50" aria-label="الحد الأدنى للعرض">
+        <button class="sbtn" type="button" id="offerSave">تفعيل العرض</button>
+      </div>
+      <button class="sbtn l hidden" type="button" id="offerOff">إيقاف العرض</button>
+    </section>
+    <section class="perk">
+      <h2>🧾 ملصق الكاشير</h2>
+      <p>اطبعه وحطه عند الكاشير أو على الباب. الزبون يصوّر الرمز ويطلب منك توصيل على طول، والطلبات اللي تجي منه تطلع لك في التقرير.</p>
+      <div class="row2"><a class="sbtn" id="posterLink" href="#" target="_blank" rel="noopener">🖨️ افتح الملصق</a></div>
+    </section>
     <div class="stats">
       <div class="stat"><small>هالأسبوع</small><b id="wCount">٠</b><span>طلب مكتمل</span><span>العمولة: <em id="wCom">٠</em> ريال</span></div>
       <div class="stat"><small>هالشهر</small><b id="mCount">٠</b><span>طلب مكتمل</span><span>العمولة: <em id="mCom">٠</em> ريال</span></div>
@@ -199,6 +243,7 @@ input.ltr{direction:ltr;text-align:right}
     <div class="note" id="rateNote"></div>
     <div class="note" id="termsNote"></div>
     <p class="hint" style="color:var(--muted);font-size:13px;margin:0 4px">الطلب ينحسب مكتمل لما تضغط "جاهز للاستلام". الأسبوع يبدأ السبت.</p>
+    <div id="pushManage"></div>
     <button class="out" id="logoutBtn">تسجيل خروج</button>
   </main>
 </div>
@@ -353,7 +398,8 @@ document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",
   const t = b.dataset.tab;
   $("#ordersTab").classList.toggle("hidden", t!=="orders");
   $("#summaryTab").classList.toggle("hidden", t!=="summary");
-  if(t==="summary"){ loadSummary(); loadHistory(); }
+  if(t==="summary"){ loadSummary(); loadHistory(); renderPerks(); loadReport();
+    if(window.JLPush) JLPush.mount($("#pushManage"), { sw: "/partner/sw.js", scope: "/partner/", api: "/api/partner/push", who: "الطلبات الجديدة", manage: true }); }
 }));
 
 /* ===== الطلبات ===== */
@@ -536,6 +582,7 @@ async function loadHistory(){
     [[toAr(t.count), "طلب مكتمل"], [money(t.bills), "مجموع الفواتير"], [money(t.commission), "العمولة (ريال)"]].forEach(([b, sp])=>{ const x = el("div"); x.append(el("b", "", b), el("span", "", sp)); tot.append(x); });
     list.innerHTML = "";
     if(t.rejected) list.append(el("p", "", `ورفضت ${toAr(t.rejected)} طلب في هالفترة.`));
+    if(t.offer_charges) list.append(el("p", "", `🎁 توصيل عروضك عليك: ${money(t.offer_charges)} ريال (فوق العمولة).`));
     if(!d.orders.length){ list.append(el("p", "", "ما فيه طلبات مكتملة في هالفترة.")); return; }
     d.orders.forEach(o=>{
       const r = el("div", "hrow"), a = el("div");
@@ -547,6 +594,64 @@ async function loadHistory(){
   }catch(err){ list.textContent = err.message; }
 }
 $("#hPeriod").addEventListener("change", loadHistory);
+
+/* ===== المزايا: العرض، التقرير، الملصق ===== */
+function renderPerks(){
+  if(!shop) return;
+  $("#featNote").classList.toggle("hidden", !shop.featured);
+  $("#posterLink").href = "/poster/?s=" + shop.id;
+  const now = $("#offerNow"); now.innerHTML = "";
+  if(shop.offer){
+    now.append(el("div", "on", `✅ العرض شغّال: توصيل مجاني للطلبات فوق ${money(shop.offer.min)} ريال`));
+    $("#offerSave").textContent = "تعديل الحد"; $("#offerOff").classList.remove("hidden");
+  } else { $("#offerSave").textContent = "تفعيل العرض"; $("#offerOff").classList.add("hidden"); }
+}
+$("#offerSave").addEventListener("click", async ()=>{
+  const v = String($("#offerMin").value).replace(/[٠-٩]/g, d => AR.indexOf(d)).trim();
+  if(!v){ $("#offerMin").focus(); toast("اكتب الحد الأدنى"); return; }
+  if(!confirm(`التوصيل يصير مجاني للزبون لو فاتورته من محلك ${v} ريال أو أكثر، ورسوم التوصيل تنحسب عليك. موافق؟`)) return;
+  try{ const d = await api("offer", {min: v}); shop.offer = d.offer; $("#offerMin").value = ""; renderPerks(); toast("العرض صار شغّال ✓"); }
+  catch(err){ toast(err.message); }
+});
+$("#offerOff").addEventListener("click", async ()=>{
+  if(!confirm("توقف العرض؟ الطلبات اللي جت قبل يظل عرضها شغّال.")) return;
+  try{ await api("offer", {off: true}); shop.offer = null; renderPerks(); toast("وقفت العرض"); }
+  catch(err){ toast(err.message); }
+});
+const DAYS = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+function monthName(m){ try{ return new Intl.DateTimeFormat("ar-SA-u-ca-gregory-nu-arab",{month:"long",year:"numeric",timeZone:"UTC"}).format(new Date(m + "-15T00:00:00Z")); }catch(e){ return m; } }
+(function fillMonths(){
+  const d = new Date(Date.now() + 3*3600000), sel = $("#rMonth");
+  for(let i = 0; i < 6; i++){ const x = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - i, 1)), m = x.toISOString().slice(0,7); sel.append(new Option((i ? "" : "هالشهر: ") + monthName(m), m)); }
+})();
+async function loadReport(){
+  const box = $("#rBody"); box.innerHTML = ""; box.append(el("p", "", "جاري التحميل…"));
+  try{
+    const d = await api("report?month=" + $("#rMonth").value), c = d.cur, p = d.prev;
+    box.innerHTML = "";
+    const g = el("div", "rgrid");
+    const cmp = (a, b) => { if(b === null || b === undefined || a === null) return el("em", "", ""); const x = Math.round((a - b) * 10) / 10; return x ? el("em", x > 0 ? "up" : "down", `${x > 0 ? "▲" : "▼"} ${toAr(Math.abs(x))} عن ${monthName(d.prev_month)}`) : el("em", "", "نفس الشهر اللي قبله"); };
+    const tile = (b, sp, e) => { const t = el("div"); t.append(el("b", "", b), el("span", "", sp)); if(e) t.append(el("br"), e); g.append(t); };
+    tile(toAr(c.orders), "طلب مكتمل", cmp(c.orders, p.orders));
+    tile(money(c.sales) + " ر", "مبيعات عن طريق جلاجل", cmp(c.sales, p.sales));
+    tile(toAr(c.new_customers), "زبون جديد جاك من جلاجل", null);
+    tile(toAr(c.returning), "زبون رجع وطلب مرة ثانية", null);
+    tile(money(c.avg_bill) + " ر", "متوسط الفاتورة", null);
+    tile(c.rating ? "★ " + toAr(c.rating) : "—", c.rating ? `تقييمك (${toAr(c.rating_count)} تقييم)` : "ما فيه تقييمات", null);
+    tile(c.accept_minutes === null ? "—" : toAr(c.accept_minutes) + " د", "سرعة قبولك للطلب", null);
+    tile(c.on_time === null ? "—" : toAr(c.on_time) + "٪", "طلبات جهزت في وقتها", null);
+    box.append(g);
+    const lines = [];
+    if(c.has_peak) lines.push(`🔥 أكثر يوم تجيك فيه طلبات: ${DAYS[c.best_day]}، وأكثر ساعة: ${toAr(c.best_hour)}:٠٠`);
+    if(c.from_qr) lines.push(`🧾 ${toAr(c.from_qr)} طلب جا من ملصق الكاشير`);
+    if(c.offer_orders) lines.push(`🎁 ${toAr(c.offer_orders)} طلب بعرض التوصيل المجاني (${money(c.offer_charges)} ريال توصيل عليك)`);
+    if(c.rejected) lines.push(`❌ رفضت ${toAr(c.rejected)} طلب من ${toAr(c.received)}`);
+    lines.push(`💵 المستحق عليك للشهر: ${money(c.due)} ريال (عمولة ${money(c.commission)}${c.offer_charges ? " + توصيل العروض " + money(c.offer_charges) : ""})`);
+    lines.forEach(l => box.append(el("p", "", l)));
+  }catch(err){ box.innerHTML = ""; box.append(el("p", "", err.message)); }
+}
+$("#rMonth").addEventListener("change", loadReport);
+$("#rPrint").addEventListener("click", ()=>{ document.body.classList.add("printing"); window.print(); setTimeout(()=>document.body.classList.remove("printing"), 500); });
 
 /* البداية */
 (async ()=>{

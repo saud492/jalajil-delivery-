@@ -8,14 +8,15 @@ const DESTS = ["home", "chalet", "park"];
 
 export async function listShops(db) {
   const { results } = await db.prepare(
-    `SELECT s.id, s.name, s.category, s.is_open, s.closed_until, AVG(p.shop_stars) AS rating, COUNT(p.shop_stars) AS rating_count
+    `SELECT s.id, s.name, s.category, s.is_open, s.closed_until, s.offer_min, s.offer_text, s.featured, AVG(p.shop_stars) AS rating, COUNT(p.shop_stars) AS rating_count
      FROM shops s LEFT JOIN parts p ON p.shop_id = s.id WHERE s.active = 1 GROUP BY s.id ORDER BY s.name`
   ).all();
   const settings = await getSettings(db);
   const { prepay_cap } = settings;
   // التقييم يطلع للزبون بعد ٣ تقييمات على الأقل
   return json({ shops: results.map(s => ({ id: s.id, name: s.name, category: s.category, open: shopOpen(s),
-    rating: s.rating_count >= 3 ? Math.round(s.rating * 10) / 10 : null })), prepay_cap,
+    rating: s.rating_count >= 3 ? Math.round(s.rating * 10) / 10 : null,
+    offer: s.offer_min ? { min: s.offer_min, text: s.offer_text || "" } : null, featured: !!s.featured })), prepay_cap,
     // الرسوم من الإعدادات، والعرض بدون الكود نفسه
     fees: { home: baseFee(settings, "home"), out: baseFee(settings, "chalet") }, promo: await promoToday(db) });
 }
@@ -36,12 +37,12 @@ export async function saveOrder(db, request, e = {}) {
   const ids = [...new Set(parts.map(p => p.shop_id).filter(Boolean))];
   const shops = new Map();
   if (ids.length) {
-    const { results } = await db.prepare(`SELECT id, name, category FROM shops WHERE active = 1 AND id IN (${ids.map(() => "?").join(",")})`).bind(...ids).all();
+    const { results } = await db.prepare(`SELECT id, name, category, offer_min FROM shops WHERE active = 1 AND id IN (${ids.map(() => "?").join(",")})`).bind(...ids).all();
     for (const s of results) shops.set(s.id, s);
   }
   for (const p of parts) {
     const s = p.shop_id && shops.get(p.shop_id);
-    if (s) { p.name = s.name; } else p.shop_id = null;
+    if (s) { p.name = s.name; p.offer_min = s.offer_min ?? null; } else p.shop_id = null;
   }
   // تجهيزات الشاليه/الكشتة يشتريها المندوب، فلها فاتورة مثل أي محل
   if (pack.length) parts.push({ shop_id: null, category: "تجهيزات", name: "تجهيزات", items: pack.join("\n") });
@@ -53,8 +54,11 @@ export async function saveOrder(db, request, e = {}) {
     customer_name: str(b.name, 80), customer_phone: str(b.phone, 30), map_url: str(b.map, 500),
     place: str(b.place, 200), pay: str(b.pay, 60), note: str(b.note, 300),
     pack: JSON.stringify(pack),
+    ref_shop: Number.isInteger(b.ref) && b.ref > 0 ? b.ref : null,
   };
   o.phone_key = phoneKey(o.customer_phone);
+  const ban = o.phone_key && await db.prepare("SELECT blocked FROM customers WHERE phone_key = ?").bind(o.phone_key).first();
+  o.blocked = ban && ban.blocked ? 1 : null;
   // حد الموافقة التلقائية: الفاتورة لين هالمبلغ تنحسب موافق عليها
   const auto = Number(String(b.auto_approve ?? "").replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)));
   o.auto_approve = String(b.auto_approve ?? "").trim() && Number.isFinite(auto) && auto > 0 ? Math.min(100000, Math.round(auto * 100) / 100) : null;
@@ -74,23 +78,25 @@ export async function saveOrder(db, request, e = {}) {
     orderId = existing.id;
     await db.batch([
       db.prepare("DELETE FROM parts WHERE order_id = ?").bind(orderId),
-      db.prepare(`UPDATE orders SET order_no=?, dest=?, customer_name=?, customer_phone=?, map_url=?, place=?, pay=?, note=?, fee=?, fee_full=?, promo=?, pack=?, auto_approve=?, phone_key=? WHERE id=?`)
-        .bind(o.order_no, o.dest, o.customer_name, o.customer_phone, o.map_url, o.place, o.pay, o.note, o.fee, o.fee_full, o.promo, o.pack, o.auto_approve, o.phone_key, orderId),
+      db.prepare(`UPDATE orders SET order_no=?, dest=?, customer_name=?, customer_phone=?, map_url=?, place=?, pay=?, note=?, fee=?, fee_full=?, promo=?, pack=?, auto_approve=?, phone_key=?, blocked=? WHERE id=?`)
+        .bind(o.order_no, o.dest, o.customer_name, o.customer_phone, o.map_url, o.place, o.pay, o.note, o.fee, o.fee_full, o.promo, o.pack, o.auto_approve, o.phone_key, o.blocked, orderId),
     ]);
   } else {
     // لو رابط المتابعة مستخدم لطلب ثاني (نادر)، نحفظ الطلب بدونه بدل ما نضيّعه
     const used = track && await db.prepare("SELECT id FROM orders WHERE track_token = ?").bind(track).first();
-    const r = await db.prepare(`INSERT INTO orders (client_key, order_no, created_at, dest, customer_name, customer_phone, map_url, place, pay, note, fee, fee_full, promo, pack, track_token, delivery_code, auto_approve, phone_key)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(client_key) DO NOTHING RETURNING id`)
-      .bind(key, o.order_no, now, o.dest, o.customer_name, o.customer_phone, o.map_url, o.place, o.pay, o.note, o.fee, o.fee_full, o.promo, o.pack, used ? null : track, code, o.auto_approve, o.phone_key).first();
+    const r = await db.prepare(`INSERT INTO orders (client_key, order_no, created_at, dest, customer_name, customer_phone, map_url, place, pay, note, fee, fee_full, promo, pack, track_token, delivery_code, auto_approve, phone_key, blocked)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(client_key) DO NOTHING RETURNING id`)
+      .bind(key, o.order_no, now, o.dest, o.customer_name, o.customer_phone, o.map_url, o.place, o.pay, o.note, o.fee, o.fee_full, o.promo, o.pack, used ? null : track, code, o.auto_approve, o.phone_key, o.blocked).first();
     if (!r) return json({ ok: true, unchanged: true }); // وصل طلبين بنفس اللحظة
     orderId = r.id;
   }
   if (parts.length) {
     await db.batch(parts.map(p => db.prepare(
-      "INSERT INTO parts (order_id, shop_id, shop_name, category, items, status, updated_at) VALUES (?, ?, ?, ?, ?, 'new', ?)"
-    ).bind(orderId, p.shop_id, p.name, p.category, p.items, now)));
+      "INSERT INTO parts (order_id, shop_id, shop_name, category, items, status, offer_min, updated_at) VALUES (?, ?, ?, ?, ?, 'new', ?, ?)"
+    ).bind(orderId, p.shop_id, p.name, p.category, p.items, p.offer_min ?? null, now)));
   }
+  // جا من ملصق QR حق محل شريك
+  if (o.ref_shop) await db.prepare("UPDATE orders SET ref_shop = (SELECT id FROM shops WHERE id = ? AND active = 1) WHERE id = ?").bind(o.ref_shop, orderId).run();
   if (!existing) await newOrder(e, db, orderId);
   return json({ ok: true, id: orderId, fee: o.fee, fee_full: o.fee_full, promo: o.promo });
 }

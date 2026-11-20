@@ -41,6 +41,8 @@ for (const p of ["/", "/partner/", "/admin/", "/driver/", "/track/"]) {
 // اللوحة
 r = await admin("GET", "/api/admin/shops"); assert.equal(r.status, 401, "admin needs login");
 r = await admin("POST", "/api/admin/login", { password: "wrong" }); assert.equal(r.status, 401);
+// كيبورد الجوال العربي: نفس كلمة السر بأرقام عربية ومسافة في الآخر تدخل
+r = await client()("POST", "/api/admin/login", { password: ADMIN_PW.replace(/\d/g, d => "٠١٢٣٤٥٦٧٨٩"[d]) + " " }); assert.equal(r.status, 200, "arabic digits in the password");
 r = await admin("POST", "/api/admin/login", { password: ADMIN_PW }); assert.equal(r.status, 200, JSON.stringify(r.data));
 // الرسوم من الإعدادات (السيرفر ما يصدّق رقم الصفحة)
 r = await admin("PUT", "/api/admin/settings", { delivery_fee: "٣", out_fee: 5 }); assert.equal(r.status, 200); assert.equal(r.data.settings.delivery_fee, 3);

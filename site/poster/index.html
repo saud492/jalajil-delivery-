@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ملصق الكاشير · توصيل جلاجل</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@500;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{--accent:#0f6a66;--accent-2:#0a4f4c;--sand:#ecd5b3;--ink:#1f2a2b;--muted:#5f6b6b;--bg:#e9e6df;
+  --font-display:"Readex Pro","IBM Plex Sans Arabic",system-ui,sans-serif;--font-body:"IBM Plex Sans Arabic",system-ui,sans-serif}
+*{box-sizing:border-box}
+html,body{margin:0}
+/* الملصق نفسه دايم فاتح عشان يطلع صح في الطباعة */
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);padding:16px;display:flex;flex-direction:column;align-items:center;gap:14px;color-scheme:light}
+.bar{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.bar button{border:none;border-radius:12px;padding:12px 20px;font:700 16px var(--font-display);background:var(--accent);color:#fff;cursor:pointer}
+.bar button.l{background:#fff;color:var(--accent);border:1.5px solid var(--accent)}
+.sheet{width:min(100%,148mm);aspect-ratio:148/210;background:#fff;border-radius:18px;box-shadow:0 10px 40px rgba(0,0,0,.15);overflow:hidden;display:flex;flex-direction:column}
+.top{background:radial-gradient(120% 140% at 85% 0%,#17847e 0%,#0f6a66 45%,#0a4f4c 100%);color:#fff;text-align:center;padding:7% 6% 6%;display:flex;flex-direction:column;align-items:center;gap:2%}
+.top img{width:16%;border-radius:18%;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+.top small{color:var(--sand);font-weight:600;font-size:clamp(11px,2.6vw,15px)}
+.top h1{margin:0;font:800 clamp(20px,6vw,34px)/1.25 var(--font-display)}
+.mid{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4%;padding:5% 8%;text-align:center}
+.mid p{margin:0;font:700 clamp(15px,4vw,22px)/1.5 var(--font-display)}
+#qr{background:#fff;padding:10px;border-radius:14px;border:3px solid var(--accent);width:52%;aspect-ratio:1;display:grid;place-items:center}
+#qr img,#qr canvas{width:100% !important;height:auto !important;image-rendering:pixelated}
+.steps{display:flex;justify-content:center;gap:6%;font-size:clamp(11px,2.8vw,15px);color:var(--muted);font-weight:600}
+.foot{background:var(--sand);color:#2a1d0e;text-align:center;padding:4% 6%;font:700 clamp(13px,3.4vw,18px) var(--font-display)}
+.err{color:#b3261e;font-weight:700}
+@media print{
+  @page{size:A5;margin:0}
+  body{background:#fff;padding:0}
+  .bar{display:none}
+  .sheet{width:148mm;height:210mm;border-radius:0;box-shadow:none}
+  .top,.foot{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<div class="bar">
+  <button type="button" onclick="print()">🖨️ اطبع الملصق</button>
+  <button type="button" class="l" id="copy">🔗 انسخ رابط الطلب من محلك</button>
+</div>
+<div class="sheet">
+  <div class="top">
+    <img src="/icon-192.png" alt="">
+    <small>شريك توصيل جلاجل ✓</small>
+    <h1 id="shopName">…</h1>
+  </div>
+  <div class="mid">
+    <p>اطلب منّا توصيل لباب بيتك 🛵</p>
+    <div id="qr" role="img" aria-label="رمز QR لطلب التوصيل"></div>
+    <div class="steps"><span>📷 صوّر الرمز</span><span>📝 اكتب طلبك</span><span>🏠 يوصلك</span></div>
+    <p id="offer" style="font-size:clamp(13px,3.4vw,18px);color:var(--accent)"></p>
+  </div>
+  <div class="foot">بسعر المحل نفسه · توصيل جلاجل</div>
+</div>
+<script>
+const id = new URLSearchParams(location.search).get("s");
+const url = location.origin + "/?shop=" + encodeURIComponent(id || "");
+const AR = "٠١٢٣٤٥٦٧٨٩", toAr = n => String(n).replace(/\d/g, d => AR[d]);
+(async () => {
+  const name = document.getElementById("shopName");
+  try{
+    const d = await (await fetch("/api/shops")).json();
+    const s = (d.shops || []).find(x => String(x.id) === String(id));
+    if(!s){ name.textContent = "المحل مو موجود"; name.className = "err"; return; }
+    name.textContent = s.name; document.title = "ملصق " + s.name + " · توصيل جلاجل";
+    if(s.offer) document.getElementById("offer").textContent = `🎁 توصيل مجاني للطلبات فوق ${toAr(s.offer.min)} ريال`;
+    // الرمز داكن على أبيض مع مستوى تصحيح عالي عشان يقرأ حتى لو الملصق اتسخ
+    new QRCode(document.getElementById("qr"), { text: url, width: 512, height: 512, colorDark: "#0a2f2d", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H });
+  }catch(e){ name.textContent = "ما قدرنا نحمّل المحل"; name.className = "err"; }
+})();
+document.getElementById("copy").onclick = async () => {
+  try{ await navigator.clipboard.writeText(url); document.getElementById("copy").textContent = "✓ انسخ الرابط"; }
+  catch(e){ prompt("انسخ الرابط:", url); }
+};
+</script>
+</body>
+</html>

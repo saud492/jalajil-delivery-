@@ -76,6 +76,11 @@ export async function newOrder(e, db, orderId) {
   if (!s) return;
   const { o, parts } = s;
   const where = (DEST[o.dest] || "بيت") + (o.place ? " · " + o.place : "");
+  // رقم محظور: الطلب ما يوصل للمحلات ولا للمناديب، وصاحب الخدمة بس يدري
+  if (o.blocked) {
+    notify(e, db, [["admin", null]], { title: "🚫 طلب من رقم محظور " + o.order_no, body: (o.customer_phone || "") + " · ما وصل للمحلات ولا المناديب", url: "/admin/", tag: "o" + o.id });
+    return;
+  }
   for (const p of parts) if (p.shop_id)
     notify(e, db, [["shop", p.shop_id]], { title: "🔔 طلب جديد " + o.order_no, body: (p.items || "").slice(0, 120), url: "/partner/", tag: "p" + p.id });
   notify(e, db, [["driver", null]], { title: "🛵 طلب جديد متاح", body: `${where} · رسوم ${money(o.fee ?? 0)} ريال`, url: "/driver/", tag: "o" + o.id });
@@ -84,9 +89,12 @@ export async function newOrder(e, db, orderId) {
 
 // بعد أي تغيير على الطلب: يقارن الحالة قبل وبعد ويبلّغ المعنيين
 export async function changed(e, db, before) {
-  if (!before || !pushEnabled(e)) return;
+  if (!before) return;
   const after = await snapshot(db, before.o.id);
   if (!after) return;
+  if (after.sum.billed && !after.o.billed_at)
+    await db.prepare("UPDATE orders SET billed_at = ? WHERE id = ? AND billed_at IS NULL").bind(Date.now(), after.o.id).run();
+  if (!pushEnabled(e)) return;
   const { o, parts, sum } = after, no = o.order_no, t = trackUrl(o);
   const st = sum.stage, was = before.sum.stage;
   const customer = (title, body) => notify(e, db, [["track", o.id]], { title, body, url: t || "/", tag: "c" + o.id });

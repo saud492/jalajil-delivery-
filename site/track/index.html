@@ -264,7 +264,7 @@ function render(){
   const t = el("div", "tot");
   const row = (k, v, cls) => { const d = el("div", cls || ""); d.append(el("span", "", k), el("span", "amt", v)); t.append(d); };
   row("قيمة المشتريات", D.billed ? money(D.total) + " ريال" : "ينحسب…");
-  row("التوصيل", money(o.fee) + " ريال");
+  row("التوصيل", D.fee_waived ? "مجاني 🎁 (عرض المحل)" : money(o.fee) + " ريال");
   if(D.prepaid) row("حوّلته مسبقاً", "− " + money(D.total) + " ريال");
   if(D.billed) row(D.stage === "delivered" ? "دفعته للمندوب" : "تدفع للمندوب عند الاستلام", money(D.collect) + " ريال", "big");
   b.append(t);

@@ -35,10 +35,20 @@
       if(btn2){ const b = document.createElement("button"); b.type = "button"; b.className = "l"; b.textContent = btn2; b.onclick = fn2; d.append(b); }
       box.append(d);
     };
+    // وضع التذكير (الشاشة الرئيسية): يطلع بس لو التنبيهات مو شغالة، ومعه «لاحقاً» يخفيه ٣ أيام
+    // وضع الإدارة (manage: في الملخص أو الإعدادات): يعرض الحالة دايم مع زر تشغيل/إيقاف
+    const later = "jlp-later:" + o.scope;
+    const snoozed = () => { try{ return Number(localStorage.getItem(later) || 0) > Date.now(); }catch(e){ return false; } };
+    const snooze = () => { try{ localStorage.setItem(later, String(Date.now() + 3 * 864e5)); }catch(e){} box.innerHTML = ""; };
+    const hide = () => { box.innerHTML = ""; };
     if(!supported()){
-      if(o.quietIfUnsupported) box.innerHTML = "";
-      else if(ios && !standalone()) show("", "🔔 عشان توصلك تنبيهات " + o.who + " والجوال مقفل:<small>اضغط زر المشاركة <b>⬆️</b>، بعدين <b>«إضافة إلى الشاشة الرئيسية»</b>، وافتح التطبيق من أيقونته.</small>");
-      else show("bad", "🔕 هالمتصفح ما يدعم التنبيهات.<small>جرّب Chrome، أو حدّث الجوال.</small>");
+      if(o.quietIfUnsupported) hide();
+      else if(ios && !standalone()){
+        if(!o.manage && snoozed()) return hide();
+        show("", "🔔 عشان توصلك تنبيهات " + o.who + " والجوال مقفل:<small>اضغط زر المشاركة <b>⬆️</b>، بعدين <b>«إضافة إلى الشاشة الرئيسية»</b>، وافتح التطبيق من أيقونته.</small>", null, null, o.manage ? null : "لاحقاً", snooze);
+      }
+      else if(o.manage) show("bad", "🔕 هالمتصفح ما يدعم التنبيهات.<small>جرّب Chrome، أو حدّث الجوال.</small>");
+      else hide();
       return;
     }
     const enable = async () => {
@@ -60,13 +70,25 @@
       render();
     };
     async function render(justOn){
-      if(Notification.permission === "denied"){ show("bad", "🔕 التنبيهات مقفلة لهالموقع.<small>افتح إعدادات الجوال ← الإشعارات، وفعّلها للمتصفح أو التطبيق.</small>"); return; }
+      if(Notification.permission === "denied"){
+        if(!o.manage) return hide();
+        show("bad", "🔕 التنبيهات مقفلة لهالموقع.<small>افتح إعدادات الجوال ← الإشعارات، وفعّلها للمتصفح أو التطبيق.</small>"); return;
+      }
       let sub = null;
       if(Notification.permission === "granted"){ try{ const r = await reg(o); sub = await r.pushManager.getSubscription(); }catch(e){} }
       if(sub){
         if(!justOn) post(o.api, { ...(o.extra || {}), sub: sub.toJSON() }).catch(()=>{}); // يربط الجهاز بالحساب الحالي
+        if(!o.manage){
+          // شغالة: ما نزحم الشاشة الرئيسية. بس بعد التفعيل مباشرة نأكّد ثواني ونخفيها
+          if(!justOn) return hide();
+          show("on", "🔔 التنبيهات شغالة ✓<small>توصلك " + o.who + " حتى لو التطبيق مسكّر.</small>");
+          setTimeout(hide, 4000); return;
+        }
         show("on", "🔔 التنبيهات شغالة" + (justOn ? " ✓" : "") + "<small>توصلك " + o.who + " حتى لو التطبيق مسكّر.</small>", null, null, "إيقاف", disable);
-      } else show("", "🔕 فعّل التنبيهات عشان توصلك " + o.who + " حتى لو الجوال مقفل", "🔔 فعّل التنبيهات", enable);
+      } else {
+        if(!o.manage && snoozed()) return hide();
+        show("", "🔕 فعّل التنبيهات عشان توصلك " + o.who + " حتى لو الجوال مقفل", "🔔 فعّل التنبيهات", enable, o.manage ? null : "لاحقاً", snooze);
+      }
     }
     render();
   }

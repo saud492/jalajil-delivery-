@@ -3,7 +3,7 @@ import { HttpError, json, readJson, str } from "./util.js";
 import { snapshot, changed, reportAlert, subscribe } from "./alerts.js";
 
 /* ===== الإعدادات ===== */
-const DEFAULTS = { prepay_cap: "100", pay_info: "", support: "966582312869", driver_share: "100", delivery_fee: "8", out_fee: "10" };
+const DEFAULTS = { prepay_cap: "100", pay_info: "", support: "966582312869", driver_share: "100", delivery_fee: "8", out_fee: "10", partner_trial_days: "30", partner_commission: "2" };
 const toEn = v => String(v).replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/[٫,]/g, ".");
 
 export async function getSettings(db) {
@@ -14,7 +14,8 @@ export async function getSettings(db) {
   const feeOf = (v, d) => { const n = Number(v); return Number.isFinite(n) && n >= 0 ? n : d; };
   return { prepay_cap: Math.max(0, Number(s.prepay_cap) || 0), pay_info: s.pay_info, support: s.support,
     driver_share: Number.isFinite(share) ? Math.min(100, Math.max(0, share)) : 100,
-    delivery_fee: feeOf(s.delivery_fee, 8), out_fee: feeOf(s.out_fee, 10) };
+    delivery_fee: feeOf(s.delivery_fee, 8), out_fee: feeOf(s.out_fee, 10),
+    partner_trial_days: Math.round(feeOf(s.partner_trial_days, 30)), partner_commission: feeOf(s.partner_commission, 2) };
 }
 
 export async function saveSettings(db, b) {
@@ -24,7 +25,12 @@ export async function saveSettings(db, b) {
     if (!Number.isFinite(c) || c < 0 || c > 100) throw new HttpError(400, "نصيب المندوب نسبة من ٠ إلى ١٠٠");
     rows.push(["driver_share", String(c)]);
   }
-  for (const k of ["delivery_fee", "out_fee"]) if (b[k] !== undefined) {
+  if (b.partner_trial_days !== undefined) {
+    const c = Number(toEn(b.partner_trial_days));
+    if (!Number.isInteger(c) || c < 0 || c > 365) throw new HttpError(400, "أيام التجربة رقم من ٠ إلى ٣٦٥");
+    rows.push(["partner_trial_days", String(c)]);
+  }
+  for (const k of ["delivery_fee", "out_fee", "partner_commission"]) if (b[k] !== undefined) {
     const c = Number(toEn(b[k]));
     if (String(b[k]).trim() === "" || !Number.isFinite(c) || c < 0 || c > 1000) throw new HttpError(400, "رسوم التوصيل رقم بالريال");
     rows.push([k, String(Math.round(c * 100) / 100)]);
@@ -68,8 +74,11 @@ export function summarize(o, parts, settings) {
   else if (!approved) stage = "approve";
   else if (needsPrepay && !prepaid) stage = o.prepay_status === "sent" ? "prepay_check" : "prepay";
   else stage = "buying";
-  const fee = Number(o.fee) || 0;
-  return { billed, total, approved, auto_approved: billed && auto, needsPrepay, prepaid, canBuy, stage, collect: Math.round(((prepaid ? 0 : total) + fee) * 100) / 100 };
+  // عرض المحل: لو فاتورته وصلت حد العرض، التوصيل على المحل والزبون ما يدفعه
+  const waivedBy = live.find(p => p.shop_id && p.offer_min !== null && p.offer_min !== undefined && p.bill !== null && p.bill !== undefined && p.bill >= p.offer_min - 0.005);
+  const fee = waivedBy ? 0 : Number(o.fee) || 0;
+  return { billed, total, approved, auto_approved: billed && auto, needsPrepay, prepaid, canBuy, stage, fee_waived: !!waivedBy, waived_part: waivedBy ? waivedBy.id : null,
+    collect: Math.round(((prepaid ? 0 : total) + fee) * 100) / 100 };
 }
 
 export async function loadOrder(db, where, val) {
@@ -123,7 +132,7 @@ export async function track(db, request, token) {
       prepay_status: o.prepay_status, leave_at_door: !!o.leave_at_door, delivery_photo: o.delivery_photo,
       auto_approve: o.auto_approve,
     },
-    parts: parts.map(p => ({ id: p.id, shop_name: p.shop_name, category: p.category, items: p.items, status: p.status, bill: p.bill, receipt: p.bill_receipt, partner: !!p.shop_id, shop_stars: p.shop_stars, shop_note: p.shop_note })),
+    parts: parts.map(p => ({ id: p.id, shop_name: p.shop_name, category: p.category, items: p.items, status: p.status, bill: p.bill, receipt: p.bill_receipt, partner: !!p.shop_id, shop_stars: p.shop_stars, shop_note: p.shop_note, offer_min: p.offer_min })),
     driver: driver && { name: driver.name, phone: driver.phone },
     eta: eta(o, parts, sum.stage),
     rating: rating && { driver_stars: rating.driver_stars, tags: safeTags(rating.tags), comment: rating.comment },

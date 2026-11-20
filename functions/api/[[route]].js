@@ -8,16 +8,29 @@ import * as driver from "../../server/driver.js";
 import * as flow from "../../server/flow.js";
 import * as alerts from "../../server/alerts.js";
 import * as fees from "../../server/fees.js";
+import * as ops from "../../server/ops.js";
+import * as perks from "../../server/perks.js";
 
 const routes = [
   ["GET", /^\/api\/shops$/, (db, r) => pub.listShops(db, r)],
   ["POST", /^\/api\/orders$/, (db, r, e) => pub.saveOrder(db, r, e)],
   ["POST", /^\/api\/promo$/, (db, r) => fees.promoCheck(db, r)],
+  ["GET", /^\/api\/join$/, (db) => perks.joinInfo(db)],
+  ["POST", /^\/api\/join$/, (db, r, e) => perks.join(db, r, e)],
+  ["POST", /^\/api\/partner\/offer$/, (db, r) => perks.setOffer(db, r)],
+  ["GET", /^\/api\/partner\/report$/, (db, r) => perks.report(db, r)],
+  ["GET", /^\/api\/admin\/requests$/, (db, r) => perks.requests(db, r)],
+  ["POST", /^\/api\/admin\/requests\/(\d+)$/, (db, r, e, m) => perks.setRequest(db, r, Number(m[1]))],
   ["GET", /^\/api\/push\/key$/, (db, r, e) => alerts.publicKey(e)],
   ["POST", /^\/api\/cron$/, (db, r, e) => alerts.cron(e, db, r)],
   ["POST", /^\/api\/partner\/push$/, (db, r) => partner.push(db, r)],
   ["POST", /^\/api\/driver\/push$/, (db, r) => driver.push(db, r)],
   ["POST", /^\/api\/admin\/push$/, (db, r) => admin.push(db, r)],
+  ["GET", /^\/api\/admin\/live$/, (db, r) => ops.live(db, r)],
+  ["GET", /^\/api\/admin\/analytics$/, (db, r) => ops.analytics(db, r)],
+  ["GET", /^\/api\/admin\/customers$/, (db, r) => ops.customers(db, r)],
+  ["PUT", /^\/api\/admin\/customers\/(\d+)$/, (db, r, e, m) => ops.updateCustomer(db, r, m[1])],
+  ["GET", /^\/api\/admin\/export$/, (db, r) => ops.exportCsv(db, r)],
   ["GET", /^\/api\/admin\/promos$/, (db, r) => admin.promos(db, r)],
   ["POST", /^\/api\/admin\/promos$/, (db, r) => admin.createPromo(db, r)],
   ["PUT", /^\/api\/admin\/promos\/(\d+)$/, (db, r, e, m) => admin.updatePromo(db, r, Number(m[1]))],
