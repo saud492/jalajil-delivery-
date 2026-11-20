@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#ecd5b3"/>
+  <rect x="96" y="104" width="320" height="276" rx="28" fill="#fffdf9"/>
+  <!-- أعمدة الرسم -->
+  <rect x="140" y="250" width="50" height="94" rx="8" fill="#4fb8b0"/>
+  <rect x="206" y="196" width="50" height="148" rx="8" fill="#0f6a66"/>
+  <rect x="272" y="226" width="50" height="118" rx="8" fill="#4fb8b0"/>
+  <rect x="338" y="152" width="50" height="192" rx="8" fill="#0f6a66"/>
+  <path d="M140 170l66-26 66 30 98-52" stroke="#a4652f" stroke-width="12" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M110 440h292" stroke="#0f6a66" stroke-width="22" stroke-linecap="round"/>
+</svg>

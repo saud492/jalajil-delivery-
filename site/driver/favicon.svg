@@ -1,9 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" fill="#0a4f4c"/>
-  <rect x="132" y="236" width="248" height="168" rx="10" fill="#ffffff"/>
-  <rect x="218" y="300" width="76" height="104" rx="8" fill="#0f6a66"/>
-  <path d="M120 150h272l28 76H92z" fill="#ecd5b3"/>
-  <path d="M92 226c0 22 18 36 41 36s41-14 41-36c0 22 18 36 41 36s41-14 41-36c0 22 18 36 41 36s41-14 41-36c0 22 18 36 41 36s41-14 41-36z" fill="#ecd5b3"/>
-  <path d="M166 150l-12 76M222 150l-6 76M290 150l6 76M346 150l12 76" stroke="#a4652f" stroke-width="18"/>
-  <path d="M110 440h292" stroke="#a4652f" stroke-width="22" stroke-linecap="round"/>
+  <rect width="512" height="512" fill="#1d2f3f"/>
+  <!-- خطوط السرعة -->
+  <path d="M44 250h64M30 290h70M52 330h48" stroke="#ecd5b3" stroke-width="14" stroke-linecap="round" opacity=".75"/>
+  <!-- صندوق التوصيل -->
+  <rect x="122" y="132" width="112" height="92" rx="14" fill="#ecd5b3"/>
+  <path d="M122 172h112" stroke="#a4652f" stroke-width="12"/>
+  <!-- المقعد -->
+  <rect x="150" y="226" width="112" height="26" rx="13" fill="#0b1a26"/>
+  <!-- جسم السكوتر الخلفي -->
+  <path d="M112 344c-6-58 34-96 92-96h76v96z" fill="#4fb8b0"/>
+  <!-- الأرضية والواجهة -->
+  <path d="M276 344h66l26-150" stroke="#4fb8b0" stroke-width="34" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M352 184h50" stroke="#fffdf9" stroke-width="20" stroke-linecap="round"/>
+  <path d="M368 190l-6 0" stroke="#fffdf9" stroke-width="20"/>
+  <!-- العجلات -->
+  <circle cx="176" cy="362" r="46" fill="#fffdf9"/><circle cx="176" cy="362" r="18" fill="#1d2f3f"/>
+  <circle cx="378" cy="362" r="46" fill="#fffdf9"/><circle cx="378" cy="362" r="18" fill="#1d2f3f"/>
+  <path d="M110 452h292" stroke="#a4652f" stroke-width="20" stroke-linecap="round"/>
 </svg>
