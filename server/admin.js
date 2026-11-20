@@ -7,7 +7,7 @@ import { snapshot, changed, subscribe } from "./alerts.js";
 import { listPromos, savePromo } from "./fees.js";
 
 const ip = r => r.headers.get("cf-connecting-ip") || "local";
-const CATS = ["بقالة", "مطعم", "كافيه", "صيدلية", "أخرى"];
+const CATS = ["بقالة", "مطعم", "كافيه", "خضار وفواكه", "صيدلية", "أخرى"];
 
 export async function login(db, request, env) {
   if (!env.ADMIN_PASSWORD) throw new HttpError(503, "كلمة سر اللوحة ما انضافت في إعدادات Cloudflare (ADMIN_PASSWORD)");

@@ -140,6 +140,7 @@ section.card.ok h2 .n span{display:none}
 .pick .opt em{font-style:normal;font-size:12px;font-weight:600;color:var(--bad);margin-inline-start:4px}
 .pick .opt.other span{border-style:dashed}
 .pick .opt.known input:not(:checked)+span{background:var(--surface2)}
+.pick .grp{flex-basis:100%;font-size:13px;font-weight:700;color:var(--muted);margin-top:4px}
 
 label.f{display:flex;flex-direction:column;gap:5px;font-size:14px;color:var(--muted);font-weight:500}
 input[type=text],input[type=tel],input[type=url],textarea,select{
@@ -407,20 +408,28 @@ const CONFIG = {
   // أوقات استقبال الطلبات بتوقيت الرياض (24 ساعة). خلّها null لو ما تبي تظهر حالة مفتوح/مسكّر
   // مثال: hours: { open: "16:00", close: "23:30" }   (لو الإغلاق بعد نص الليل اكتب مثلاً "01:00")
   hours: null,
-  categories: ["بقالة","مطعم","كافيه","صيدلية","أخرى"],
+  categories: ["بقالة","مطعم","كافيه","خضار وفواكه","صيدلية","أخرى"],
   // أيقونة كل نوع محل
-  icons: {"بقالة":"🛒","مطعم":"🍔","كافيه":"☕","صيدلية":"💊","أخرى":"📦"},
+  icons: {"بقالة":"🛒","مطعم":"🍔","كافيه":"☕","خضار وفواكه":"🥬","صيدلية":"💊","أخرى":"📦"},
   // أغراض سريعة: الزبون يضغطها وتنضاف لطلبه (وكل ضغطة تزيد العدد)
   quickItems: {
     "بقالة": ["حليب","خبز","بيض","ماء كرتون","لبن","رز"],
-    "كافيه": ["قهوة","شاي كرك","ماء"]
+    "كافيه": ["قهوة","شاي كرك","ماء"],
+    "خضار وفواكه": ["طماطم","خيار","بصل","بطاطس","ليمون","موز","تفاح","برتقال"]
   },
   shops: [],
   // محلات موجودة في جلاجل (مو شركاء): تطلع اختيارات جاهزة، والمندوب يشتري منها ويصوّر الفاتورة
   // المصدر: خرائط قوقل (نوفمبر ٢٠٢٦). أضف أو احذف براحتك
   knownShops: {
     "بقالة": ["بقالة النود", "تموينات طيبة", "تموينات مروة الخير", "تموينات اليقطين", "تموينات أجود البركات",
-             "بقالة وتموينات سارية المستقبل"]
+             "بقالة وتموينات سارية المستقبل"],
+    // المطاعم مقسّمة مجموعات عشان الفوال والبوفيهات ما تختلط مع المطاعم
+    "مطعم": {
+      "🍽️ مطاعم": ["فودلس جلاجل", "مطعم فرن القرية", "مطعم زهرة الشواية البخاري", "مطعم قلب حضرموت للأكلات الشعبية"],
+      "🫘 فوال وبوفيهات": ["فوال أول الفلافل", "فوال شعبيات أفران", "بوفيه أكلات مصرية", "بوفية منارة الغيم للوجبات السريعة"]
+    },
+    "كافيه": ["AWN cafe", "كوفي الشلال"],
+    "خضار وفواكه": ["محلات الشعيبة للخضار والفواكه", "خير مزارعنا للخضار والفواكه", "فواكه وورقيات"]
   },
   chaletItems: ["فحم","ثلج (كيس)","ماء (كرتون)","قهوة عربية بالدلة","تمر","شاي"]
 };
@@ -480,7 +489,10 @@ function refreshPick(b){
   const pick = $("#"+id+"-pick"), wrap = $("#"+id+"-namewrap"), nameEl = $("#"+id+"-name");
   const list = PARTNERS.filter(p => p.category === cat).sort((a, b) =>
     (b.open - a.open) || (b.featured - a.featured) || (!!b.offer - !!a.offer) || ((b.rating || 0) - (a.rating || 0)));
-  const known = ((CONFIG.knownShops || {})[cat] || []).filter(n => !list.some(p => p.name === n));
+  const raw = (CONFIG.knownShops || {})[cat] || [];
+  const groups = (Array.isArray(raw) ? [["", raw]] : Object.entries(raw))
+    .map(([g, names]) => [g, names.filter(n => !list.some(p => p.name === n))]).filter(([, names]) => names.length);
+  const known = groups.flatMap(([, names]) => names);
   if(!list.length && !known.length){
     // ما فيه شركاء ولا محلات معروفة بهالنوع: نفس الخانة القديمة
     if((b.dataset.shop && partnerById(b.dataset.shop)) || b.dataset.known) nameEl.value = "";
@@ -501,7 +513,9 @@ function refreshPick(b){
   }
   pick.innerHTML = `<small>${list.length ? "اختر المحل (✓ = شريك، يوصله طلبك على طول)" : "اختر المحل، أو «محل ثاني» واكتب اسمه"}</small><div class="chips" role="radiogroup" aria-label="المحل">` +
     list.map(p => `<label class="opt${p.open ? "" : " closed"}"><input type="radio" name="${id}-shop" value="${p.id}" ${String(p.id)===sel ? "checked" : ""} ${p.open || String(p.id)===sel ? "" : "disabled"}><span>${esc(p.name)}<small class="ok" title="شريك توصيل جلاجل">✓</small>${p.rating ? `<small class="rt">★ ${toAr(p.rating)}</small>` : ""}${p.open ? "" : "<em>مسكّر</em>"}${p.offer ? `<small class="of">🎁 توصيل مجاني فوق ${toAr(p.offer.min)} ر</small>` : ""}</span></label>`).join("") +
-    known.map(n => `<label class="opt known"><input type="radio" name="${id}-shop" value="k:${esc(n)}" ${n === kn ? "checked" : ""}><span>${esc(n)}</span></label>`).join("") +
+    groups.map(([g, names]) => (g ? `<span class="grp">${esc(g)}</span>` : "") +
+      names.map(n => `<label class="opt known"><input type="radio" name="${id}-shop" value="k:${esc(n)}" ${n === kn ? "checked" : ""}><span>${esc(n)}</span></label>`).join("")).join("") +
+    (groups.some(([g]) => g) ? `<span class="grp"></span>` : "") +
     `<label class="opt other"><input type="radio" name="${id}-shop" value="other" ${!sel && !kn && b.dataset.other ? "checked" : ""}><span>محل ثاني</span></label></div>`;
   pick.classList.remove("hidden");
   wrap.classList.toggle("hidden", !(!sel && !kn && b.dataset.other));

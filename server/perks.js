@@ -5,7 +5,7 @@ import { getSettings } from "./flow.js";
 import { notify } from "./alerts.js";
 
 const M = 60_000, H = 60 * M, D = 24 * H, RIYADH = 3 * H;
-const CATS = ["بقالة", "مطعم", "كافيه", "صيدلية", "أخرى"];
+const CATS = ["بقالة", "مطعم", "كافيه", "خضار وفواكه", "صيدلية", "أخرى"];
 const r1 = v => Math.round(v * 10) / 10, r2 = v => Math.round(v * 100) / 100;
 const toEn = v => String(v ?? "").replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/[٫,]/g, ".");
 
